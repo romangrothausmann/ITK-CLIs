@@ -1,0 +1,81 @@
+##from http://www.cmake.org/pipermail/cmake/2008-September/023808.html
+#i.e. this is bad: SET(CMAKE_BUILD_TYPE "Release")
+# If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their definition
+# and dump it in the cache along with proper documentation, otherwise set CMAKE_BUILD_TYPE
+# to Debug prior to calling PROJECT()
+
+#${ITK_VERSION_MAJOR}.${ITK_VERSION_MINOR}.${ITK_VERSION_PATCH} 
+
+
+IF(DEFINED CMAKE_BUILD_TYPE)
+   SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
+ELSE()
+   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
+ENDIF()
+
+
+IF(DEFINED CMAKE_INSTALL_PREFIX)
+   SET(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "Choose the install directory.")
+ELSE()
+   SET(CMAKE_INSTALL_PREFIX /opt/itk-simple/ CACHE STRING "Choose the install directory.")
+ENDIF()
+
+# IF(DEFINED ITK_DIR)
+#    SET(ITK_DIR ${ITK_DIR})
+# ELSE()
+#    SET(ITK_DIR /opt/itk-4.6.1/lib/cmake/ITK-4.6/)
+# ENDIF()
+
+##-Werror for clean programming ;-)
+# SET(CMAKE_CXX_FLAGS "") #dynamic linking, comment out for static linking
+# IF(DEFINED CMAKE_CXX_FLAGS)
+#    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror" CACHE STRING "NOT compiled with static libc, libgcc and libstdc++")
+# ELSE()
+#    SET(CMAKE_CXX_FLAGS "-static -static-libgcc -static-libstdc++ -Werror" CACHE STRING "compile with static libc, libgcc and libstdc++")
+# ENDIF()
+
+
+
+
+PROJECT(simple_ITK_programs)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+#set search path
+SET(CMAKE_PREFIX_PATH "/opt/itk-3.20/lib/InsightToolkit/" ${CMAKE_PREFIX_PATH})
+SET(CMAKE_PREFIX_PATH "/opt/itk-4.1.0/lib/cmake/ITK-4.1/" ${CMAKE_PREFIX_PATH})
+
+
+SET(Required_Packages
+  ITK
+)
+
+
+FIND_PACKAGE (ITK REQUIRED)
+IF ( ITK_FOUND )
+      INCLUDE( ${USE_ITK_FILE} )
+ENDIF( ITK_FOUND )
+# FIND_PACKAGE ( VTK )
+# IF ( VTK_FOUND )
+#       INCLUDE( ${USE_VTK_FILE} )
+# ENDIF( VTK_FOUND )
+
+INCLUDE_DIRECTORIES(
+  $ENV{HOME}/itk/parabolicMorphology/
+  $ENV{HOME}/itk/ITKbinaryThinningImageFilter3D/Source/
+  $ENV{HOME}/itk/itkWindowImageFilter/
+  $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
+  )
+
+SET(Libraries
+  ${ITK_LIBRARIES}
+)
+
+
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+
+SET(CurrentExe "file_converter")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
