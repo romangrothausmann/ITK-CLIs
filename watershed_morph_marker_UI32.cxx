@@ -1,4 +1,4 @@
-////program for itkGradientMagnitudeImageFilter
+////program for itkMorphologicalWatershedFromMarkersImageFilter
 //01: based on template_02.cxx
 
 
@@ -8,7 +8,7 @@
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkGradientMagnitudeImageFilter.h>
+#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 
 
 
@@ -30,7 +30,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType;
+    typedef uint32_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -53,10 +53,28 @@ int DoIt(int argc, char *argv[]){
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
+    typedef itk::ImageFileReader<OutputImageType> ReaderType2;
+    typename ReaderType2::Pointer reader2 = ReaderType2::New();
+ 
+    reader2->SetFileName(argv[2]);
+    FilterWatcher watcherI2(reader2);
+    watcherI2.QuietOn();
+    watcherI2.ReportTimeOn();
+    try{ 
+        reader2->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
 
-    typedef itk::GradientMagnitudeImageFilter<InputImageType, OutputImageType> FilterType;
+
+    typedef itk::MorphologicalWatershedFromMarkersImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
+    filter->SetMarkerImage(reader2->GetOutput());
+    filter->SetFullyConnected(atoi(argv[4]));
+    filter->SetMarkWatershedLine(atoi(argv[5]));
 
     FilterWatcher watcher1(filter);
     try{ 
@@ -74,10 +92,10 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(argv[3]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->UseCompressionOn();
+    //writer->SetUseCompression(atoi(argv[]));
     try{ 
         writer->Update();
         }

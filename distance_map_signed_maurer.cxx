@@ -2,10 +2,6 @@
 //01: based on template_02.cxx
 
 
-////todo:
-//not working yet
-
-
 #include <complex>
 
 #include <itkImageFileReader.h>

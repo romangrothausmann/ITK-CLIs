@@ -13,7 +13,7 @@ template<typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     //typedef InputPixelType  OutputPixelType;
-    typedef  unsigned short OutputPixelType;
+    typedef uint32_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
