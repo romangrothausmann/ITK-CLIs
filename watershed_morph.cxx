@@ -1,7 +1,6 @@
 /////program to watershed an image
 //02: multi dim, multi type
 
-//#include "itkImage.h"
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
@@ -11,7 +10,6 @@
 
 
 template<typename InputPixelType, size_t Dimension>
-//int DoIt(std::string ifn, std::string ofn){
 int DoIt(int argc, char *argv[]){
 
     //typedef InputPixelType  OutputPixelType;
@@ -33,11 +31,8 @@ int DoIt(int argc, char *argv[]){
         { 
 	if (!strcmp(ex.GetDescription(), "Filter does not have progress.")){
 	  std::cerr << ex << std::endl;
-	  //std::cerr << ex.GetDescription() << std::endl;
 	  return EXIT_FAILURE;
 	  }
-	// else
-	//   std::cerr << "Reader has no progress!" << std::endl;
         }
 
     typedef itk::MorphologicalWatershedImageFilter<InputImageType, OutputImageType> FilterType;
@@ -51,7 +46,6 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcher(filter);
     try { 
         filter->Update();
-    //std::cout << std::endl;
         }
     catch (itk::ExceptionObject &ex)
         { 
@@ -67,7 +61,6 @@ int DoIt(int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetInput(filter->GetOutput());
     writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
     try
         { 
         writer->Update();
@@ -77,9 +70,6 @@ int DoIt(int argc, char *argv[]){
         std::cout << ex << std::endl;
         return EXIT_FAILURE;
         }
-
-    
-
 
     return EXIT_SUCCESS;
 
