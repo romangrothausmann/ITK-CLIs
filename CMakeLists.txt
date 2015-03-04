@@ -104,6 +104,12 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+SET(CurrentExe "watershed_morph+growing_border")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 SET(CurrentExe "gradient_mag")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
