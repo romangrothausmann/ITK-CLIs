@@ -83,6 +83,11 @@ int DoIt(int argc, char *argv[]){
     double MinRelFacetSize= atof(argv[3]);
     uint8_t NumberOfExtraWS= 1; //without iterative gm, only 1 makes sense!
 
+    typename LabelImageType::Pointer markerImg;
+    typename LabelImageType::Pointer borderImg;
+    typename LabelImageType::Pointer labelImg;
+    typename LabelImageType::PixelType labelCnt;
+
     // typedef itk::ShiftScaleImageFilter<GreyImageType, GreyImageType> SSType;
     // SSType::Pointer ss = SSType::New();
     // ss->SetScale(-1); //invert by mul. with -1
@@ -90,6 +95,7 @@ int DoIt(int argc, char *argv[]){
     // ss->Update();
     // input= ss->GetOutput();
 
+    {//scoped for better consistency
     typedef itk::HMinimaImageFilter<GreyImageType, GreyImageType> HMType; //seems for hmin in-type==out-type!!!
     typename HMType::Pointer hm= HMType::New();
     hm->SetHeight(MinRelFacetSize);
@@ -115,40 +121,38 @@ int DoIt(int argc, char *argv[]){
     labeller->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     labeller->AddObserver(itk::EndEvent(), eventCallbackITK);
     labeller->Update();
+    labelImg= labeller->GetOutput();
+    labelImg->DisconnectPipeline();
+    labelCnt= labeller->GetObjectCount();
+    }
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
     typename MWatershedType::Pointer ws = MWatershedType::New();
     ws->SetMarkWatershedLine(NumberOfExtraWS); //use borders if higher order WS are wanted
     ws->SetFullyConnected(ws0_conn);
     ws->SetInput(input);
-    ws->SetMarkerImage(labeller->GetOutput());
+    ws->SetMarkerImage(labelImg);
     ws->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     ws->AddObserver(itk::EndEvent(), eventCallbackITK);
     ws->Update(); 
 
+    {//scoped for better consistency
     // extract the watershed lines and combine with the orginal markers
     typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
     typename ThreshType::Pointer th = ThreshType::New();
     th->SetUpperThreshold(0);
     th->SetOutsideValue(0);
     // set the inside value to the number of markers + 1
-    th->SetInsideValue(labeller->GetObjectCount() + 1);
+    th->SetInsideValue(labelCnt + 1);
     th->SetInput(ws->GetOutput());
     th->Update();
+    borderImg= th->GetOutput();
+    borderImg->DisconnectPipeline();
+    }
 
     // to combine the markers again
     typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
-
-    // Add the marker image to the watershed line image
-    adder->SetInput1(th->GetOutput());
-    adder->SetInput2(labeller->GetOutput());
-    adder->Update();
-
-    typename LabelImageType::Pointer markerImg= adder->GetOutput();
-    markerImg->DisconnectPipeline();
-    typename LabelImageType::Pointer finalLabelImg= ws->GetOutput();
-    finalLabelImg->DisconnectPipeline();
 
     ws->SetMarkWatershedLine(false); //no use for a border in higher stages
     ws->SetFullyConnected(ws_conn); 
@@ -156,10 +160,17 @@ int DoIt(int argc, char *argv[]){
     // to delete the background label
     typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
     typename ChangeLabType::Pointer ch= ChangeLabType::New();
-    ch->SetChange(labeller->GetObjectCount() + 1, 0);
+    ch->SetChange(labelCnt + 1, 0);
 
 
     for(char i= 0; i < NumberOfExtraWS; i++){
+
+	// Add the marker image to the watershed line image
+	adder->SetInput1(borderImg);
+	adder->SetInput2(labelImg);
+	adder->Update();
+	markerImg= adder->GetOutput();
+	markerImg->DisconnectPipeline();
 
 	// Now apply higher order watershed
 	ws->SetMarkerImage(markerImg);
@@ -168,23 +179,15 @@ int DoIt(int argc, char *argv[]){
 	// delete the background label
 	ch->SetInput(ws->GetOutput());
 	ch->Update();
-
-	// combine the markers again
-	adder->SetInput1(th->GetOutput());
-	adder->SetInput2(ch->GetOutput());
-	adder->Update();
-
-	markerImg= adder->GetOutput();
-	markerImg->DisconnectPipeline();
-	finalLabelImg= ch->GetOutput();
-	finalLabelImg->DisconnectPipeline();
+	labelImg= ch->GetOutput();
+	labelImg->DisconnectPipeline();
 	}
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     writer->SetFileName(argv[2]);
-    writer->SetInput(finalLabelImg);
+    writer->SetInput(labelImg);
     writer->UseCompressionOn();
     //writer->SetUseCompression(atoi(argv[]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
