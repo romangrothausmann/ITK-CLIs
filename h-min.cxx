@@ -1,23 +1,16 @@
-////program for iterative itkMorphologicalWatershedFromMarkersImageFilter
-//01: based on watershed_morph_nX, but grows borders on HMin eliminated regions (does not use gradient image)
+////program to apply itkHMinimaImageFilter and itkRegionalMinimaImageFilter
+//01: based on template_02.cxx
 
 
 #include <complex>
 
+#include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include <itkCommand.h>
-
-#include <itkShiftScaleImageFilter.h>
 #include <itkHMinimaImageFilter.h>
 #include <itkRegionalMinimaImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
-#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
-#include <itkBinaryThresholdImageFilter.h>
-#include <itkAddImageFilter.h>
-#include <itkChangeLabelImageFilter.h>
-#include <itkMaskImageFilter.h>
 
 
 
@@ -50,23 +43,22 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef uint32_t  OutputPixelType;
-    typedef uint8_t   MaskType;
-
-    typedef itk::Image<InputPixelType, Dimension>   GreyImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
-    typedef itk::Image<MaskType,  Dimension>        MaskImageType;
+    
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
     eventCallbackITK->SetCallback(FilterEventHandlerITK);
 
 
-    typedef itk::ImageFileReader<GreyImageType> ReaderType;
+    typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
-    reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    reader->AddObserver(itk::EndEvent(), eventCallbackITK);
+    FilterWatcher watcherI(reader);
+    watcherI.QuietOn();
+    watcherI.ReportTimeOn();
     try{ 
         reader->Update();
         }
@@ -75,118 +67,45 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename GreyImageType::Pointer input= reader->GetOutput();
+    typename InputImageType::Pointer input= reader->GetOutput();
 
-    bool ws0_conn= true;//true reduces amount of watersheds
-    bool ws_conn= false;
 
-    double MinRelFacetSize= atof(argv[3]);
-
-    typename LabelImageType::Pointer markerImg;
-    typename LabelImageType::Pointer borderImg;
-    typename LabelImageType::Pointer labelImg;
-    typename LabelImageType::PixelType labelCnt;
-
-    // typedef itk::ShiftScaleImageFilter<GreyImageType, GreyImageType> SSType;
-    // SSType::Pointer ss = SSType::New();
-    // ss->SetScale(-1); //invert by mul. with -1
-    // ss->SetInput(input);
-    // ss->Update();
-    // input= ss->GetOutput();
-
-    {//scoped for better consistency
-    typedef itk::HMinimaImageFilter<GreyImageType, GreyImageType> HMType; //seems for hmin in-type==out-type!!!
+    typedef itk::HMinimaImageFilter<InputImageType, InputImageType> HMType; //seems for hmin in-type==out-type!!!
     typename HMType::Pointer hm= HMType::New();
-    hm->SetHeight(MinRelFacetSize);
-    hm->SetFullyConnected(ws0_conn);
+    hm->SetHeight(atof(argv[3]));
+    hm->SetFullyConnected(atoi(argv[4]));
     hm->SetInput(input);
     hm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     hm->AddObserver(itk::EndEvent(), eventCallbackITK);
     hm->Update();
 
-    typedef itk::RegionalMinimaImageFilter<GreyImageType, MaskImageType> RegMinType;
+    typedef itk::RegionalMinimaImageFilter<InputImageType, OutputImageType> RegMinType;
     typename RegMinType::Pointer rm = RegMinType::New();
-    rm->SetFullyConnected(ws0_conn);
+    rm->SetFullyConnected(atoi(argv[4]));
     rm->SetInput(hm->GetOutput());
     rm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     rm->AddObserver(itk::EndEvent(), eventCallbackITK);
     rm->Update();
 
     // connected component labelling
-    typedef itk::ConnectedComponentImageFilter<MaskImageType, LabelImageType> CCType;
+    typedef itk::ConnectedComponentImageFilter<OutputImageType, OutputImageType> CCType;
     typename CCType::Pointer labeller = CCType::New();
-    labeller->SetFullyConnected(ws0_conn);
+    labeller->SetFullyConnected(atoi(argv[4]));
     labeller->SetInput(rm->GetOutput());
     labeller->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     labeller->AddObserver(itk::EndEvent(), eventCallbackITK);
     labeller->Update();
-    labelImg= labeller->GetOutput();
-    labelImg->DisconnectPipeline();
-    labelCnt= labeller->GetObjectCount();
-    }
 
-    typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
-    typename MWatershedType::Pointer ws = MWatershedType::New();
-    ws->SetMarkWatershedLine(true); //use borders if higher order WS are wanted
-    ws->SetFullyConnected(ws0_conn);
-    ws->SetInput(input);
-    ws->SetMarkerImage(labelImg);
-    ws->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    ws->AddObserver(itk::EndEvent(), eventCallbackITK);
-    ws->Update(); 
+    typename OutputImageType::Pointer output= labeller->GetOutput();
 
-    {//scoped for better consistency
-    // extract the watershed lines and combine with the orginal markers
-    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-    typename ThreshType::Pointer th = ThreshType::New();
-    th->SetUpperThreshold(0);
-    th->SetOutsideValue(0);
-    // set the inside value to the number of markers + 1
-    th->SetInsideValue(labelCnt + 1);
-    th->SetInput(ws->GetOutput());
-    th->Update();
-    borderImg= th->GetOutput();
-    borderImg->DisconnectPipeline();
-    }
 
-    // to combine the markers again
-    typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-    typename AddType::Pointer adder = AddType::New();
-
-    ws->SetMarkWatershedLine(false); //no use for a border in higher stages
-    ws->SetFullyConnected(ws_conn); 
-
-    // to delete the background label
-    typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
-    typename ChangeLabType::Pointer ch= ChangeLabType::New();
-    ch->SetChange(labelCnt + 1, 0);
-
-    // Add the marker image to the watershed line image
-    adder->SetInput1(borderImg);
-    adder->SetInput2(labelImg);
-    adder->Update();
-    markerImg= adder->GetOutput();
-    markerImg->DisconnectPipeline();
-    
-    // Now apply higher order watershed
-    ws->SetMarkerImage(markerImg);
-    ws->Update();
-    
-    // delete the background label
-    ch->SetInput(ws->GetOutput());
-    ch->Update();
-    labelImg= ch->GetOutput();
-    labelImg->DisconnectPipeline();
-
-    typedef itk::ImageFileWriter<LabelImageType>  WriterType;
+    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
+    FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(labelImg);
+    writer->SetInput(output);
     writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[]));
-    writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    writer->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
         writer->Update();
         }
@@ -345,12 +264,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " MinRelFacetSize"
+		  << " level fully-connected"
     		  << std::endl;
 
 	return EXIT_FAILURE;

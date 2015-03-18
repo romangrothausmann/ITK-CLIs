@@ -254,12 +254,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
+		  << " Marker_Image"
 		  << " Output_Image"
-		  << " compress"
+		  << " fully-connected borders"
     		  << std::endl;
 
 	return EXIT_FAILURE;
