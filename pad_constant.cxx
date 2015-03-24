@@ -1,14 +1,14 @@
-////program for labelling connected components
+////program to apply itkConstantPadImageFilter to extend an image
 //01: based on template_02.cxx
 
 
 #include <complex>
 
+#include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include <itkConnectedComponentImageFilter.h>
-#include "itkFilterWatcher.h" 
+#include <itkConstantPadImageFilter.h>
 
 
 
@@ -30,7 +30,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef uint32_t  OutputPixelType;
+    typedef InputPixelType OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -55,10 +55,25 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::ConnectedComponentImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ConstantPadImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetFullyConnected(atoi(argv[3]));
+    filter->SetConstant(atoi(argv[3]));
+    
+    unsigned int i;
+    unsigned long padding_u[Dimension], padding_l[Dimension];
+
+    for (i= 0; i < Dimension; i++){
+        padding_l[i]= atoi(argv[4+i]);
+ 	std::cerr << padding_l[i] << std::endl;
+	}
+    for (i= 0; i < Dimension; i++){
+        padding_u[i]= atoi(argv[4+Dimension+i]);
+	std::cerr << padding_u[i] << std::endl;
+	}
+
+    filter->SetPadUpperBound(padding_u);
+    filter->SetPadLowerBound(padding_l);
 
 
     FilterWatcher watcher1(filter);
@@ -70,7 +85,6 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    std::cerr << filter->GetObjectCount() << " connected components found." << std::endl;
 
     typename OutputImageType::Pointer output= filter->GetOutput();
 
@@ -134,14 +148,14 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     typedef long InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  // case itk::ImageIOBase::FLOAT:{
-  //   typedef float InputComponentType;
-  //   res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::DOUBLE:{
-  //   typedef double InputComponentType;
-  //   res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-  // } break;
+  case itk::ImageIOBase::FLOAT:{
+    typedef float InputComponentType;
+    res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::DOUBLE:{
+    typedef double InputComponentType;
+    res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+  } break;
   case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
   default:
     std::cout << "unknown component type" << std::endl;
@@ -239,12 +253,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc < 4 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " fully-connected"
+		  << " pad-value padding..."
     		  << std::endl;
 
 	return EXIT_FAILURE;
