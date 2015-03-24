@@ -50,13 +50,18 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
+    unsigned int i;
     typename InputImageType::IndexType desiredStart;
-    desiredStart[0]= atoi(argv[3]);
-    desiredStart[1]= atoi(argv[4]);
- 
     typename InputImageType::SizeType desiredSize;
-    desiredSize[0]= atoi(argv[5]);
-    desiredSize[1]= atoi(argv[6]);
+
+    for (i= 0; i < Dimension; i++){
+        desiredStart[i]= atoi(argv[3+i]);
+    	std::cerr << desiredStart[i] << std::endl;
+    	}
+    for (i= 0; i < Dimension; i++){
+        desiredSize[i]= atoi(argv[3+Dimension+i]);
+    	std::cerr << desiredSize[i] << std::endl;
+    	}
 
     typename InputImageType::RegionType desiredRegion(desiredStart, desiredSize);
 
@@ -194,9 +199,9 @@ void dispatch_D(size_t dimensionType, int argc, char *argv[]){
   case 2:
     DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
     break;
-  // case 3:
-  //   DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
-  //   break;
+  case 3:
+    DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
+    break;
   default: 
     std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
     break;
@@ -235,12 +240,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc < 4 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " index_x index_y size_x size_y"
+		  << " index... size..."
     		  << std::endl;
 
 	return EXIT_FAILURE;

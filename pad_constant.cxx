@@ -58,10 +58,10 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ConstantPadImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetConstant(atoi(argv[3]));
+    filter->SetConstant(static_cast<OutputPixelType>(atof(argv[3])));
     
     unsigned int i;
-    unsigned long padding_u[Dimension], padding_l[Dimension];
+    typename FilterType::SizeType padding_u, padding_l;
 
     for (i= 0; i < Dimension; i++){
         padding_l[i]= atoi(argv[4+i]);
