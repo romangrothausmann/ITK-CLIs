@@ -15,18 +15,18 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkShiftScaleImageFilter_h
-#define itkShiftScaleImageFilter_h
+#ifndef itkScaleShiftImageFilter_h
+#define itkScaleShiftImageFilter_h
 
 #include "itkImageToImageFilter.h"
 #include "itkArray.h"
 
 namespace itk
 {
-/** \class ShiftScaleImageFilter
+/** \class ScaleShiftImageFilter
  * \brief Shift and scale the pixels in an image.
  *
- * ShiftScaleImageFilter shifts the input pixel by Shift (default 0.0)
+ * ScaleShiftImageFilter shifts the input pixel by Shift (default 0.0)
  * and then scales the pixel by Scale (default 1.0). All computattions
  * are performed in the precison of the input pixel's RealType. Before
  * assigning the computed value to the output pixel, the value is clamped
@@ -36,12 +36,12 @@ namespace itk
  * \ingroup ITKImageIntensity
  */
 template< typename TInputImage, typename TOutputImage >
-class ShiftScaleImageFilter:
+class ScaleShiftImageFilter:
   public ImageToImageFilter< TInputImage, TOutputImage >
 {
 public:
   /** Standard class typedefs. */
-  typedef ShiftScaleImageFilter                           Self;
+  typedef ScaleShiftImageFilter                           Self;
   typedef ImageToImageFilter< TInputImage, TOutputImage > Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;
@@ -77,7 +77,7 @@ public:
                       TInputImage::ImageDimension);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(ShiftScaleImageFilter, ImageToImageFilter);
+  itkTypeMacro(ScaleShiftImageFilter, ImageToImageFilter);
 
   /** Set/Get the amount to Shift each Pixel. The shift is followed by a Scale.
     */
@@ -105,8 +105,8 @@ public:
 #endif
 
 protected:
-  ShiftScaleImageFilter();
-  ~ShiftScaleImageFilter();
+  ScaleShiftImageFilter();
+  ~ScaleShiftImageFilter();
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
   /** Initialize some accumulators before the threads run. */
@@ -121,7 +121,7 @@ protected:
                              ThreadIdType threadId) ITK_OVERRIDE;
 
 private:
-  ShiftScaleImageFilter(const Self &); //purposely not implemented
+  ScaleShiftImageFilter(const Self &); //purposely not implemented
   void operator=(const Self &);        //purposely not implemented
 
   RealType m_Shift;
@@ -139,7 +139,7 @@ private:
 } // end namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkShiftScaleImageFilter.hxx"
+#include "itkScaleShiftImageFilter.hxx"
 #endif
 
 #endif

@@ -15,9 +15,9 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkShiftScaleImageFilter_hxx
-#define itkShiftScaleImageFilter_hxx
-#include "itkShiftScaleImageFilter.h"
+#ifndef itkScaleShiftImageFilter_hxx
+#define itkScaleShiftImageFilter_hxx
+#include "itkScaleShiftImageFilter.h"
 
 #include "itkImageRegionIterator.h"
 #include "itkNumericTraits.h"
@@ -26,8 +26,8 @@
 namespace itk
 {
 template< typename TInputImage, typename TOutputImage >
-ShiftScaleImageFilter< TInputImage, TOutputImage >
-::ShiftScaleImageFilter()
+ScaleShiftImageFilter< TInputImage, TOutputImage >
+::ScaleShiftImageFilter()
 {
   m_Shift = NumericTraits< RealType >::ZeroValue();
   m_Scale = NumericTraits< RealType >::OneValue();
@@ -40,13 +40,13 @@ ShiftScaleImageFilter< TInputImage, TOutputImage >
 }
 
 template< typename TInputImage, typename TOutputImage >
-ShiftScaleImageFilter< TInputImage, TOutputImage >
-::~ShiftScaleImageFilter()
+ScaleShiftImageFilter< TInputImage, TOutputImage >
+::~ScaleShiftImageFilter()
 {}
 
 template< typename TInputImage, typename TOutputImage >
 void
-ShiftScaleImageFilter< TInputImage, TOutputImage >
+ScaleShiftImageFilter< TInputImage, TOutputImage >
 ::BeforeThreadedGenerateData()
 {
   ThreadIdType numberOfThreads = this->GetNumberOfThreads();
@@ -62,7 +62,7 @@ ShiftScaleImageFilter< TInputImage, TOutputImage >
 
 template< typename TInputImage, typename TOutputImage >
 void
-ShiftScaleImageFilter< TInputImage, TOutputImage >
+ScaleShiftImageFilter< TInputImage, TOutputImage >
 ::AfterThreadedGenerateData()
 {
   ThreadIdType numberOfThreads = this->GetNumberOfThreads();
@@ -80,7 +80,7 @@ ShiftScaleImageFilter< TInputImage, TOutputImage >
 
 template< typename TInputImage, typename TOutputImage >
 void
-ShiftScaleImageFilter< TInputImage, TOutputImage >
+ScaleShiftImageFilter< TInputImage, TOutputImage >
 ::ThreadedGenerateData(const OutputImageRegionType & outputRegionForThread,
                        ThreadIdType threadId)
 {
@@ -119,7 +119,7 @@ ShiftScaleImageFilter< TInputImage, TOutputImage >
 
 template< typename TInputImage, typename TOutputImage >
 void
-ShiftScaleImageFilter< TInputImage, TOutputImage >
+ScaleShiftImageFilter< TInputImage, TOutputImage >
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
