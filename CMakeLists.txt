@@ -157,3 +157,15 @@ ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "std-mean_ROI_SBS")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "shift-scale_ROI")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)

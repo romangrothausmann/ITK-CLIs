@@ -95,7 +95,7 @@ ScaleShiftImageFilter< TInputImage, TOutputImage >
   // shift and scale the input pixels
   while ( !it.IsAtEnd() )
     {
-    value = ( static_cast< RealType >( it.Get() ) + m_Shift ) * m_Scale;
+    value = static_cast< RealType >( it.Get() ) * m_Scale + m_Shift;
     if ( value < NumericTraits< OutputImagePixelType >::NonpositiveMin() )
       {
       ot.Set ( NumericTraits< OutputImagePixelType >::NonpositiveMin() );
