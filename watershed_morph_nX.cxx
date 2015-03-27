@@ -53,7 +53,8 @@ int DoIt(int argc, char *argv[]){
     typedef uint32_t  OutputPixelType;
     typedef uint8_t   MaskType;
 
-    typedef itk::Image<InputPixelType, Dimension>   GreyImageType;
+    typedef itk::Image<InputPixelType, Dimension>   InputImageType;
+    typedef itk::Image<double, Dimension>   GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
     typedef itk::Image<MaskType,  Dimension>        MaskImageType;
 
@@ -62,7 +63,7 @@ int DoIt(int argc, char *argv[]){
     eventCallbackITK->SetCallback(FilterEventHandlerITK);
 
 
-    typedef itk::ImageFileReader<GreyImageType> ReaderType;
+    typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
@@ -76,13 +77,13 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename GreyImageType::Pointer input= reader->GetOutput();
+    typename GreyImageType::Pointer input;
 
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= false;
 
-    double MinRelFacetSize= atof(argv[3]);
-    uint8_t NumberOfExtraWS= atoi(argv[4]);
+    double MinRelFacetSize= atof(argv[4]);
+    uint8_t NumberOfExtraWS= atoi(argv[5]);
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -90,12 +91,15 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
 
-    // typedef itk::ShiftScaleImageFilter<GreyImageType, GreyImageType> SSType;
-    // SSType::Pointer ss = SSType::New();
-    // ss->SetScale(-1); //invert by mul. with -1
-    // ss->SetInput(input);
-    // ss->Update();
-    // input= ss->GetOutput();
+    typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
+    typename SSType::Pointer ss = SSType::New();
+    if(atoi(argv[3]))
+	ss->SetScale(-1); //invert by mul. with -1
+    else
+	ss->SetScale(1); //invert by mul. with -1
+    ss->SetInput(reader->GetOutput());
+    ss->Update();
+    input= ss->GetOutput();
 
     {//scoped for better consistency
     typedef itk::HMinimaImageFilter<GreyImageType, GreyImageType> HMType; //seems for hmin in-type==out-type!!!
@@ -367,12 +371,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " MinRelFacetSize NumberOfExtraWS"
+		  << " invert level WS-extra-runs"
     		  << std::endl;
 
 	return EXIT_FAILURE;
