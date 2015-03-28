@@ -84,7 +84,7 @@ int DoIt(int argc, char *argv[]){
 	typedef itk::ImageFileReader<MaskImageType> ReaderType;
 	typename ReaderType::Pointer reader = ReaderType::New();
  
-	reader->SetFileName(argv[3]);
+	reader->SetFileName(argv[2]);
 	reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
 	reader->AddObserver(itk::EndEvent(), eventCallbackITK);
 	try{ 
@@ -206,7 +206,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(argv[3]);
     writer->SetInput(labelImg);
     writer->UseCompressionOn();
     //writer->SetUseCompression(atoi(argv[]));
@@ -374,8 +374,8 @@ int main(int argc, char *argv[]){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
-		  << " Output_Image"
 		  << " Marker_Image"
+		  << " Output_Image"
 		  << " NumberOfExtraWS"
     		  << std::endl;
 
