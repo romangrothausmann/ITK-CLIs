@@ -80,16 +80,16 @@ int DoIt(int argc, char *argv[]){
     char* arg;
     
     arg= argv[3];
-    if (!strcmp(arg, "max")){
-	printf("%s: identified as max\n", arg);
+    if (!strcasecmp(arg, "max")){
+	printf("%s: identified as maximum\n", arg);
 	th_l= itk::NumericTraits<InputPixelType>::max();
 	//itk::NumericTraits<InputPixelType>::max(&pv);
-	std::cout << "Max: " << th_l << std::endl;
+	std::cout << "Max: " << (itk::ImageIOBase::IOPixelType)th_l << std::endl;
 	}
-    else if (!strcmp(arg, "min")){
-	printf("%s: identified as min\n", arg);
+    else if (!strcasecmp(arg, "min")){
+	printf("%s: identified as minimum\n", arg);
 	th_l= itk::NumericTraits<InputPixelType>::min();
-	std::cout << "Min: " << th_l << std::endl;
+	std::cout << "Min: " << (itk::ImageIOBase::IOPixelType)th_l << std::endl;
 	std::cout << "Is -1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(-1) << std::endl;
 	std::cout << "Is 1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(1) << std::endl;
 	}
@@ -97,12 +97,12 @@ int DoIt(int argc, char *argv[]){
 	th_l= InputPixelType(atof(arg));
     
     arg= argv[4];
-    if (!strcmp(arg, "max")){
-	printf("%s: identified as max\n", arg);
+    if (!strcasecmp(arg, "max")){
+	printf("%s: identified as maximum\n", arg);
 	th_h= itk::NumericTraits<InputPixelType>::max();
 	}
-    else if (!strcmp(arg, "min")){
-	printf("%s: identified as min\n", arg);
+    else if (!strcasecmp(arg, "min")){
+	printf("%s: identified as minimum\n", arg);
 	th_h= itk::NumericTraits<InputPixelType>::min();
 	}
     else
