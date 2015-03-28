@@ -1,4 +1,4 @@
-////program for
+////program for itkBinaryThresholdImageFilter
 //01: based on template.cxx
 
 
@@ -8,7 +8,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-
+#include <itkBinaryThresholdImageFilter.h>
 
 
 int dispatch_cT(itk::ImageIOBase::IOPixelType, itk::ImageIOBase::IOComponentType, size_t, int, char **);
@@ -45,7 +45,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    typedef uint8_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -70,10 +70,58 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::BinaryThresholdImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
 
+    InputPixelType th_l, th_h; //not InputPixelType!
+
+
+    char* arg;
+    
+    arg= argv[3];
+    if (!strcmp(arg, "max")){
+	printf("%s: identified as max\n", arg);
+	th_l= itk::NumericTraits<InputPixelType>::max();
+	//itk::NumericTraits<InputPixelType>::max(&pv);
+	std::cout << "Max: " << th_l << std::endl;
+	}
+    else if (!strcmp(arg, "min")){
+	printf("%s: identified as min\n", arg);
+	th_l= itk::NumericTraits<InputPixelType>::min();
+	std::cout << "Min: " << th_l << std::endl;
+	std::cout << "Is -1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(-1) << std::endl;
+	std::cout << "Is 1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(1) << std::endl;
+	}
+    else
+	th_l= InputPixelType(atof(arg));
+    
+    arg= argv[4];
+    if (!strcmp(arg, "max")){
+	printf("%s: identified as max\n", arg);
+	th_h= itk::NumericTraits<InputPixelType>::max();
+	}
+    else if (!strcmp(arg, "min")){
+	printf("%s: identified as min\n", arg);
+	th_h= itk::NumericTraits<InputPixelType>::min();
+	}
+    else
+	th_h= InputPixelType(atof(arg));
+    
+    if (th_l > th_h){
+	filter->SetLowerThreshold(th_h);
+	filter->SetUpperThreshold(th_l);
+	filter->SetOutsideValue (itk::NumericTraits<OutputPixelType>::Zero);
+	filter->SetInsideValue(itk::NumericTraits<OutputPixelType>::max());
+	}
+    else {
+	filter->SetLowerThreshold(th_l);
+	filter->SetUpperThreshold(th_h);
+	filter->SetInsideValue (itk::NumericTraits<OutputPixelType>::Zero);
+	filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
+	}
+
+    std::cout << "lower_th: "<< (itk::ImageIOBase::IOPixelType)filter->GetLowerThreshold() << "   upper_th: " << (itk::ImageIOBase::IOPixelType)filter->GetUpperThreshold() << std::endl;
 
     FilterWatcher watcher1(filter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
@@ -87,7 +135,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    typename OutputImageType::Pointer output= filterXYZ->GetOutput();
+    typename OutputImageType::Pointer output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -96,7 +144,7 @@ int DoIt(int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
     //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[5]));
     try{ 
         writer->Update();
         }
@@ -118,43 +166,43 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
   //IOComponentType: UNKNOWNCOMPONENTTYPE, UCHAR, CHAR, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT, DOUBLE
 
   switch (componentType){
-  case itk::ImageIOBase::UCHAR:{        // uint8_t
+  case itk::ImageIOBase::UCHAR:{
     typedef unsigned char InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::CHAR:{         // int8_t
+  case itk::ImageIOBase::CHAR:{
     typedef char InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::USHORT:{       // uint16_t
+  case itk::ImageIOBase::USHORT:{
     typedef unsigned short InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::SHORT:{        // int16_t
+  case itk::ImageIOBase::SHORT:{
     typedef short InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::UINT:{         // uint32_t
+  case itk::ImageIOBase::UINT:{
     typedef unsigned int InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::INT:{          // int32_t
+  case itk::ImageIOBase::INT:{
     typedef int InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::ULONG:{        // uint64_t
+  case itk::ImageIOBase::ULONG:{
     typedef unsigned long InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::LONG:{         // int64_t
+  case itk::ImageIOBase::LONG:{
     typedef long InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::FLOAT:{        // float32
+  case itk::ImageIOBase::FLOAT:{
     typedef float InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::DOUBLE:{       // float64
+  case itk::ImageIOBase::DOUBLE:{
     typedef double InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
@@ -178,22 +226,22 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     typedef InputComponentType InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::VECTOR:{
-    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
+  // case itk::ImageIOBase::RGB:{
+  //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::RGBA:{
+  //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::COMPLEX:{
+  //   typedef std::complex<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::VECTOR:{
+  //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -255,13 +303,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
+ 		  << " lower upper"
 		  << " compress"
-    		  << std::endl;
+   		  << std::endl;
 
 	return EXIT_FAILURE;
 	}
