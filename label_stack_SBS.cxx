@@ -11,6 +11,7 @@
 #include <itkImageFileWriter.h>
 
 #include <itkSliceBySliceImageFilter.h>
+//#include <itkImageToImageFilter.h>
 #include <itkStatisticsImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkChangeLabelImageFilter.h>
@@ -79,32 +80,35 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::SliceBySliceImageFilter<InputImageType, OutputImageType> SBSFilterType;
     typename SBSFilterType::Pointer sbs = SBSFilterType::New();
-    sbs->SetInput(input);
+    sbs->SetInput(0, input);
+    sbs->SetInput(1, input);
 
     typedef typename  SBSFilterType::InternalInputImageType SBSInputImageType;
     typedef typename  SBSFilterType::InternalOutputImageType SBSOutputImageType;
 
 
+    // typedef itk::ImageToImageFilter<SBSInputImageType, SBSInputImageType> I2IType;
+    // typename I2IType::Pointer I2I = I2IType::New();
+
     typedef itk::StatisticsImageFilter<SBSOutputImageType> StatType;
     typename StatType::Pointer stat = StatType::New();
-    typename StatType::Pointer stat2 = StatType::New();
 
-    typedef itk::AddImageFilter<SBSInputImageType, SBSOutputImageType> AddType;
+    typedef itk::AddImageFilter<SBSInputImageType, SBSInputImageType, SBSOutputImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
-    adder->SetInput1(stat->GetOutput());
+    //adder->SetInput1(I2I->GetOutput());
     adder->SetConstant2(stat->GetMaximum());
     //adder->SetConstant2(10);
 
     typedef itk::ChangeLabelImageFilter<SBSOutputImageType, SBSOutputImageType> ChangeLabType;
     typename ChangeLabType::Pointer ch= ChangeLabType::New();
     //ch->SetInput(adder->GetOutput());
-    ch->SetInput(stat2->GetOutput());
-    ch->SetChange(stat2->GetMaximum(), 0);
+    ch->SetInput(adder->GetOutput());
+    ch->SetChange(stat->GetMaximum(), 0);
 
-    stat2->SetInput(adder->GetOutput());
+    stat->SetInput(adder->GetOutput());
 
-    sbs->SetInputFilter(stat);
-    //sbs->SetInputFilter(adder);
+    //sbs->SetInputFilter(I2I);
+    sbs->SetInputFilter(adder);
     //sbs->SetOutputFilter(stat);
     sbs->SetOutputFilter(ch);
 
