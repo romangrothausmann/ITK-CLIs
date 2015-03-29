@@ -193,3 +193,9 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 #   ${CurrentExe})
 # TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 # install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "label_stack_SBS")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
