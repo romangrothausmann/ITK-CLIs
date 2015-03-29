@@ -81,28 +81,28 @@ int DoIt(int argc, char *argv[]){
     
     arg= argv[3];
     if (!strcasecmp(arg, "max")){
-	printf("%s: identified as maximum\n", arg);
+	fprintf(stderr, "%s: identified as maximum\n", arg);
 	th_l= itk::NumericTraits<InputPixelType>::max();
 	//itk::NumericTraits<InputPixelType>::max(&pv);
-	std::cout << "Max: " << (itk::ImageIOBase::IOPixelType)th_l << std::endl;
+	std::cerr << "Max: " << +th_l << std::endl;
 	}
     else if (!strcasecmp(arg, "min")){
-	printf("%s: identified as minimum\n", arg);
+	fprintf(stderr, "%s: identified as minimum\n", arg);
 	th_l= itk::NumericTraits<InputPixelType>::min();
-	std::cout << "Min: " << (itk::ImageIOBase::IOPixelType)th_l << std::endl;
-	std::cout << "Is -1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(-1) << std::endl;
-	std::cout << "Is 1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(1) << std::endl;
+	std::cerr << "Min: " << +th_l << std::endl;
+	std::cerr << "Is -1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(-1) << std::endl;
+	std::cerr << "Is 1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(1) << std::endl;
 	}
     else
 	th_l= InputPixelType(atof(arg));
     
     arg= argv[4];
     if (!strcasecmp(arg, "max")){
-	printf("%s: identified as maximum\n", arg);
+	fprintf(stderr, "%s: identified as maximum\n", arg);
 	th_h= itk::NumericTraits<InputPixelType>::max();
 	}
     else if (!strcasecmp(arg, "min")){
-	printf("%s: identified as minimum\n", arg);
+	fprintf(stderr, "%s: identified as minimum\n", arg);
 	th_h= itk::NumericTraits<InputPixelType>::min();
 	}
     else
@@ -121,7 +121,7 @@ int DoIt(int argc, char *argv[]){
 	filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
 	}
 
-    std::cout << "lower_th: "<< (itk::ImageIOBase::IOPixelType)filter->GetLowerThreshold() << "   upper_th: " << (itk::ImageIOBase::IOPixelType)filter->GetUpperThreshold() << std::endl;
+    std::cerr << "lower_th: "<< +filter->GetLowerThreshold() << "   upper_th: " << +filter->GetUpperThreshold() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
     FilterWatcher watcher1(filter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
@@ -208,7 +208,7 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
   } break;
   case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
   default:
-    std::cout << "unknown component type" << std::endl;
+    std::cerr << "unknown component type" << std::endl;
     break;
   }//switch
   return res;

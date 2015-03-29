@@ -123,8 +123,7 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    //fprintf(stderr, "Min: %f; Max: %f; Mean: %f; Std: %f; Variance: %f; Sum: %f\n", (double)static_cast<typename StatType::PixelType>(stat->GetMinimum()), (double)static_cast<typename StatType::PixelType>(stat->GetMaximum()), (double)stat->GetMean(), (double)stat->GetSigma(), (double)stat->GetVariance(), (double)stat->GetSum());
-    std::cerr << "Min: " << itk::ImageIOBase::IOPixelType(stat->GetMinimum()) << " Max: " << itk::ImageIOBase::IOPixelType(stat->GetMaximum()) << " Mean: " << stat->GetMean() << " Std: " << stat->GetSigma() << " Variance: " << stat->GetVariance() << " Sum: " << stat->GetSum() << std::endl; //stat->GetMaximum() returns PixelType which needs to be casted for proper output, using itk::ImageIOBase::IOPixelType here somehow seems to work right...
+    std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
     typename StatType::RealType stackMean= stat->GetMean();
     typename StatType::RealType stackStd= stat->GetSigma();

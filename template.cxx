@@ -160,7 +160,7 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
   } break;
   case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
   default:
-    std::cout << "unknown component type" << std::endl;
+    std::cerr << "unknown component type" << std::endl;
     break;
   }//switch
   return res;

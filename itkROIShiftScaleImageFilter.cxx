@@ -52,12 +52,12 @@ namespace itk{
 	    std::cerr << ex << std::endl;
 	    }
 
-	//std::cerr << "Min: " << itk::ImageIOBase::IOPixelType(stat->GetMinimum()) << " Max: " << itk::ImageIOBase::IOPixelType(stat->GetMaximum()) << " Mean: " << stat->GetMean() << " Std: " << stat->GetSigma() << " Variance: " << stat->GetVariance() << " Sum: " << stat->GetSum() << std::endl; //stat->GetMaximum() returns PixelType which needs to be casted for proper output, using itk::ImageIOBase::IOPixelType here somehow seems to work right...
+	//std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
 	typename SSImageFilterType::Pointer ss= SSImageFilterType::New();
 	ss->SetShift(static_cast<typename SSImageFilterType::RealType>(m_DesiredMean - stat->GetMean() * m_DesiredStd/stat->GetSigma()));
 	ss->SetScale(static_cast<typename SSImageFilterType::RealType>(m_DesiredStd/stat->GetSigma()));
-	//std::cerr << " Shift: " << ss->GetShift() << " Scale: " << ss->GetScale() << std::endl;
+	//std::cerr << " Shift: " << +ss->GetShift() << " Scale: " << +ss->GetScale() << std::endl;
 	ss->SetInput(input);
 
 	try { 
