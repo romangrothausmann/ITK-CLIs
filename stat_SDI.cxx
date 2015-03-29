@@ -1,5 +1,7 @@
 ////program for printing out stats of an image indep. of its dim and pixel type
 //01: based on stat.cxx, not streaming (yet)!
+//02: these modifications (first itkStatisticsImageFilter then itkStreamingImageFilter) even need twice as much memory
+//=>  concluding: itkStatisticsImageFilter does not support streaming
 
 
 #include <complex>
@@ -71,28 +73,28 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
-    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
-    monitorFilter->SetInput(input);
-    monitorFilter->DebugOn();
+    typedef itk::StatisticsImageFilter<InputImageType> FilterType;
+    typename FilterType::Pointer stat= FilterType::New();
+    stat->SetInput(input);
+    FilterWatcher watcher1(stat);
+
+    // typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
+    // typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    // monitorFilter->SetInput(stat->GetOutput());
+    // monitorFilter->DebugOn();
 
     typedef itk::StreamingImageFilter<InputImageType, InputImageType> StreamingFilterType;
     typename StreamingFilterType::Pointer streamingFilter = StreamingFilterType::New();
     // streamingFilter->SetInput(monitorFilter->GetOutput());
-    streamingFilter->SetInput(monitorFilter->GetOutput());
+    streamingFilter->SetInput(stat->GetOutput());
     streamingFilter->SetNumberOfStreamDivisions(atoi(argv[2]));
 
     FilterWatcher watcher2(streamingFilter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
 
-    typedef itk::StatisticsImageFilter<InputImageType> FilterType;
-    typename FilterType::Pointer stat= FilterType::New();
-    stat->SetInput(streamingFilter->GetOutput());
-    FilterWatcher watcher1(stat);
-
     try{ 
-        stat->Update();
+        streamingFilter->Update();
         }
     catch(itk::ExceptionObject &ex){ 
 	std::cerr << ex << std::endl;
