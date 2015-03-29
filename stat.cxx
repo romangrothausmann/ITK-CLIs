@@ -1,4 +1,4 @@
-////program for itkBinaryThresholdImageFilter
+////program for printing out stats of an image indep. of its dim and pixel type
 //01: based on template.cxx
 
 
@@ -8,7 +8,8 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include <itkBinaryThresholdImageFilter.h>
+
+#include <itkStatisticsImageFilter.h>
 
 
 int dispatch_cT(itk::ImageIOBase::IOPixelType, itk::ImageIOBase::IOComponentType, size_t, int, char **);
@@ -45,10 +46,8 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef uint8_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -70,64 +69,16 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::BinaryThresholdImageFilter<InputImageType, OutputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-
-    InputPixelType th_l, th_h; //not InputPixelType!
+    typedef itk::StatisticsImageFilter<InputImageType> FilterType;
+    typename FilterType::Pointer stat= FilterType::New();
+    stat->SetInput(input);
 
 
-    char* arg;
-    
-    arg= argv[3];
-    if (!strcasecmp(arg, "max")){
-	fprintf(stderr, "%s: identified as maximum\n", arg);
-	th_l= itk::NumericTraits<InputPixelType>::max();
-	//itk::NumericTraits<InputPixelType>::max(&pv);
-	std::cerr << "Max: " << +th_l << std::endl;
-	}
-    else if (!strcasecmp(arg, "min")){
-	fprintf(stderr, "%s: identified as minimum\n", arg);
-	th_l= itk::NumericTraits<InputPixelType>::min();
-	std::cerr << "Min: " << +th_l << std::endl;
-	std::cerr << "Is -1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(-1) << std::endl;
-	std::cerr << "Is 1 negative? " << itk::NumericTraits<InputPixelType>::IsNegative(1) << std::endl;
-	}
-    else
-	th_l= InputPixelType(atof(arg));
-    
-    arg= argv[4];
-    if (!strcasecmp(arg, "max")){
-	fprintf(stderr, "%s: identified as maximum\n", arg);
-	th_h= itk::NumericTraits<InputPixelType>::max();
-	}
-    else if (!strcasecmp(arg, "min")){
-	fprintf(stderr, "%s: identified as minimum\n", arg);
-	th_h= itk::NumericTraits<InputPixelType>::min();
-	}
-    else
-	th_h= InputPixelType(atof(arg));
-    
-    if (th_l > th_h){
-	filter->SetLowerThreshold(th_h);
-	filter->SetUpperThreshold(th_l);
-	filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
-	filter->SetInsideValue (itk::NumericTraits<OutputPixelType>::Zero);
-	}
-    else {
-	filter->SetLowerThreshold(th_l);
-	filter->SetUpperThreshold(th_h);
-	filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::Zero);
-	filter->SetInsideValue (itk::NumericTraits<OutputPixelType>::max());
-	}
-
-    std::cerr << "lower_th: "<< +filter->GetLowerThreshold() << "   upper_th: " << +filter->GetUpperThreshold() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
-
-    FilterWatcher watcher1(filter);
+    FilterWatcher watcher1(stat);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
-        filter->Update();
+        stat->Update();
         }
     catch(itk::ExceptionObject &ex){ 
 	std::cerr << ex << std::endl;
@@ -135,23 +86,8 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    typename OutputImageType::Pointer output= filter->GetOutput();
-
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    //writer->UseCompressionOn();
-    writer->SetUseCompression(atoi(argv[5]));
-    try{ 
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
+ 
 
     return EXIT_SUCCESS;
 
@@ -166,43 +102,43 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
   //IOComponentType: UNKNOWNCOMPONENTTYPE, UCHAR, CHAR, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT, DOUBLE
 
   switch (componentType){
-  case itk::ImageIOBase::UCHAR:{
+  case itk::ImageIOBase::UCHAR:{        // uint8_t
     typedef unsigned char InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::CHAR:{
+  case itk::ImageIOBase::CHAR:{         // int8_t
     typedef char InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::USHORT:{
+  case itk::ImageIOBase::USHORT:{       // uint16_t
     typedef unsigned short InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::SHORT:{
+  case itk::ImageIOBase::SHORT:{        // int16_t
     typedef short InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::UINT:{
+  case itk::ImageIOBase::UINT:{         // uint32_t
     typedef unsigned int InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::INT:{
+  case itk::ImageIOBase::INT:{          // int32_t
     typedef int InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::ULONG:{
+  case itk::ImageIOBase::ULONG:{        // uint64_t
     typedef unsigned long InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::LONG:{
+  case itk::ImageIOBase::LONG:{         // int64_t
     typedef long InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::FLOAT:{
+  case itk::ImageIOBase::FLOAT:{        // float32
     typedef float InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::DOUBLE:{
+  case itk::ImageIOBase::DOUBLE:{       // float64
     typedef double InputComponentType;
     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
   } break;
@@ -303,14 +239,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 2 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
-		  << " Output_Image"
- 		  << " lower upper"
-		  << " compress"
-   		  << std::endl;
+    		  << std::endl;
 
 	return EXIT_FAILURE;
 	}
