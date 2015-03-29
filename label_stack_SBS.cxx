@@ -1,5 +1,7 @@
 ////program to shift the labels of each slice such that the values do not overlap
 //01: based on template.cxx
+//02: try to use IterationEvent of SBS to access stat->GetMaximum()
+//    could not figure out though how to store/add maximum of last slice for the next one
 
 
 #include <complex>
@@ -29,7 +31,7 @@ int DoIt(int, char *argv[]);
 
 
 
-template<typename InputImageType, typename OutputImageType>
+template<typename InputImageType, typename OutputImageType, typename SBSInputImageType>
 void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
@@ -37,9 +39,11 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
     if(itk::ProgressEvent().CheckEvent(&event))
 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
     else if(itk::IterationEvent().CheckEvent(&event))
-	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;   
+	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
+		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl;
     else if(itk::EndEvent().CheckEvent(&event))
-	std::cerr << std::endl;   
+	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
+		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl; 
     }
 
 
@@ -52,10 +56,6 @@ int DoIt(int argc, char *argv[]){
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    itk::CStyleCommand::Pointer eventCallbackITK;
-    eventCallbackITK = itk::CStyleCommand::New();
-    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -85,22 +85,33 @@ int DoIt(int argc, char *argv[]){
     typedef typename  SBSFilterType::InternalOutputImageType SBSOutputImageType;
 
 
-    typedef itk::StatisticsImageFilter<SBSInputImageType> StatType;
+    typedef itk::StatisticsImageFilter<SBSOutputImageType> StatType;
     typename StatType::Pointer stat = StatType::New();
+    typename StatType::Pointer stat2 = StatType::New();
 
     typedef itk::AddImageFilter<SBSInputImageType, SBSOutputImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
     adder->SetInput1(stat->GetOutput());
     adder->SetConstant2(stat->GetMaximum());
+    //adder->SetConstant2(10);
 
     typedef itk::ChangeLabelImageFilter<SBSOutputImageType, SBSOutputImageType> ChangeLabType;
     typename ChangeLabType::Pointer ch= ChangeLabType::New();
-    ch->SetInput(adder->GetOutput());
-    ch->SetChange(stat->GetMaximum(), 0);
+    //ch->SetInput(adder->GetOutput());
+    ch->SetInput(stat2->GetOutput());
+    ch->SetChange(stat2->GetMaximum(), 0);
+
+    stat2->SetInput(adder->GetOutput());
 
     sbs->SetInputFilter(stat);
     //sbs->SetInputFilter(adder);
+    //sbs->SetOutputFilter(stat);
     sbs->SetOutputFilter(ch);
+
+    itk::CStyleCommand::Pointer eventCallbackITK;
+    eventCallbackITK = itk::CStyleCommand::New();
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType, SBSInputImageType>);
+
     sbs->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     sbs->AddObserver(itk::IterationEvent(), eventCallbackITK);
     sbs->AddObserver(itk::EndEvent(), eventCallbackITK);

@@ -25,17 +25,17 @@ int DoIt(int, char *argv[]);
 
 
 
+// template<typename InputImageType, typename OutputImageType>
 // void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
 //     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
 
 //     if(itk::ProgressEvent().CheckEvent(&event))
 // 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader")){
-// 	typedef itk::Image<unsigned char, 3> ImageType;
-// 	const itk::ImageFileReader<ImageType>* reader = static_cast<const itk::ImageFileReader<ImageType>*>(caller);
-// 	std::cerr << "Reading: " << reader->GetFileName() << std::endl;   
-// 	}
+//     else if(itk::IterationEvent().CheckEvent(&event))
+//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;   
+//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
+// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;   
 //     else if(itk::EndEvent().CheckEvent(&event))
 // 	std::cerr << std::endl;   
 //     }
@@ -52,7 +52,7 @@ int DoIt(int argc, char *argv[]){
 
     // itk::CStyleCommand::Pointer eventCallbackITK;
     // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK);
+    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -81,6 +81,7 @@ int DoIt(int argc, char *argv[]){
 
     FilterWatcher watcher1(filter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
     // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
         filter->Update();
