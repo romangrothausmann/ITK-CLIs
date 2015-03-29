@@ -4,7 +4,7 @@
 
 #include <complex>
 
-#include "itkFilterWatcher.h" 
+//#include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
@@ -29,20 +29,18 @@ int DoIt(int, char *argv[]);
 
 
 
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
+template<typename InputImageType, typename OutputImageType>
+void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
+    const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
 
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader")){
-// 	typedef itk::Image<unsigned char, 3> ImageType;
-// 	const itk::ImageFileReader<ImageType>* reader = static_cast<const itk::ImageFileReader<ImageType>*>(caller);
-// 	std::cerr << "Reading: " << reader->GetFileName() << std::endl;   
-// 	}
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
-//     }
+    if(itk::ProgressEvent().CheckEvent(&event))
+	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
+    else if(itk::IterationEvent().CheckEvent(&event))
+	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;   
+    else if(itk::EndEvent().CheckEvent(&event))
+	std::cerr << std::endl;   
+    }
 
 
 
@@ -54,6 +52,10 @@ int DoIt(int argc, char *argv[]){
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+
+    itk::CStyleCommand::Pointer eventCallbackITK;
+    eventCallbackITK = itk::CStyleCommand::New();
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -99,7 +101,9 @@ int DoIt(int argc, char *argv[]){
     sbs->SetInputFilter(stat);
     //sbs->SetInputFilter(adder);
     sbs->SetOutputFilter(ch);
-    FilterWatcher watcher_sbs(sbs);
+    sbs->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+    sbs->AddObserver(itk::IterationEvent(), eventCallbackITK);
+    sbs->AddObserver(itk::EndEvent(), eventCallbackITK);
     try { 
 	sbs->Update();
         }
@@ -113,7 +117,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
-    FilterWatcher watcherO(writer);
+    //FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
     //writer->UseCompressionOn();

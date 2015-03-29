@@ -50,6 +50,10 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    // itk::CStyleCommand::Pointer eventCallbackITK;
+    // eventCallbackITK = itk::CStyleCommand::New();
+    // eventCallbackITK->SetCallback(FilterEventHandlerITK);
+
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
