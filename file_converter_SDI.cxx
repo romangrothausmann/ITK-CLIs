@@ -1,4 +1,4 @@
-////program to use itk to convert between file-formats
+////program to use itk to convert between file-formats, streaming version
 //01: based on template.cxx
 
 
@@ -54,10 +54,16 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
  
+    ////reading compressed MHA/MHD is supported for streaming!
     reader->SetFileName(argv[1]);
+    reader->UseStreamingOn(); //optional, default: On
+
+    ////progress report is possible when streaming but ugly for reader
     // FilterWatcher watcherI(reader);
     // watcherI.QuietOn();
     // watcherI.ReportTimeOn();
+
+    ////for streaming: Do NOT update reader!
     // try{ 
     //     reader->Update();
     //     }
@@ -72,7 +78,8 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(reader->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -236,7 +243,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " compress"
+		  << " stream-chunks"
     		  << std::endl;
 
 	return EXIT_FAILURE;
