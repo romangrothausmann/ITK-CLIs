@@ -80,7 +80,8 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->UseCompressionOn();
+    writer->SetUseCompression(atoi(argv[4]));
+    //writer->SetNumberOfStreamDivisions(100); //ConnectedComponentImageFilter does not support streaming
     try{ 
         writer->Update();
         }
@@ -88,6 +89,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
 
     return EXIT_SUCCESS;
 
@@ -239,12 +241,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " fully-connected"
+		  << " compress"
     		  << std::endl;
 
 	return EXIT_FAILURE;

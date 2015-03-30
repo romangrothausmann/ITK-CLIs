@@ -78,21 +78,20 @@ int DoIt(int argc, char *argv[]){
     stat->SetInput(input);
     FilterWatcher watcher1(stat);
 
-    // typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
-    // typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
-    // monitorFilter->SetInput(stat->GetOutput());
+    typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(stat->GetOutput());
     // monitorFilter->DebugOn();
 
     typedef itk::StreamingImageFilter<InputImageType, InputImageType> StreamingFilterType;
     typename StreamingFilterType::Pointer streamingFilter = StreamingFilterType::New();
-    // streamingFilter->SetInput(monitorFilter->GetOutput());
-    streamingFilter->SetInput(stat->GetOutput());
+    streamingFilter->SetInput(monitorFilter->GetOutput());
+    //streamingFilter->SetInput(stat->GetOutput());
     streamingFilter->SetNumberOfStreamDivisions(atoi(argv[2]));
 
     FilterWatcher watcher2(streamingFilter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-
     try{ 
         streamingFilter->Update();
         }
@@ -101,9 +100,17 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-
     std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
  
+
+    std::cout << "ExpectedNumberOfStreams: " << atoi(argv[2]) << std::endl;
+
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[2]))){
+	std::cout << "Filter failed to execute employing streaming!" << std::endl;
+	//std::cout << monitorFilter;
+	return EXIT_FAILURE;
+	}
+
 
     return EXIT_SUCCESS;
 
