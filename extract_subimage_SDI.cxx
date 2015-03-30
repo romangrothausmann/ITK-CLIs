@@ -30,8 +30,8 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    if( argc != 3 + 2*Dimension){
-	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension - 1);
+    if( argc != 4 + 2*Dimension){
+	fprintf(stderr, "3 + 2*Dimension = %d parameters are needed!\n", 4 + 2*Dimension - 1);
 	return EXIT_FAILURE;
 	}
 	
@@ -57,9 +57,9 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::SizeType desiredSize;
 
     for (i= 0; i < Dimension; i++)
-        desiredStart[i]= atoi(argv[3+i]);
+        desiredStart[i]= atoi(argv[4+i]);
     for (i= 0; i < Dimension; i++)
-        desiredSize[i]=  atoi(argv[3+Dimension+i]);
+        desiredSize[i]=  atoi(argv[4+Dimension+i]);
 
     typename InputImageType::RegionType desiredRegion(desiredStart, desiredSize);
     std::cerr << "desired region index: " << desiredRegion.GetIndex()
@@ -71,15 +71,6 @@ int DoIt(int argc, char *argv[]){
     	return EXIT_FAILURE;
 	}
 	
-    FilterWatcher watcherI(reader);
-    try{ 
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
-
 
     typedef itk::ExtractImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter = FilterType::New();
@@ -102,7 +93,8 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(filter->GetOutput());
-    //writer->UseCompressionOn();
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -256,11 +248,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 4 ){
+    if ( argc < 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
+		  << " stream-chunks"
 		  << " index... size..."
     		  << std::endl;
 
