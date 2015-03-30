@@ -6,6 +6,7 @@
 
 #include <itkImageFileReader.h>
 #include <itkExtractImageFilter.h>
+#include <itkPipelineMonitorImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
@@ -78,6 +79,10 @@ int DoIt(int argc, char *argv[]){
     filter->SetExtractionRegion(desiredRegion);
     filter->SetDirectionCollapseToIdentity(); // This is required.
 
+    typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
+
     FilterWatcher watcher1(filter);
     try{ 
         filter->Update();
@@ -92,7 +97,7 @@ int DoIt(int argc, char *argv[]){
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(filter->GetOutput());
+    writer->SetInput(monitorFilter->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
     writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{ 
@@ -102,6 +107,12 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "itk::ImageFileWriter: " << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){
+	std::cout << "Filter failed to execute as expected." << std::endl;
+	//std::cout << monitorFilter;
+	return EXIT_FAILURE;
+	}
 
     return EXIT_SUCCESS;
 
