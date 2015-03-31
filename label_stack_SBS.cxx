@@ -17,6 +17,8 @@
 #include <itkChangeLabelImageFilter.h>
 
 
+unsigned long long m_lastMax= 0;
+
 
 int dispatch_cT(itk::ImageIOBase::IOPixelType, itk::ImageIOBase::IOComponentType, size_t, int, char **);
 
@@ -39,9 +41,11 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 
     if(itk::ProgressEvent().CheckEvent(&event))
 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-    else if(itk::IterationEvent().CheckEvent(&event))
+    else if(itk::IterationEvent().CheckEvent(&event)){
 	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
 		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl;
+	m_lastMax= (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum();
+	}
     else if(itk::EndEvent().CheckEvent(&event))
 	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
 		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl; 
@@ -90,25 +94,25 @@ int DoIt(int argc, char *argv[]){
     // typedef itk::ImageToImageFilter<SBSInputImageType, SBSInputImageType> I2IType;
     // typename I2IType::Pointer I2I = I2IType::New();
 
-    typedef itk::StatisticsImageFilter<SBSOutputImageType> StatType;
+    typedef itk::StatisticsImageFilter<SBSInputImageType> StatType;
     typename StatType::Pointer stat = StatType::New();
 
     typedef itk::AddImageFilter<SBSInputImageType, SBSInputImageType, SBSOutputImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
-    //adder->SetInput1(I2I->GetOutput());
-    adder->SetConstant2(stat->GetMaximum());
-    //adder->SetConstant2(10);
+    adder->SetInput1(stat->GetOutput());
+    //adder->SetConstant2(stat->GetMaximum());
+    adder->SetConstant2(m_lastMax);
 
     typedef itk::ChangeLabelImageFilter<SBSOutputImageType, SBSOutputImageType> ChangeLabType;
     typename ChangeLabType::Pointer ch= ChangeLabType::New();
     //ch->SetInput(adder->GetOutput());
     ch->SetInput(adder->GetOutput());
-    ch->SetChange(stat->GetMaximum(), 0);
+    ch->SetChange(m_lastMax, 0);
 
-    stat->SetInput(adder->GetOutput());
+    //stat->SetInput(adder->GetOutput());
 
-    //sbs->SetInputFilter(I2I);
-    sbs->SetInputFilter(adder);
+    sbs->SetInputFilter(stat);
+    //sbs->SetInputFilter(adder);
     //sbs->SetOutputFilter(stat);
     sbs->SetOutputFilter(ch);
 
