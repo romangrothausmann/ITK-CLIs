@@ -82,7 +82,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::JoinSeriesImageFilter<SliceImageType, OutputImageType> JoinSeriesFilterType;
     typedef itk::ImageFileWriter<OutputImageType>                       ImageFileWriterType;
 
-    const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(reader->GetOutput()->GetLargestPossibleRegion().GetSize(2));
+    const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(reader->GetOutput()->GetLargestPossibleRegion().GetSize(Dimension-1));
 
 
     typename itk::PipelineMonitorImageFilter<InputImageType>::Pointer monitor1 = itk::PipelineMonitorImageFilter<InputImageType>::New();
@@ -91,8 +91,8 @@ int DoIt(int argc, char *argv[]){
     std::vector<itk::ProcessObject::Pointer> savedPointers;
 
     typename JoinSeriesFilterType::Pointer joinSeries = JoinSeriesFilterType::New();
-    joinSeries->SetOrigin( reader->GetOutput()->GetOrigin()[2] );
-    joinSeries->SetSpacing( reader->GetOutput()->GetSpacing()[2] );
+    joinSeries->SetOrigin( reader->GetOutput()->GetOrigin()[Dimension-1] );
+    joinSeries->SetSpacing( reader->GetOutput()->GetSpacing()[Dimension-1] );
 
     OutputPixelType m_lastMax= 0;
 
@@ -103,8 +103,8 @@ int DoIt(int argc, char *argv[]){
 	extractor->SetDirectionCollapseToSubmatrix();
 
 	typename SliceExtractorFilterType::InputImageRegionType slice( reader->GetOutput()->GetLargestPossibleRegion() );
-	slice.SetSize( 2, 0 );
-	slice.SetIndex( 2, z );
+	slice.SetSize( Dimension-1, 0 );
+	slice.SetIndex( Dimension-1, z );
 
 	std::cerr << "slice region index: " << slice.GetIndex()
 		  << "  size: " << slice.GetSize()
@@ -287,9 +287,9 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   // case 1:
   //   res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
   //   break;
-  // case 2:
-  //   res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-  //   break;
+  case 2:
+    res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+    break;
   case 3:
     res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
     break;
