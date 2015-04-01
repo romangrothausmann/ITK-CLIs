@@ -60,10 +60,10 @@ ENDIF( ITK_FOUND )
 # ENDIF( VTK_FOUND )
 
 INCLUDE_DIRECTORIES(
-  $ENV{HOME}/itk/parabolicMorphology/
-  $ENV{HOME}/itk/ITKbinaryThinningImageFilter3D/Source/
-  $ENV{HOME}/itk/itkWindowImageFilter/
-  $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
+  # $ENV{HOME}/itk/parabolicMorphology/
+  # $ENV{HOME}/itk/ITKbinaryThinningImageFilter3D/Source/
+  # $ENV{HOME}/itk/itkWindowImageFilter/
+  # $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
   )
 
 SET(Libraries
@@ -201,6 +201,12 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 # install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "label_stack_SBS")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "label_stack")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
