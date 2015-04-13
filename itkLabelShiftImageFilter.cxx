@@ -15,8 +15,8 @@ namespace itk{
 
     template<typename TInputImage, typename TOutputImage>
     void LabelShiftImageFilter<TInputImage, TOutputImage>
-    //::GenerateData(){
-    ::ThreadedGenerateData(const OutputImageRegionType & region, ThreadIdType threadId){
+    ::GenerateData(){
+    //::ThreadedGenerateData(const OutputImageRegionType & region, ThreadIdType threadId){
 	//std::cerr << "Thread " << threadId << " given region: " << region << std::endl;
 
 
@@ -29,7 +29,7 @@ namespace itk{
 
 	m_AddImageFilter->SetInput1(input);
 	m_AddImageFilter->SetConstant2(m_LastMax);
-	m_AddImageFilter->GetOutput()->SetRequestedRegion(region);
+	//m_AddImageFilter->GetOutput()->SetRequestedRegion(region);
 
 	m_AddImageFilter->GraftOutput(this->GetOutput()); //http://www.itk.org/Doxygen/html/classitk_1_1ImageSource.html#ab988dcc743020c2f4381996ba6503306
 	m_AddImageFilter->Update();

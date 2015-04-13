@@ -47,8 +47,8 @@ namespace itk{
 	void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
 	/** Does the real work. */
-	//virtual void GenerateData();
-	virtual void ThreadedGenerateData(const OutputImageRegionType &, ThreadIdType);
+	virtual void GenerateData();
+	//virtual void ThreadedGenerateData(const OutputImageRegionType &, ThreadIdType);
 
 	typename TInputImage::PixelType m_LastMax;
 
