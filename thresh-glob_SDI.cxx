@@ -9,6 +9,7 @@
 #include <itkImageFileWriter.h>
 
 #include <itkBinaryThresholdImageFilter.h>
+#include <itkPipelineMonitorImageFilter.h>
 
 
 int dispatch_cT(itk::ImageIOBase::IOPixelType, itk::ImageIOBase::IOComponentType, size_t, int, char **);
@@ -55,24 +56,12 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{ 
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
-
-    typename InputImageType::Pointer input= reader->GetOutput();
 
 
 
     typedef itk::BinaryThresholdImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(reader->GetOutput());
 
     InputPixelType th_l, th_h; //not InputPixelType!
 
@@ -123,28 +112,18 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "lower_th: "<< +filter->GetLowerThreshold() << "   upper_th: " << +filter->GetUpperThreshold() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{ 
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
-
-
-    typename OutputImageType::Pointer output= filter->GetOutput();
+    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    //writer->UseCompressionOn();
-    writer->SetUseCompression(atoi(argv[5]));
+    writer->SetInput(monitorFilter->GetOutput());
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[5]));
     try{ 
         writer->Update();
         }
@@ -152,6 +131,10 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[5]))){
+	//std::cerr << monitorFilter;
+	}
 
     return EXIT_SUCCESS;
 
@@ -309,7 +292,7 @@ int main(int argc, char *argv[]){
 		  << " Input_Image"
 		  << " Output_Image"
  		  << " lower upper"
-		  << " compress"
+		  << " stream-chunks"
    		  << std::endl;
 
 	return EXIT_FAILURE;
