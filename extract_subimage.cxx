@@ -102,7 +102,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(filter->GetOutput());
-    //writer->UseCompressionOn();
+    writer->UseCompressionOff();
     try{ 
         writer->Update();
         }
