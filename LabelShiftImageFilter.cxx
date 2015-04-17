@@ -48,7 +48,7 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
 
-    typedef InputPixelType  OutputPixelType;
+    typedef double  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;

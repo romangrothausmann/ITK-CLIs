@@ -31,10 +31,11 @@ namespace itk{
 	m_AddImageFilter->SetConstant2(m_LastMax);
 	//m_AddImageFilter->GetOutput()->SetRequestedRegion(region);
 
-	m_AddImageFilter->GraftOutput(this->GetOutput()); //http://www.itk.org/Doxygen/html/classitk_1_1ImageSource.html#ab988dcc743020c2f4381996ba6503306
+	//m_AddImageFilter->GraftOutput(this->GetOutput()); //http://www.itk.org/Doxygen/html/classitk_1_1ImageSource.html#ab988dcc743020c2f4381996ba6503306
 	m_AddImageFilter->Update();
-	//output->Graft(m_AddImageFilter->GetOutput()); //http://www.itk.org/Wiki/ITK/Examples/Developer/Minipipeline
-	this->GraftOutput(m_AddImageFilter->GetOutput()); //http://www.itk.org/Doxygen/html/classitk_1_1ImageSource.html#ab988dcc743020c2f4381996ba6503306
+	//output= m_AddImageFilter->GetOutput(); //http://www.itk.org/Wiki/ITK/Examples/Developer/Minipipeline
+	output->Graft(m_AddImageFilter->GetOutput()); //http://www.itk.org/Wiki/ITK/Examples/Developer/Minipipeline
+	//this->GraftOutput(m_AddImageFilter->GetOutput()); //http://www.itk.org/Doxygen/html/classitk_1_1ImageSource.html#ab988dcc743020c2f4381996ba6503306
 
 	m_LastMax++;
 	}
