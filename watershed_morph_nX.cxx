@@ -54,7 +54,7 @@ int DoIt(int argc, char *argv[]){
     typedef uint8_t   MaskType;
 
     typedef itk::Image<InputPixelType, Dimension>   InputImageType;
-    typedef itk::Image<double, Dimension>   GreyImageType;
+    typedef itk::Image<double, Dimension>           GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
     typedef itk::Image<MaskType,  Dimension>        MaskImageType;
 
@@ -96,7 +96,7 @@ int DoIt(int argc, char *argv[]){
     if(atoi(argv[3]))
 	ss->SetScale(-1); //invert by mul. with -1
     else
-	ss->SetScale(1); //invert by mul. with -1
+	ss->SetScale(1); //just convert to GreyImageType
     ss->SetInput(reader->GetOutput());
     ss->Update();
     input= ss->GetOutput();

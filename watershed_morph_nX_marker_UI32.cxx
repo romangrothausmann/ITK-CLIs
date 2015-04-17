@@ -9,7 +9,7 @@
 
 #include <itkCommand.h>
 
-//#include <itkShiftScaleImageFilter.h>
+#include <itkShiftScaleImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
@@ -51,7 +51,8 @@ int DoIt(int argc, char *argv[]){
     typedef uint32_t  OutputPixelType;
     typedef uint8_t   MaskType;
 
-    typedef itk::Image<InputPixelType, Dimension>   GreyImageType;
+    typedef itk::Image<InputPixelType, Dimension>   InputImageType;
+    typedef itk::Image<double, Dimension>           GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
     typedef itk::Image<MaskType,  Dimension>        MaskImageType;
 
@@ -61,7 +62,7 @@ int DoIt(int argc, char *argv[]){
 
     typename GreyImageType::Pointer input;
 	{
-	typedef itk::ImageFileReader<GreyImageType> ReaderType;
+	typedef itk::ImageFileReader<InputImageType> ReaderType;
 	typename ReaderType::Pointer reader = ReaderType::New();
  
 	reader->SetFileName(argv[1]);
@@ -75,7 +76,23 @@ int DoIt(int argc, char *argv[]){
 	    return EXIT_FAILURE;
 	    }
 
-	input= reader->GetOutput();
+	typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
+	typename SSType::Pointer ss = SSType::New();
+	if(atoi(argv[5]))
+	    ss->SetScale(-1); //invert by mul. with -1
+	else
+	    ss->SetScale(1); //just convert to GreyImageType
+	ss->SetInput(reader->GetOutput());
+	ss->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+	ss->AddObserver(itk::EndEvent(), eventCallbackITK);
+	try{ 
+	    ss->Update();
+	    }
+	catch(itk::ExceptionObject &ex){ 
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	input= ss->GetOutput();
 	input->DisconnectPipeline();
 	}
 
@@ -110,12 +127,6 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
 
-    // typedef itk::ShiftScaleImageFilter<GreyImageType, GreyImageType> SSType;
-    // SSType::Pointer ss = SSType::New();
-    // ss->SetScale(-1); //invert by mul. with -1
-    // ss->SetInput(input);
-    // ss->Update();
-    // input= ss->GetOutput();
 
 	{//scoped for better consistency
 	// connected component labelling
@@ -370,13 +381,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Marker_Image"
 		  << " Output_Image"
-		  << " NumberOfExtraWS"
+		  << " NumberOfExtraWS invert"
     		  << std::endl;
 
 	return EXIT_FAILURE;
