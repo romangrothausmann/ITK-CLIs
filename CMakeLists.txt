@@ -207,11 +207,12 @@ TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 ## according to the docs itkStatisticsImageFilter cannot stream
-# SET(CurrentExe "stat_SDI")
-# ADD_EXECUTABLE(${CurrentExe}
-#   ${CurrentExe})
-# TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-# install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+## but StreamingStatisticsImageFilter can: https://github.com/blowekamp/itkStreamingSinc/
+SET(CurrentExe "stat_SDI")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "label_stack_SBS")
 ADD_EXECUTABLE(${CurrentExe}

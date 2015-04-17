@@ -11,7 +11,7 @@
 #include <itkImageFileWriter.h>
 
 
-#include <itkStatisticsImageFilter.h>
+#include <itkStreamingStatisticsImageFilter.h>
 #include <itkPipelineMonitorImageFilter.h>
 #include <itkStreamingImageFilter.h>
 
@@ -30,23 +30,6 @@ int DoIt(int, char *argv[]);
 
 
 
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader")){
-// 	typedef itk::Image<unsigned char, 3> ImageType;
-// 	const itk::ImageFileReader<ImageType>* reader = static_cast<const itk::ImageFileReader<ImageType>*>(caller);
-// 	std::cerr << "Reading: " << reader->GetFileName() << std::endl;   
-// 	}
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
-//     }
-
-
-
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
@@ -59,41 +42,17 @@ int DoIt(int argc, char *argv[]){
  
     reader->SetFileName(argv[1]);
     reader->UseStreamingOn(); //optional, default: On
-    // FilterWatcher watcherI(reader);
-    // watcherI.QuietOn();
-    // watcherI.ReportTimeOn();
-    // try{ 
-    //     reader->Update();
-    //     }
-    // catch(itk::ExceptionObject &ex){ 
-    // 	std::cerr << ex << std::endl;
-    // 	return EXIT_FAILURE;
-    // 	}
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
-
-    typedef itk::StatisticsImageFilter<InputImageType> FilterType;
+    typedef itk::StreamingStatisticsImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer stat= FilterType::New();
     stat->SetInput(input);
+    stat->SetNumberOfStreamDivisions(atoi(argv[2]));
     FilterWatcher watcher1(stat);
 
-    typedef itk::PipelineMonitorImageFilter<InputImageType> MonitorFilterType;
-    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
-    monitorFilter->SetInput(stat->GetOutput());
-    // monitorFilter->DebugOn();
-
-    typedef itk::StreamingImageFilter<InputImageType, InputImageType> StreamingFilterType;
-    typename StreamingFilterType::Pointer streamingFilter = StreamingFilterType::New();
-    streamingFilter->SetInput(monitorFilter->GetOutput());
-    //streamingFilter->SetInput(stat->GetOutput());
-    streamingFilter->SetNumberOfStreamDivisions(atoi(argv[2]));
-
-    FilterWatcher watcher2(streamingFilter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
-        streamingFilter->Update();
+        stat->Update();
         }
     catch(itk::ExceptionObject &ex){ 
 	std::cerr << ex << std::endl;
@@ -102,15 +61,6 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
  
-
-    std::cout << "ExpectedNumberOfStreams: " << atoi(argv[2]) << std::endl;
-
-    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[2]))){
-	std::cout << "Filter failed to execute employing streaming!" << std::endl;
-	//std::cout << monitorFilter;
-	return EXIT_FAILURE;
-	}
-
 
     return EXIT_SUCCESS;
 
