@@ -58,16 +58,16 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
-    // FilterWatcher watcherI(reader);
-    // watcherI.QuietOn();
-    // watcherI.ReportTimeOn();
-    // try{ 
-    //     reader->Update();
-    //     }
-    // catch(itk::ExceptionObject &ex){ 
-    // 	std::cerr << ex << std::endl;
-    // 	return EXIT_FAILURE;
-    // 	}
+    reader->UpdateOutputInformation();
+
+    typename InputImageType::RegionType region= reader->GetOutput()->GetLargestPossibleRegion();
+
+    std::cerr << "input region index: " << region.GetIndex()
+	      << "  size: " <<  region.GetSize()
+	      << std::endl;
+
+
+    const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(region.GetSize(Dimension-1));
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
@@ -87,7 +87,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::StreamingImageFilter<OutputImageType, OutputImageType> StreamingFilterType;
     typename StreamingFilterType::Pointer streamingFilter = StreamingFilterType::New();
     streamingFilter->SetInput(monitorFilter->GetOutput());
-    streamingFilter->SetNumberOfStreamDivisions(atoi(argv[3]));
+    streamingFilter->SetNumberOfStreamDivisions(numberOfSlices);
     // streamingFilter->SetRegionSplitter( splitter );
 
     FilterWatcher watcher2(streamingFilter);
@@ -101,8 +101,7 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){
-	std::cout << "Filter failed to execute employing streaming!" << std::endl;
+    if (!monitorFilter->VerifyAllInputCanStream(numberOfSlices)){
 	//std::cout << monitorFilter;
 	}
 
@@ -274,12 +273,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 3 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " stream-chunks"
     		  << std::endl;
 
 	return EXIT_FAILURE;
