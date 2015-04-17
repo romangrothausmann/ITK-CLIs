@@ -26,22 +26,6 @@ int DoIt(int, char *argv[]);
 
 
 
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader")){
-// 	typedef itk::Image<unsigned char, 3> ImageType;
-// 	const itk::ImageFileReader<ImageType>* reader = static_cast<const itk::ImageFileReader<ImageType>*>(caller);
-// 	std::cerr << "Reading: " << reader->GetFileName() << std::endl;   
-// 	}
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
-//     }
-
-
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
@@ -54,7 +38,6 @@ int DoIt(int argc, char *argv[]){
     typedef itk::NumericSeriesFileNames    NameGeneratorType;
     NameGeneratorType::Pointer nameGenerator = NameGeneratorType::New();
  
-    std::cerr << "test" << std::endl;
     nameGenerator->SetSeriesFormat(argv[1]);
     nameGenerator->SetStartIndex(atoi(argv[3]));
     nameGenerator->SetEndIndex(atoi(argv[4]));
@@ -62,9 +45,8 @@ int DoIt(int argc, char *argv[]){
     std::vector<std::string> names = nameGenerator->GetFileNames();
 
     // List the files
-    std::vector<std::string>::iterator nit;
-    for (nit = names.begin(); nit != names.end(); nit++)
-	std::cerr << "File: " << (*nit).c_str() << std::endl;
+    for(unsigned int i = 0; i < names.size(); ++i)
+	std::cerr << "File: " << names[i] << std::endl;
  
     typedef itk::ImageSeriesReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -72,20 +54,6 @@ int DoIt(int argc, char *argv[]){
     ////reading compressed MHA/MHD is supported for streaming!
     reader->SetFileNames(names);
     reader->UseStreamingOn(); //optional, default: On
-
-    ////progress report is possible when streaming but ugly for reader
-    // FilterWatcher watcherI(reader);
-    // watcherI.QuietOn();
-    // watcherI.ReportTimeOn();
-
-    ////for streaming: Do NOT update reader!
-    // try{ 
-    //     reader->Update();
-    //     }
-    // catch(itk::ExceptionObject &ex){ 
-    // 	std::cerr << ex << std::endl;
-    // 	return EXIT_FAILURE;
-    // 	}
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -239,7 +207,7 @@ void GetImageType (std::string fileName, itk::SizeValueType start,
     nameGenerator->SetSeriesFormat(fileName.c_str());
     nameGenerator->SetStartIndex(start);
 
-    typedef itk::Image<unsigned char, 3> ImageType;
+    typedef itk::Image<char, 1> ImageType; //template initialization parameters need to be given but can be arbitrary here
     itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
     imageReader->SetFileName(nameGenerator->GetFileNames()[0]);
     imageReader->UpdateOutputInformation();

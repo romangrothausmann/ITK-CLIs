@@ -240,7 +240,7 @@ void GetImageType (std::string fileName,
     itk::ImageIOBase::IOComponentType &componentType,
     size_t &dimensionType
     ){
-    typedef itk::Image<unsigned char, 3> ImageType;
+    typedef itk::Image<char, 1> ImageType; //template initialization parameters need to be given but can be arbitrary here
     itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
