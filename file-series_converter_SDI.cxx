@@ -1,11 +1,12 @@
 ////program to use itk to convert between file-formats, streaming version
-//01: based on template.cxx
+//01: based on file_converter_SDI.cxx and http://www.itk.org/Wiki/ITK/Examples/IO/VolumeFromSlices
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h" 
-#include <itkImageFileReader.h>
+#include <itkNumericSeriesFileNames.h>
+#include <itkImageSeriesReader.h>
 #include <itkImageFileWriter.h>
 
 
@@ -50,12 +51,26 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    typedef itk::NumericSeriesFileNames    NameGeneratorType;
+    NameGeneratorType::Pointer nameGenerator = NameGeneratorType::New();
+ 
+    std::cerr << "test" << std::endl;
+    nameGenerator->SetSeriesFormat(argv[1]);
+    nameGenerator->SetStartIndex(atoi(argv[3]));
+    nameGenerator->SetEndIndex(atoi(argv[4]));
+    nameGenerator->SetIncrementIndex(1);
+    std::vector<std::string> names = nameGenerator->GetFileNames();
 
-    typedef itk::ImageFileReader<InputImageType> ReaderType;
+    // List the files
+    std::vector<std::string>::iterator nit;
+    for (nit = names.begin(); nit != names.end(); nit++)
+	std::cerr << "File: " << (*nit).c_str() << std::endl;
+ 
+    typedef itk::ImageSeriesReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
  
     ////reading compressed MHA/MHD is supported for streaming!
-    reader->SetFileName(argv[1]);
+    reader->SetFileNames(names);
     reader->UseStreamingOn(); //optional, default: On
 
     ////progress report is possible when streaming but ugly for reader
@@ -79,7 +94,7 @@ int DoIt(int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetInput(reader->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(atoi(argv[5]));
     try{ 
         writer->Update();
         }
@@ -213,19 +228,25 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   // Description:
   // Get the PixelType and ComponentType from fileName
 
-void GetImageType (std::string fileName,
+void GetImageType (std::string fileName, itk::SizeValueType start,
     itk::ImageIOBase::IOPixelType &pixelType,
     itk::ImageIOBase::IOComponentType &componentType,
     size_t &dimensionType
     ){
+    typedef itk::NumericSeriesFileNames    NameGeneratorType;
+    NameGeneratorType::Pointer nameGenerator = NameGeneratorType::New();
+ 
+    nameGenerator->SetSeriesFormat(fileName.c_str());
+    nameGenerator->SetStartIndex(start);
+
     typedef itk::Image<unsigned char, 3> ImageType;
     itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
-    imageReader->SetFileName(fileName.c_str());
+    imageReader->SetFileName(nameGenerator->GetFileNames()[0]);
     imageReader->UpdateOutputInformation();
 
-    pixelType = imageReader->GetImageIO()->GetPixelType();
+    pixelType = imageReader->GetImageIO()->GetPixelType(); // segfaults if ImageSeriesReader is used for imageReader
     componentType = imageReader->GetImageIO()->GetComponentType();
-    dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
+    dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions() + 1;
 
     std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;  
     std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
@@ -238,11 +259,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
-		  << " Input_Image"
+		  << " Input_Image-pattern"
 		  << " Output_Image"
+		  << " first last"
 		  << " stream-chunks"
     		  << std::endl;
 
@@ -255,7 +277,7 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[1], pixelType, componentType, dimensionType);
+        GetImageType(argv[1], atoi(argv[3]), pixelType, componentType, dimensionType);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
