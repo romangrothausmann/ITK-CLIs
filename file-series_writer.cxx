@@ -6,7 +6,7 @@
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
-#include <itkImageFileWriter.h>
+#include <itkImageSeriesWriter.h>
 
 
 
@@ -48,35 +48,27 @@ int DoIt(int argc, char *argv[]){
     typedef InputPixelType  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+    typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
- 
-    reader->SetFileName(argv[1]);
-    // FilterWatcher watcherI(reader);
-    // watcherI.QuietOn();
-    // watcherI.ReportTimeOn();
-    // try{ 
-    //     reader->Update();
-    //     }
-    // catch(itk::ExceptionObject &ex){ 
-    // 	std::cerr << ex << std::endl;
-    // 	return EXIT_FAILURE;
-    // 	}
 
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
+    reader->SetFileName(argv[1]);
+
+    typedef itk::ImageSeriesWriter<InputImageType, OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
+    writer->SetSeriesFormat(argv[2]);
+    writer->SetStartIndex(0);
+    writer->SetIncrementIndex(1);
     writer->SetInput(reader->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
-    try{ 
+    try{
         writer->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
@@ -183,12 +175,12 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   int res= 0;
   switch (dimensionType){
-  case 1:
-    res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-    break;
-  case 2:
-    res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-    break;
+  // case 1:
+  //   res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
+  //   break;
+  // case 2:
+  //   res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+  //   break;
   case 3:
     res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
     break;
@@ -235,7 +227,7 @@ int main(int argc, char *argv[]){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
-		  << " Output_Image"
+		  << " Output_Image-pattern"
 		  << " compress"
     		  << std::endl;
 
