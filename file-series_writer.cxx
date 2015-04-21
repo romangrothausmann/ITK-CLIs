@@ -6,6 +6,7 @@
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
+#include <itkNumericSeriesFileNames.h>
 #include <itkImageSeriesWriter.h>
 
 
@@ -55,14 +56,25 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
+    reader->UpdateOutputInformation();
+
+    typename InputImageType::RegionType region= reader->GetOutput()->GetLargestPossibleRegion();
+    const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(region.GetSize(Dimension-1));
+
+    typedef itk::NumericSeriesFileNames    NameGeneratorType;
+    NameGeneratorType::Pointer nameGenerator = NameGeneratorType::New();
+
+    nameGenerator->SetSeriesFormat(argv[2]);
+    nameGenerator->SetStartIndex(0);
+    nameGenerator->SetEndIndex(numberOfSlices - 1);
+    nameGenerator->SetIncrementIndex(1);
+    std::vector<std::string> names = nameGenerator->GetFileNames();
 
     typedef itk::ImageSeriesWriter<InputImageType, OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetSeriesFormat(argv[2]);
-    writer->SetStartIndex(0);
-    writer->SetIncrementIndex(1);
+    writer->SetFileNames(names);
     writer->SetInput(reader->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{
