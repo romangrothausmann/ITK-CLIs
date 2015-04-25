@@ -1,5 +1,6 @@
 ////program to use itk to convert between file-formats
 //01: based on file-series_writer.cxx
+//02: changes based on Modules/Filtering/ImageCompose/test/itkJoinSeriesImageFilterStreamingTest.cxx
 
 
 #include <complex>
@@ -7,7 +8,8 @@
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkNumericSeriesFileNames.h>
-#include <itkImageSeriesWriter.h>
+#include <itkExtractImageFilter.h>
+#include <itkImageFileWriter.h>
 
 
 
@@ -49,13 +51,14 @@ int DoIt(int argc, char *argv[]){
     typedef InputPixelType  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
+    typedef itk::Image<OutputPixelType, Dimension - 1>  SliceImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
+    reader->UpdateOutputInformation();
 
     typename InputImageType::RegionType region= reader->GetOutput()->GetLargestPossibleRegion();
     const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(region.GetSize(Dimension-1));
@@ -69,23 +72,44 @@ int DoIt(int argc, char *argv[]){
     nameGenerator->SetIncrementIndex(1);
     std::vector<std::string> names = nameGenerator->GetFileNames();
 
-    typedef itk::ImageSeriesWriter<InputImageType, OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
+    typedef itk::ExtractImageFilter<InputImageType,SliceImageType>     SliceExtractorFilterType;
+    typedef itk::ImageFileWriter<SliceImageType>                       ImageFileWriterType;
 
-    FilterWatcher watcherO(writer);
-    writer->SetFileNames(names);
-    writer->SetInput(reader->GetOutput());
-    writer->SetNumberOfStreamDivisions(atoi(argv[3])); //ImageSeriesWriter seems not capable of streaming (not yet implemented?)
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    for (typename InputImageType::SizeValueType z = 0; z < numberOfSlices; ++z ){
+
+	typename SliceExtractorFilterType::Pointer extractor = SliceExtractorFilterType::New();
+	extractor->SetDirectionCollapseToSubmatrix();
+
+	typename SliceExtractorFilterType::InputImageRegionType slice(reader->GetOutput()->GetLargestPossibleRegion());
+	slice.SetSize(Dimension-1, 0);
+	slice.SetIndex(Dimension-1, z);
+
+	std::cerr << "slice region index: " << slice.GetIndex()
+		  << "  size: " << slice.GetSize()
+		  << std::endl;
+
+
+	extractor->SetExtractionRegion(slice);
+	extractor->SetInput(reader->GetOutput());
+	extractor->InPlaceOn();
+	extractor->ReleaseDataFlagOn();
+
+	typename ImageFileWriterType::Pointer writer = ImageFileWriterType::New();
+	FilterWatcher watcherO(writer);
+	writer->SetFileName(names[z]);
+	writer->SetInput(extractor->GetOutput());
+	writer->SetUseCompression(atoi(argv[3]));
+	try{
+	    writer->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+
+	}
 
     return EXIT_SUCCESS;
-
     }
 
 
@@ -239,7 +263,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image-pattern"
-		  << " stream-chunks"
+		  << " compress"
     		  << std::endl;
 
 	return EXIT_FAILURE;
