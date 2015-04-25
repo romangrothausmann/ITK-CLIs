@@ -1,5 +1,5 @@
 ////program to use itk to convert between file-formats
-//01: based on template.cxx
+//01: based on file-series_writer.cxx
 
 
 #include <complex>
@@ -56,17 +56,6 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    ////not streamed version loads whole image anyway
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{ 
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-    	std::cerr << ex << std::endl;
-    	return EXIT_FAILURE;
-    	}
 
     typename InputImageType::RegionType region= reader->GetOutput()->GetLargestPossibleRegion();
     const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(region.GetSize(Dimension-1));
@@ -86,7 +75,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileNames(names);
     writer->SetInput(reader->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(atoi(argv[3])); //ImageSeriesWriter seems not capable of streaming (not yet implemented?)
     try{
         writer->Update();
         }
@@ -250,7 +239,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image-pattern"
-		  << " compress"
+		  << " stream-chunks"
     		  << std::endl;
 
 	return EXIT_FAILURE;
