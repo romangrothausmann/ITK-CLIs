@@ -56,7 +56,17 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->UpdateOutputInformation();
+    ////not streamed version loads whole image anyway
+    FilterWatcher watcherI(reader);
+    watcherI.QuietOn();
+    watcherI.ReportTimeOn();
+    try{ 
+        reader->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+    	std::cerr << ex << std::endl;
+    	return EXIT_FAILURE;
+    	}
 
     typename InputImageType::RegionType region= reader->GetOutput()->GetLargestPossibleRegion();
     const unsigned int numberOfSlices = itk::Math::CastWithRangeCheck<unsigned int>(region.GetSize(Dimension-1));
