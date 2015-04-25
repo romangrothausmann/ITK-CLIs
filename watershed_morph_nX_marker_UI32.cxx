@@ -10,6 +10,7 @@
 #include <itkCommand.h>
 
 #include <itkShiftScaleImageFilter.h>
+#include <itkStatisticsImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
@@ -94,6 +95,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
     typename LabelImageType::Pointer labelImg;
+    typename LabelImageType::PixelType labelCnt;
 	{
 	typedef itk::ImageFileReader<LabelImageType> ReaderType;
 	typename ReaderType::Pointer reader = ReaderType::New();
@@ -109,7 +111,25 @@ int DoIt(int argc, char *argv[]){
 	    return EXIT_FAILURE;
 	    }
 
-	labelImg= reader->GetOutput();
+	typedef itk::StatisticsImageFilter<LabelImageType> FilterType;
+	typename FilterType::Pointer stat= FilterType::New();
+	stat->SetInput(reader->GetOutput());
+	stat->ReleaseDataFlagOn();
+
+	stat->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+	stat->AddObserver(itk::EndEvent(), eventCallbackITK);
+	try{ 
+	    stat->Update();
+	    }
+	catch(itk::ExceptionObject &ex){ 
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+
+	std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
+
+	labelCnt= stat->GetMaximum();
+	labelImg= stat->GetOutput();
 	labelImg->DisconnectPipeline();
 	}
 
@@ -121,7 +141,6 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
     typename GreyImageType::Pointer gradientImg;
-    typename LabelImageType::PixelType labelCnt;
 
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
@@ -201,8 +220,7 @@ int DoIt(int argc, char *argv[]){
 
     writer->SetFileName(argv[3]);
     writer->SetInput(labelImg);
-    writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[]));
+    writer->SetUseCompression(atoi(argv[6]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     writer->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
@@ -363,13 +381,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 7 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Marker_Image"
 		  << " Output_Image"
 		  << " NumberOfExtraWS invert"
+		  << " compress"
     		  << std::endl;
 
 	return EXIT_FAILURE;
