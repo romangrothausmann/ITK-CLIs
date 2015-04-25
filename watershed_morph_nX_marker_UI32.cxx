@@ -10,7 +10,6 @@
 #include <itkCommand.h>
 
 #include <itkShiftScaleImageFilter.h>
-#include <itkConnectedComponentImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
@@ -49,12 +48,10 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef uint32_t  OutputPixelType;
-    typedef uint8_t   MaskType;
 
     typedef itk::Image<InputPixelType, Dimension>   InputImageType;
     typedef itk::Image<double, Dimension>           GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
-    typedef itk::Image<MaskType,  Dimension>        MaskImageType;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
@@ -96,9 +93,9 @@ int DoIt(int argc, char *argv[]){
 	input->DisconnectPipeline();
 	}
 
-    typename MaskImageType::Pointer marker;
+    typename LabelImageType::Pointer labelImg;
 	{
-	typedef itk::ImageFileReader<MaskImageType> ReaderType;
+	typedef itk::ImageFileReader<LabelImageType> ReaderType;
 	typename ReaderType::Pointer reader = ReaderType::New();
  
 	reader->SetFileName(argv[2]);
@@ -112,8 +109,8 @@ int DoIt(int argc, char *argv[]){
 	    return EXIT_FAILURE;
 	    }
 
-	marker= reader->GetOutput();
-	marker->DisconnectPipeline();
+	labelImg= reader->GetOutput();
+	labelImg->DisconnectPipeline();
 	}
 
     bool ws0_conn= true;//true reduces amount of watersheds
@@ -124,23 +121,8 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
     typename GreyImageType::Pointer gradientImg;
-    typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
 
-
-	{//scoped for better consistency
-	// connected component labelling
-	typedef itk::ConnectedComponentImageFilter<MaskImageType, LabelImageType> CCType;
-	typename CCType::Pointer labeller = CCType::New();
-	labeller->SetFullyConnected(ws0_conn);
-	labeller->SetInput(marker);
-	labeller->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	labeller->AddObserver(itk::EndEvent(), eventCallbackITK);
-	labeller->Update();
-	labelImg= labeller->GetOutput();
-	labelImg->DisconnectPipeline();
-	labelCnt= labeller->GetObjectCount();
-	}
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
     typename MWatershedType::Pointer ws = MWatershedType::New();
