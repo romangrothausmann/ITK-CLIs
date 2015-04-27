@@ -1,5 +1,5 @@
 ////program to run itkMedianImageFilter, streaming version
-//01: based on template.cxx
+//01: based on median.cxx
 
 
 #include <complex>
@@ -7,6 +7,7 @@
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkMedianImageFilter.h>//MT and well optimized
+#include <itkPipelineMonitorImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -39,16 +40,6 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{ 
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
 
 
     typedef itk::MedianImageFilter<InputImageType, OutputImageType> FilterType;
@@ -59,15 +50,12 @@ int DoIt(int argc, char *argv[]){
 
     filter->SetRadius(radius);
     filter->SetInput(reader->GetOutput());
+    //filter->InPlaceOn(); //not supported by MedianImageFilter
+    filter->ReleaseDataFlagOn();
 
-    FilterWatcher watcher1(filter);
-    try{ 
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
+    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
 
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
@@ -75,8 +63,9 @@ int DoIt(int argc, char *argv[]){
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(filter->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetInput(monitorFilter->GetOutput());
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -84,6 +73,10 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){
+	//std::cerr << monitorFilter;
+	}
 
     return EXIT_SUCCESS;
 
@@ -240,7 +233,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " compress"
+		  << " stream-chunks"
 		  << " radius"
     		  << std::endl;
 
