@@ -1,5 +1,8 @@
 ////program to run itkMedianImageFilter, streaming version
 //01: based on median.cxx
+//02: modified to use itkImageRegionSplitterMultidimensional based on Modules/Filtering/ImageGrid/test/itkPasteImageFilterTest.cxx
+//    the splitter cannot be passe to the writer, so streaming ends at itkStreamingImageFilter
+//    the performance improvement was hardly noticeable, so this version was not included into master
 
 
 #include <complex>
@@ -8,6 +11,8 @@
 #include <itkImageFileReader.h>
 #include <itkMedianImageFilter.h>//MT and well optimized
 #include <itkPipelineMonitorImageFilter.h>
+#include <itkImageRegionSplitterMultidimensional.h>
+#include <itkStreamingImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -58,14 +63,27 @@ int DoIt(int argc, char *argv[]){
     monitorFilter->SetInput(filter->GetOutput());
 
 
+    //// blocks are better for median as this reduces the region extensions needed by the kernel operation
+    typedef itk::ImageRegionSplitterMultidimensional SplitterType;
+    SplitterType::Pointer splitter = SplitterType::New();
+    splitter->DebugOn();
+
+    typedef itk::StreamingImageFilter<OutputImageType, OutputImageType> StreamerType;
+    typename StreamerType::Pointer streamer = StreamerType::New();
+    streamer->SetInput( monitorFilter->GetOutput() );
+    streamer->SetNumberOfStreamDivisions(atoi(argv[3]));
+    streamer->SetRegionSplitter( splitter );
+
+
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(monitorFilter->GetOutput());
+    writer->SetInput(streamer->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(atoi(argv[3])); //the writer will likely not use the same splitter as the StreamingImageFilter above
+    //writer->SetRegionSplitter(splitter); //does not work
     try{ 
         writer->Update();
         }
