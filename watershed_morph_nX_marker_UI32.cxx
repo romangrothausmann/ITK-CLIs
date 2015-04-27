@@ -76,7 +76,7 @@ int DoIt(int argc, char *argv[]){
 
 	typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
 	typename SSType::Pointer ss = SSType::New();
-	if(atoi(argv[5]))
+	if(atoi(argv[6]))
 	    ss->SetScale(-1); //invert by mul. with -1
 	else
 	    ss->SetScale(1); //just convert to GreyImageType
@@ -136,7 +136,7 @@ int DoIt(int argc, char *argv[]){
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= false;
 
-    uint8_t NumberOfExtraWS= atoi(argv[4]);
+    uint8_t NumberOfExtraWS= atoi(argv[5]);
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -225,7 +225,7 @@ int DoIt(int argc, char *argv[]){
 
     writer->SetFileName(argv[3]);
     writer->SetInput(labelImg);
-    writer->SetUseCompression(atoi(argv[6]));
+    writer->SetUseCompression(atoi(argv[4]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     writer->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
@@ -392,8 +392,8 @@ int main(int argc, char *argv[]){
 		  << " Input_Image"
 		  << " Marker_Image"
 		  << " Output_Image"
-		  << " NumberOfExtraWS invert"
 		  << " compress"
+		  << " NumberOfExtraWS invert"
     		  << std::endl;
 
 	return EXIT_FAILURE;

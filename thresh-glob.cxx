@@ -79,7 +79,7 @@ int DoIt(int argc, char *argv[]){
 
     char* arg;
     
-    arg= argv[3];
+    arg= argv[4];
     if (!strcasecmp(arg, "max")){
 	fprintf(stderr, "%s: identified as maximum\n", arg);
 	th_l= itk::NumericTraits<InputPixelType>::max();
@@ -96,7 +96,7 @@ int DoIt(int argc, char *argv[]){
     else
 	th_l= InputPixelType(atof(arg));
     
-    arg= argv[4];
+    arg= argv[5];
     if (!strcasecmp(arg, "max")){
 	fprintf(stderr, "%s: identified as maximum\n", arg);
 	th_h= itk::NumericTraits<InputPixelType>::max();
@@ -144,7 +144,7 @@ int DoIt(int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
     //writer->UseCompressionOn();
-    writer->SetUseCompression(atoi(argv[5]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -308,8 +308,8 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
- 		  << " lower upper"
 		  << " compress"
+ 		  << " lower upper"
    		  << std::endl;
 
 	return EXIT_FAILURE;

@@ -58,7 +58,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ConnectedComponentImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetFullyConnected(atoi(argv[3]));
+    filter->SetFullyConnected(atoi(argv[4]));
 
 
     FilterWatcher watcher1(filter);
@@ -80,7 +80,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[4]));
+    writer->SetUseCompression(atoi(argv[3]));
     //writer->SetNumberOfStreamDivisions(100); //ConnectedComponentImageFilter does not support streaming
     try{ 
         writer->Update();
@@ -246,8 +246,8 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " fully-connected"
 		  << " compress"
+		  << " fully-connected"
     		  << std::endl;
 
 	return EXIT_FAILURE;
