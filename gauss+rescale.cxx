@@ -1,11 +1,13 @@
-////program for
-//01: based on template.cxx
+////program to apply itkSmoothingRecursiveGaussianImageFilter
+//01: based on template.cxx and gauss+rescale_01.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
+#include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkRescaleIntensityImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -25,34 +27,16 @@ int DoIt(int, char *argv[]);
 
 
 
-// template<typename InputImageType, typename OutputImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;   
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;   
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
-//     }
-
-
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
-    
-    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+    typedef InputPixelType  OutputPixelType;
+    typedef double  ProcessPixelType;
 
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<ProcessPixelType, Dimension>  ProcessImageType;
+    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -74,15 +58,15 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, ProcessImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
+    filter->SetSigma(atof(argv[4]));
+    //filter->InPlaceOn();//no effect if InputImageType != ProcessImageType ?
+    //filter->ReleaseDataFlagOn();
 
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
         filter->Update();
         }
@@ -91,8 +75,25 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
+    typedef itk::RescaleIntensityImageFilter<ProcessImageType, OutputImageType> RescaleType;
+    typename RescaleType::Pointer rs = RescaleType::New();
+    rs->SetInput(filter->GetOutput());
+    //rs->InPlaceOn();
+    //rs->ReleaseDataFlagOn();
+    // rs->SetOutputMinimum(itk::NumericTraits<OutputImageType>::min());
+    // rs->SetOutputMaximum(itk::NumericTraits<OutputImageType>::max());
 
-    typename OutputImageType::Pointer output= filterXYZ->GetOutput();
+    FilterWatcher watcher2(rs);
+    try { 
+        rs->Update();
+        }
+    catch (itk::ExceptionObject &ex){ 
+        std::cout << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+
+    typename OutputImageType::Pointer output= rs->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -100,8 +101,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -183,22 +183,22 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     typedef InputComponentType InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::VECTOR:{
-    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
+  // case itk::ImageIOBase::RGB:{
+  //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::RGBA:{
+  //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::COMPLEX:{
+  //   typedef std::complex<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::VECTOR:{
+  //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -260,12 +260,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
+		  << " sigma"
     		  << std::endl;
 
 	return EXIT_FAILURE;
