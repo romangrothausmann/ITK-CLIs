@@ -1,13 +1,15 @@
 ////program to apply itkSmoothingRecursiveGaussianImageFilter
-//01: based on template.cxx and gauss+rescale_01.cxx
+//01: based on gauss+rescale.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
-#include <itkSmoothingRecursiveGaussianImageFilter.h>
-#include <itkRescaleIntensityImageFilter.h>
+//#include <itkSmoothingRecursiveGaussianImageFilter.h>//works on each component independently, e.g. for RGB; cannot stream!
+#include <itkRecursiveGaussianImageFilter.h>//can stream
+//#include <itkRescaleIntensityImageFilter.h>//results differ depending on chunk sizes and therefore on # of stream chunks!
+#include <itkPipelineMonitorImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -32,10 +34,8 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef InputPixelType  OutputPixelType;
-    typedef double  ProcessPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<ProcessPixelType, Dimension>  ProcessImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -43,65 +43,27 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{ 
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
 
-    typename InputImageType::Pointer input= reader->GetOutput();
-
-
-
-    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, ProcessImageType> FilterType;
+    typedef itk::RecursiveGaussianImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(reader->GetOutput());
     filter->SetSigma(atof(argv[4]));
-    //filter->InPlaceOn();//no effect if InputImageType != ProcessImageType ?
-    //filter->ReleaseDataFlagOn();
+    //filter->InPlaceOn();//no effect if InputImageType != ProcessImageType !
+    filter->ReleaseDataFlagOn();
 
 
-    FilterWatcher watcher1(filter);
-    try{ 
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
+    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
 
-    typedef itk::RescaleIntensityImageFilter<ProcessImageType, OutputImageType> RescaleType;
-    typename RescaleType::Pointer rs = RescaleType::New();
-    rs->SetInput(filter->GetOutput());
-    //rs->InPlaceOn();
-    //rs->ReleaseDataFlagOn();
-    // rs->SetOutputMinimum(itk::NumericTraits<OutputImageType>::min());
-    // rs->SetOutputMaximum(itk::NumericTraits<OutputImageType>::max());
-
-    FilterWatcher watcher2(rs);
-    try { 
-        rs->Update();
-        }
-    catch (itk::ExceptionObject &ex){ 
-        std::cout << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
-
-    typename OutputImageType::Pointer output= rs->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetInput(monitorFilter->GetOutput());
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -109,6 +71,10 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){
+	//std::cerr << monitorFilter;
+	}
 
     return EXIT_SUCCESS;
 
@@ -265,7 +231,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " compress"
+		  << " stream-chunks"
 		  << " sigma"
     		  << std::endl;
 
