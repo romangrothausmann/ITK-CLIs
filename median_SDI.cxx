@@ -1,5 +1,6 @@
 ////program to run itkMedianImageFilter, streaming version
 //01: based on median.cxx
+//02: extended to allow size spedification for each dimension
 
 
 #include <complex>
@@ -30,6 +31,11 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
+    if( argc != 4 + 1*Dimension){
+	fprintf(stderr, "3 + 1*Dimension = %d parameters are needed!\n", 4 + 1*Dimension - 1);
+	return EXIT_FAILURE;
+	}
+	
     typedef InputPixelType  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
@@ -46,7 +52,8 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter = FilterType::New();
 
     typename FilterType::RadiusType radius;
-    radius.Fill(atoi(argv[4]));
+    for (unsigned int i= 0; i < Dimension; i++)
+	radius[i]= atoi(argv[4+i]);
 
     filter->SetRadius(radius);
     filter->SetInput(reader->GetOutput());
@@ -228,13 +235,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc < 4 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " stream-chunks"
-		  << " radius"
+		  << " radius_size..."
     		  << std::endl;
 
 	return EXIT_FAILURE;
