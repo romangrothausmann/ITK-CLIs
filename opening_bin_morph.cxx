@@ -1,12 +1,12 @@
-////program for itkBinaryMorphologicalClosingImageFilter
-//01: based on template.cxx
+////program for itkBinaryMorphologicalOpeningImageFilter
+//01: based on closing_bin_morph.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryMorphologicalClosingImageFilter.h>
+#include <itkBinaryMorphologicalOpeningImageFilter.h>
 #include <itkBinaryBallStructuringElement.h>
 #include <itkImageFileWriter.h>
 
@@ -59,7 +59,7 @@ int DoIt(int argc, char *argv[]){
     structuringElement.SetRadius(atoi(argv[4]));
     structuringElement.CreateStructuringElement();
 
-    typedef itk::BinaryMorphologicalClosingImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
+    typedef itk::BinaryMorphologicalOpeningImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
