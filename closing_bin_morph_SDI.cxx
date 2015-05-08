@@ -40,16 +40,6 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
@@ -64,17 +54,6 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     filter->SetForegroundValue(atoi(argv[5]));
-    filter->ReleaseDataFlagOn();
-    //filter->InPlaceOn();
-
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
 
 
     typename OutputImageType::Pointer output= filter->GetOutput();
@@ -85,7 +64,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -249,7 +228,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " compress"
+		  << " stream-chunks"
 		  << " kernelRadius"
 		  << " foreground"
     		  << std::endl;
