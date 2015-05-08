@@ -4,7 +4,7 @@
 
 #include <complex>
 
-#include "itkFilterWatcher.h" 
+#include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkBinaryMorphologicalClosingImageFilter.h>
 #include <itkBinaryBallStructuringElement.h>
@@ -31,22 +31,22 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef InputPixelType  OutputPixelType;
-    
+
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
- 
+
     reader->SetFileName(argv[1]);
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
-    try{ 
+    try{
         reader->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
@@ -64,11 +64,14 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     filter->SetForegroundValue(atoi(argv[5]));
+    filter->ReleaseDataFlagOn();
+    //filter->InPlaceOn();
+
     FilterWatcher watcher1(filter);
-    try{ 
+    try{
         filter->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
@@ -83,10 +86,10 @@ int DoIt(int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
     writer->SetUseCompression(atoi(argv[3]));
-    try{ 
+    try{
         writer->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
@@ -157,7 +160,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   int res= 0;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
-    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX 
+    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
   switch (pixelType){
   case itk::ImageIOBase::SCALAR:{
@@ -184,7 +187,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -202,10 +205,10 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   case 3:
     res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
     break;
-  default: 
+  default:
     std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -230,14 +233,14 @@ void GetImageType (std::string fileName,
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
 
-    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;  
+    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
     std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
-    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl; 
-    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl; 
-    std::cerr << "pixel type: " << pixelType << std::endl << std::endl; 
+    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
+    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
+    std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
 
     }
-  
+
 
 
 int main(int argc, char *argv[]){
@@ -267,7 +270,7 @@ int main(int argc, char *argv[]){
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
         }
- 
+
     return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
     }
 

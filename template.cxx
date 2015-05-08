@@ -4,7 +4,7 @@
 
 #include <complex>
 
-#include "itkFilterWatcher.h" 
+#include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
@@ -33,11 +33,11 @@ int DoIt(int, char *argv[]);
 //     if(itk::ProgressEvent().CheckEvent(&event))
 // 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
 //     else if(itk::IterationEvent().CheckEvent(&event))
-//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;   
+//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;
 //     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;   
+// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
 //     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
+// 	std::cerr << std::endl;
 //     }
 
 
@@ -46,7 +46,7 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef   OutputPixelType;
-    
+
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
@@ -57,15 +57,15 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
- 
+
     reader->SetFileName(argv[1]);
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
-    try{ 
+    try{
         reader->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
@@ -77,16 +77,17 @@ int DoIt(int argc, char *argv[]){
     typedef itk::<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-
+    filter->ReleaseDataFlagOn();
+    filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
     // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{ 
+    try{
         filter->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
@@ -102,10 +103,10 @@ int DoIt(int argc, char *argv[]){
     writer->SetInput(output);
     //writer->UseCompressionOn();
     //writer->SetUseCompression(atoi(argv[3]));
-    try{ 
+    try{
         writer->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
@@ -176,7 +177,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   int res= 0;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
-    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX 
+    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
   switch (pixelType){
   case itk::ImageIOBase::SCALAR:{
@@ -203,7 +204,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -221,10 +222,10 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   case 3:
     res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
     break;
-  default: 
+  default:
     std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -249,14 +250,14 @@ void GetImageType (std::string fileName,
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
 
-    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;  
+    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
     std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
-    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl; 
-    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl; 
-    std::cerr << "pixel type: " << pixelType << std::endl << std::endl; 
+    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
+    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
+    std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
 
     }
-  
+
 
 
 int main(int argc, char *argv[]){
@@ -284,7 +285,7 @@ int main(int argc, char *argv[]){
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
         }
- 
+
     return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
     }
 
