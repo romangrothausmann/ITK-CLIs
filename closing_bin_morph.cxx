@@ -59,7 +59,7 @@ int DoIt(int argc, char *argv[]){
     structuringElement.SetRadius(atoi(argv[4]));
     structuringElement.CreateStructuringElement();
 
-   typedef itk::BinaryMorphologicalClosingImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
+    typedef itk::BinaryMorphologicalClosingImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);

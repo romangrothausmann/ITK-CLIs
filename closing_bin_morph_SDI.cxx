@@ -1,5 +1,5 @@
 ////program for itkBinaryMorphologicalClosingImageFilter
-//01: based on template.cxx
+//01: based on closing_bin_morph.cxx
 
 
 #include <complex>
@@ -49,11 +49,13 @@ int DoIt(int argc, char *argv[]){
     structuringElement.SetRadius(atoi(argv[4]));
     structuringElement.CreateStructuringElement();
 
-   typedef itk::BinaryMorphologicalClosingImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
+    typedef itk::BinaryMorphologicalClosingImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     filter->SetForegroundValue(atoi(argv[5]));
+    filter->ReleaseDataFlagOn();
+    //filter->InPlaceOn();
 
 
     typename OutputImageType::Pointer output= filter->GetOutput();
