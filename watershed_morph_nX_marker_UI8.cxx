@@ -1,5 +1,6 @@
 ////program for iterative itkMorphologicalWatershedFromMarkersImageFilter
-//01: based on template_02.cxx
+////extra light version concerning memory usage
+//01: based on watershed_morph_nX_marker_UI32.cxx
 
 
 #include <complex>
@@ -48,10 +49,10 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef uint32_t  OutputPixelType;
+    typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>   InputImageType;
-    typedef itk::Image<double, Dimension>           GreyImageType;
+    typedef itk::Image<float, Dimension>            GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
@@ -91,7 +92,7 @@ int DoIt(int argc, char *argv[]){
 	    return EXIT_FAILURE;
 	    }
 	input= ss->GetOutput();
-	input->DisconnectPipeline();
+	input->DisconnectPipeline();//will need its own Delete later on!
 	}
 
     typename LabelImageType::Pointer labelImg;
@@ -114,6 +115,7 @@ int DoIt(int argc, char *argv[]){
 	typedef itk::StatisticsImageFilter<LabelImageType> FilterType;
 	typename FilterType::Pointer stat= FilterType::New();
 	stat->SetInput(reader->GetOutput());
+	//stat->InPlaceOn();//not available
 	stat->ReleaseDataFlagOn();
 
 	stat->AddObserver(itk::ProgressEvent(), eventCallbackITK);
@@ -130,7 +132,7 @@ int DoIt(int argc, char *argv[]){
 
 	labelCnt= stat->GetMaximum();
 	labelImg= stat->GetOutput();
-	labelImg->DisconnectPipeline();
+	labelImg->DisconnectPipeline();//will need its own Delete later on!
 	}
 
     bool ws0_conn= true;//true reduces amount of watersheds
@@ -181,13 +183,13 @@ int DoIt(int argc, char *argv[]){
 
 	gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
 	gm->AddObserver(itk::EndEvent(), eventCallbackITK);
-	//gm->InPlaceOn();
-	gm->ReleaseDataFlagOn();
+	//gm->InPlaceOn();//not available
+	//gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
 	gradientImg= input;
 
 	ws->SetMarkWatershedLine(false); //no use for a border in higher stages
 	ws->SetFullyConnected(ws_conn); 
-	//ws->InPlaceOn();
+	//ws->InPlaceOn();//not available
 	ws->ReleaseDataFlagOn();
 
 	// to delete the background label
@@ -195,35 +197,43 @@ int DoIt(int argc, char *argv[]){
 	typename ChangeLabType::Pointer ch= ChangeLabType::New();
 	ch->SetChange(labelCnt + 1, 0);
 	ch->InPlaceOn();
-	ch->ReleaseDataFlagOn();
+	ch->ReleaseDataFlagOn();//will be handled by adder if adder->InPlaceOn() AND used for adder->SetInput1
 
+	std::cerr << "Starting extra runs..." << std::endl;
 
 	for(char i= 0; i < NumberOfExtraWS; i++){
+	    //// DisconnectPipeline() on outputs does not make sense here becauses:
+	    //// - the filter it belongs to is not scoped to the loop
+	    //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
 
 	    // Add the marker image to the watershed line image
-	    adder->SetInput1(borderImg);
-	    adder->SetInput2(labelImg);
-	    adder->Update();
+	    //// labelImg will not be needed again afterwards
+	    //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
+	    //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
+	    adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
+	    adder->SetInput2(borderImg);
+	    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
 	    markerImg= adder->GetOutput();
-	    markerImg->DisconnectPipeline();
-
+	    //markerImg->DisconnectPipeline();
+	    //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
+	    
 	    // compute a gradient
 	    gm->SetInput(gradientImg);
 	    gm->Update();
-	    gradientImg->Delete();
+	    gradientImg->Delete();//free mem of orig input / last gradientImg
 	    gradientImg= gm->GetOutput();
 	    gradientImg->DisconnectPipeline();
 
 	    // Now apply higher order watershed
 	    ws->SetInput(gradientImg);
 	    ws->SetMarkerImage(markerImg);
-	    ws->Update();
+	    ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
 	    // delete the background label
-	    ch->SetInput(ws->GetOutput());
-	    ch->Update();
+	    ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
+	    ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
 	    labelImg= ch->GetOutput();
-	    labelImg->DisconnectPipeline();
+	    //labelImg->DisconnectPipeline();
 	    }
 	}
     else
