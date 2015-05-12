@@ -261,3 +261,8 @@ SET(CurrentExe "opening_bin_morph_SDI")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "mask")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
