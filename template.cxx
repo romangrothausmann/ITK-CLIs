@@ -10,15 +10,6 @@
 
 
 
-
-int dispatch_cT(itk::ImageIOBase::IOPixelType, itk::ImageIOBase::IOComponentType, size_t, int, char **);
-
-template<typename InputComponentType>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t, int, char **);
-
-template<typename InputComponentType, typename InputPixelType>
-int dispatch_D(size_t, int, char **);
-
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int, char *argv[]);
 
@@ -116,6 +107,62 @@ int DoIt(int argc, char *argv[]){
     }
 
 
+template<typename InputComponentType, typename InputPixelType>
+int dispatch_D(size_t dimensionType, int argc, char *argv[]){
+  int res= 0;
+  switch (dimensionType){
+  case 1:
+    res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
+    break;
+  case 2:
+    res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+    break;
+  case 3:
+    res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
+    break;
+  default:
+    std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
+    break;
+  }//switch
+  return res;
+}
+
+template<typename InputComponentType>
+int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+  int res= 0;
+    //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
+    //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
+    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
+
+  switch (pixelType){
+  case itk::ImageIOBase::SCALAR:{
+    typedef InputComponentType InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::RGB:{
+    typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::RGBA:{
+    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::COMPLEX:{
+    typedef std::complex<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::VECTOR:{
+    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::UNKNOWNPIXELTYPE:
+  default:
+    std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
+    break;
+  }//switch
+  return res;
+}
+
 int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
   int res= 0;
 
@@ -171,64 +218,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
   }//switch
   return res;
 }
-
-template<typename InputComponentType>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
-    //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
-    //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
-    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
-
-  switch (pixelType){
-  case itk::ImageIOBase::SCALAR:{
-    typedef InputComponentType InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::VECTOR:{
-    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::UNKNOWNPIXELTYPE:
-  default:
-    std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
-    break;
-  }//switch
-  return res;
-}
-
-
-template<typename InputComponentType, typename InputPixelType>
-int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
-  switch (dimensionType){
-  case 1:
-    res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-    break;
-  case 2:
-    res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-    break;
-  case 3:
-    res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
-    break;
-  default:
-    std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
-    break;
-  }//switch
-  return res;
-}
-
 
 
 ////from http://itk-users.7.n7.nabble.com/Pad-image-with-0-but-keep-its-type-what-ever-it-is-td27442.html
