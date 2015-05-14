@@ -1,55 +1,39 @@
-////program for
-//01: based on template.cxx
+////program for itkResampleImageFilter
+//01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkIdentityTransform.h>
+#include <itkNearestNeighborInterpolateImageFunction.h>
+#include <itkResampleImageFilter.h>
 #include <itkImageFileWriter.h>
 
-
-
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int, char *argv[]);
-
-
-
-
-// template<typename InputImageType, typename OutputImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    if( argc != 3 + 1*Dimension + 1){
+	fprintf(stderr, "3 + 1*Dimension = %d parameters are needed!\n", 3 + 1*Dimension);
+	return EXIT_FAILURE;
+	}
+	
+    typedef InputPixelType  OutputPixelType;
+    typedef double  InterpolationType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
+    reader->ReleaseDataFlagOn();
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -64,17 +48,38 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
+    typedef itk::IdentityTransform<InterpolationType, Dimension> TransformType;
+    typename TransformType::Pointer transform= TransformType::New();
+    transform->SetIdentity();
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, InterpolationType> InterpolatorType;
+    typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
+
+    const typename InputImageType::SpacingType& inputSpacing= reader->GetOutput()->GetSpacing();
+
+    typename InputImageType::SpacingType outputSpacing;
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSpacing[i]= atof(argv[4+i]);
+
+    const typename InputImageType::SizeType& inputSize= reader->GetOutput()->GetLargestPossibleRegion().GetSize();
+    typename OutputImageType::SizeType outputSize;
+
+    for (unsigned int i= 0; i < Dimension; i++)
+	outputSize[i]= (double) inputSize[i] * inputSpacing[i] / outputSpacing[i];
+
+
+    typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
+    filter->SetTransform(transform);
+    filter->SetInterpolator(interpolator);
+    filter->SetOutputSpacing(outputSpacing);
+    filter->SetSize(outputSize);
+    filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -84,7 +89,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    typename OutputImageType::Pointer output= filterXYZ->GetOutput();
+    typename OutputImageType::Pointer output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -92,8 +97,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -145,14 +149,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   } break;
   case itk::ImageIOBase::RGBA:{
     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::VECTOR:{
-    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -250,12 +246,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc < 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
+		  << " spacing..."
     		  << std::endl;
 
 	return EXIT_FAILURE;
