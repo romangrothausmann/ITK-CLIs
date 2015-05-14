@@ -10,12 +10,6 @@
 
 
 
-template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
-int DoIt(int, char *argv[]);
-
-
-
-
 // template<typename InputImageType, typename OutputImageType>
 // void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
@@ -51,6 +45,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType1::Pointer reader1 = ReaderType1::New();
 
     reader1->SetFileName(argv[1]);
+    reader1->ReleaseDataFlagOn();
     FilterWatcher watcherI1(reader1);
     watcherI1.QuietOn();
     watcherI1.ReportTimeOn();
@@ -62,13 +57,14 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename InputImageType1::Pointer input1= reader1->GetOutput();
+    const typename InputImageType1::Pointer& input1= reader1->GetOutput();
 
 
     typedef itk::ImageFileReader<InputImageType2> ReaderType2;
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
     reader2->SetFileName(argv[2]);
+    reader2->ReleaseDataFlagOn();
     FilterWatcher watcherI2(reader2);
     watcherI2.QuietOn();
     watcherI2.ReportTimeOn();
@@ -80,7 +76,7 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename InputImageType2::Pointer input2= reader2->GetOutput();
+    const typename InputImageType2::Pointer& input2= reader2->GetOutput();
 
 
     typedef itk::<InputImageType1, InputImageType2, OutputImageType> FilterType;
@@ -103,7 +99,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    typename OutputImageType::Pointer output= filterXYZ->GetOutput();
+    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
