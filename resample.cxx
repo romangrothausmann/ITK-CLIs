@@ -8,24 +8,27 @@
 #include <itkImageFileReader.h>
 #include <itkIdentityTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
+#include <itkLinearInterpolateImageFunction.h>
+#include <itkGaussianInterpolateImageFunction.h>
+#include <itkLabelImageGaussianInterpolateImageFunction.h>
+#include <itkBSplineInterpolateImageFunction.h>
+#include <itkWindowedSincInterpolateImageFunction.h>
+#include <itkConstantBoundaryCondition.h>
 #include <itkResampleImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int argc, char *argv[]){
+template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename TCoordRep, typename InterpolatorType>
+int DoIt2(int argc, char *argv[]){
 
-    if( argc != 3 + 1*Dimension + 1){
-	fprintf(stderr, "3 + 1*Dimension = %d parameters are needed!\n", 3 + 1*Dimension);
+    if( argc != 4 + 1*Dimension + 1){
+	fprintf(stderr, "4 + 1*Dimension = %d parameters are needed!\n", 4 + 1*Dimension);
 	return EXIT_FAILURE;
 	}
 	
     typedef InputPixelType  OutputPixelType;
-    typedef double  InterpolationType;
-
-    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -48,18 +51,23 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::IdentityTransform<InterpolationType, Dimension> TransformType;
+    typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
     typename TransformType::Pointer transform= TransformType::New();
     transform->SetIdentity();
 
-    typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, InterpolationType> InterpolatorType;
     typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
+    std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
+
+    // if(dynamic_cast<itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep>*>(interpolator)){
+    // 	interpolator->SetSplineOrder(3);
+    // 	std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
+    // 	}
 
     const typename InputImageType::SpacingType& inputSpacing= reader->GetOutput()->GetSpacing();
 
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
-        outputSpacing[i]= atof(argv[4+i]);
+        outputSpacing[i]= atof(argv[5+i]);
 
     const typename InputImageType::SizeType& inputSize= reader->GetOutput()->GetLargestPossibleRegion().GetSize();
     typename OutputImageType::SizeType outputSize;
@@ -110,6 +118,48 @@ int DoIt(int argc, char *argv[]){
 
     }
 
+template<typename InputComponentType, typename InputPixelType, size_t Dimension>
+int DoIt(int argc, char *argv[]){
+    int res= 0;
+
+    typedef double TCoordRep;
+    typedef double TCoefficientType;
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+
+    switch(atoi(argv[4])){
+    case 0:{
+	typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+	}break;
+    case 1:{
+	typedef itk::LinearInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+	}break;
+    case 2:{
+	typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
+	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+	}break;
+    case 3:{
+	typedef itk::GaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+	}break;
+    case 4:{
+	typedef itk::LabelImageGaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+	}break;
+    case 5:{//from: http://www.itk.org/Doxygen/html/Examples_2Filtering_2ResampleImageFilter8_8cxx-example.html#_a7
+	typedef itk::ConstantBoundaryCondition<InputImageType> BoundaryConditionType;
+	const unsigned int WindowRadius = 5;
+	typedef itk::Function::HammingWindowFunction<WindowRadius> WindowFunctionType;
+    	typedef itk::WindowedSincInterpolateImageFunction<InputImageType, WindowRadius, WindowFunctionType, BoundaryConditionType, TCoordRep> InterpolatorType;
+    	res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv);
+    	}break;
+    default:
+	std::cerr << "unknown interpolation type." << std::endl;
+	res= EXIT_FAILURE;
+	break;
+	}//switch
+    }
 
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
@@ -143,14 +193,22 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     typedef InputComponentType InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
+  // case itk::ImageIOBase::RGB:{ //does not work with: BSplineInterpolateImageFunction
+  //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::RGBA:{
+  //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::COMPLEX:{ //does not work with: NearestNeighborInterpolateImageFunction
+  //   typedef std::complex<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
+  // case itk::ImageIOBase::VECTOR:{ //does not work with: NearestNeighborInterpolateImageFunction
+  //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  // } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -246,12 +304,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 5 ){
+    if ( argc < 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
+		  << " Interpolator_Type"
 		  << " spacing..."
     		  << std::endl;
 
