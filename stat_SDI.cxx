@@ -38,8 +38,13 @@ int DoIt(int argc, char *argv[]){
  
     reader->SetFileName(argv[1]);
     reader->UseStreamingOn(); //optional, default: On
+    reader->UpdateOutputInformation();
 
-    typename InputImageType::Pointer input= reader->GetOutput();
+    const typename InputImageType::Pointer& input= reader->GetOutput();
+    std::cerr << "input region index: " << input->GetLargestPossibleRegion().GetIndex()
+	      << "  size: " <<  input->GetLargestPossibleRegion().GetSize()
+	      << std::endl;
+
 
     typedef itk::StreamingStatisticsImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer stat= FilterType::New();

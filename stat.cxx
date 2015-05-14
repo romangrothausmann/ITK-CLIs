@@ -26,23 +26,6 @@ int DoIt(int, char *argv[]);
 
 
 
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader")){
-// 	typedef itk::Image<unsigned char, 3> ImageType;
-// 	const itk::ImageFileReader<ImageType>* reader = static_cast<const itk::ImageFileReader<ImageType>*>(caller);
-// 	std::cerr << "Reading: " << reader->GetFileName() << std::endl;   
-// 	}
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;   
-//     }
-
-
-
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
@@ -65,18 +48,17 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename InputImageType::Pointer input= reader->GetOutput();
-
+    const typename InputImageType::Pointer& input= reader->GetOutput();
+    std::cerr << "input region index: " << input->GetLargestPossibleRegion().GetIndex()
+	      << "  size: " <<  input->GetLargestPossibleRegion().GetSize()
+	      << std::endl;
 
 
     typedef itk::StatisticsImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer stat= FilterType::New();
     stat->SetInput(input);
-
-
     FilterWatcher watcher1(stat);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
+
     try{ 
         stat->Update();
         }
