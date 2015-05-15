@@ -1,5 +1,6 @@
 ////program for itkResampleImageFilter
-//01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
+//01: based on resample.cxx
+//    itkResampleImageFilter seems to need the whole input no matter what interpolator is used
 
 
 #include <complex>
@@ -36,17 +37,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    reader->UpdateOutputInformation();
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
@@ -76,17 +67,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetOutputSpacing(outputSpacing);
     filter->SetSize(outputSize);
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
-    filter->ReleaseDataFlagOn();
     //filter->InPlaceOn();//not available
-
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
 
 
     typename OutputImageType::Pointer output= filter->GetOutput();
@@ -97,7 +78,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -322,7 +303,7 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-                  << " compress"
+                  << " stream-chunks"
                   << " Interpolator_Type"
                   << " spacing..."
                   << std::endl;
