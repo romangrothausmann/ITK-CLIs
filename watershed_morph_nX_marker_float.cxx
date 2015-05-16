@@ -54,18 +54,18 @@ int DoIt(int argc, char *argv[]){
 
     typename GreyImageType::Pointer input;
         {
-    typedef itk::ImageFileReader<InputImageType1> ReaderType1;
-    typename ReaderType1::Pointer reader1 = ReaderType1::New();
+        typedef itk::ImageFileReader<InputImageType1> ReaderType1;
+        typename ReaderType1::Pointer reader1 = ReaderType1::New();
 
-    reader1->SetFileName(argv[1]);
-    reader1->AddObserver(itk::AnyEvent(), eventCallbackITK);
-    try{
-        reader1->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+        reader1->SetFileName(argv[1]);
+        reader1->AddObserver(itk::AnyEvent(), eventCallbackITK);
+        try{
+            reader1->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
 
         typedef itk::ShiftScaleImageFilter<InputImageType1, GreyImageType> SSType;
         typename SSType::Pointer ss = SSType::New();
@@ -91,18 +91,18 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
         {
-    typedef itk::ImageFileReader<LabelImageType> ReaderType2;
-    typename ReaderType2::Pointer reader2 = ReaderType2::New();
+        typedef itk::ImageFileReader<LabelImageType> ReaderType2;
+        typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
-    reader2->SetFileName(argv[2]);
-    reader2->AddObserver(itk::AnyEvent(), eventCallbackITK);
-    try{
-        reader2->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+        reader2->SetFileName(argv[2]);
+        reader2->AddObserver(itk::AnyEvent(), eventCallbackITK);
+        try{
+            reader2->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
 
         typedef itk::StatisticsImageFilter<LabelImageType> FilterType;
         typename FilterType::Pointer stat= FilterType::New();
