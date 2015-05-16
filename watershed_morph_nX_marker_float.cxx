@@ -28,8 +28,9 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 
     if(itk::ProgressEvent().CheckEvent(&event))
         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-    else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-        std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
+    else if(itk::StartEvent().CheckEvent(&event))
+	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
+	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl; //reader apparently does not issue an EndEvent
     else if(itk::EndEvent().CheckEvent(&event))
         std::cerr << std::endl;
     }
@@ -45,11 +46,12 @@ int DoIt(int argc, char *argv[]){
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
-    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType1>);
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType1>);//also works for InputImageType2
 
     ////for mem monitoring: http://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-run-time-in-c
     struct proc_t usage;//description in: /usr/include/proc/readproc.h
     double page_size_mb = sysconf(_SC_PAGE_SIZE) / 1024. / 1024.; // in case x86-64 is configured to use 2MB pages
+
 
     typename GreyImageType::Pointer input;
         {
