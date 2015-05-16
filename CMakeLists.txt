@@ -1,3 +1,10 @@
+PROJECT(ITK-CLIs)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+## bash command to check if CMakeLists.txt contains an entry for all *.cxx: 
+## for i in *cxx ; do if ! `grep -q ${i%.cxx} CMakeLists.txt`; then echo "$i not found"'!'; fi; done
+
+
 ##from http://www.cmake.org/pipermail/cmake/2008-September/023808.html
 #i.e. this is bad: SET(CMAKE_BUILD_TYPE "Release")
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their definition
@@ -36,9 +43,6 @@ ENDIF()
 
 
 
-
-PROJECT(simple_ITK_programs)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 #set search path
 SET(CMAKE_PREFIX_PATH "/opt/itk-3.20/lib/InsightToolkit/" ${CMAKE_PREFIX_PATH})
@@ -125,13 +129,14 @@ TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "watershed_morph_nX_marker_float")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES LINK_FLAGS "-lprocps")
+ADD_EXECUTABLE(${CurrentExe}  "watershed_morph_nX_marker.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT" LINK_FLAGS "-lprocps")#ADD_DEFINITIONS(-DUSE_FLOAT) is not target specific!
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "watershed_morph_nX_marker_UI32")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+SET(CurrentExe "watershed_morph_nX_marker_double")
+ADD_EXECUTABLE(${CurrentExe}  "watershed_morph_nX_marker.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES LINK_FLAGS "-lprocps")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 

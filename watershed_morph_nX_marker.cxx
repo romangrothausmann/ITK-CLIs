@@ -42,7 +42,13 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  LabelImageType;
+#ifdef USE_FLOAT
     typedef itk::Image<float, Dimension>            GreyImageType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef itk::Image<double, Dimension>           GreyImageType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
