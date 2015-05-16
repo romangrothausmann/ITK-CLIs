@@ -194,7 +194,7 @@ int DoIt(int argc, char *argv[]){
         ws->SetMarkWatershedLine(false); //no use for a border in higher stages
         ws->SetFullyConnected(ws_conn);
         //ws->InPlaceOn();//not available
-        ws->ReleaseDataFlagOn();
+        //ws->ReleaseDataFlagOn();//no problem but not needed as ch->InPlaceOn()
 
         // to delete the background label
         typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
@@ -206,6 +206,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Starting extra runs..." << std::endl;
 
         for(char i= 0; i < NumberOfExtraWS; i++){
+	    std::cerr << "Run: " << i+1 << std::endl;
             //// DisconnectPipeline() on outputs does not make sense here becauses:
             //// - the filter it belongs to is not scoped to the loop
             //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
@@ -222,14 +223,16 @@ int DoIt(int argc, char *argv[]){
             //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
 
             look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+	    gradientImg->ReleaseDataFlagOn();
             // compute a gradient
             gm->SetInput(gradientImg);
             gm->Update();
             //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
             gradientImg= gm->GetOutput();
-            gradientImg->DisconnectPipeline();
+            gradientImg->DisconnectPipeline();//segfaults without! Why?
 
             look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+	    markerImg->ReleaseDataFlagOn();
             // Now apply higher order watershed
             ws->SetInput(gradientImg);
             ws->SetMarkerImage(markerImg);
