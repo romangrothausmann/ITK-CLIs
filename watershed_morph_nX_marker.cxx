@@ -28,9 +28,10 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 
     if(itk::ProgressEvent().CheckEvent(&event))
         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-    else if(itk::StartEvent().CheckEvent(&event))
+    else if(itk::StartEvent().CheckEvent(&event)){
 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl; //reader apparently does not issue an EndEvent
+	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName();
+	}
     else if(itk::EndEvent().CheckEvent(&event))
         std::cerr << std::endl;
     }
