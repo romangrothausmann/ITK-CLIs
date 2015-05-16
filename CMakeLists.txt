@@ -124,7 +124,7 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "watershed_morph_nX_marker_UI8")
+SET(CurrentExe "watershed_morph_nX_marker_float")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES LINK_FLAGS "-lprocps")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
