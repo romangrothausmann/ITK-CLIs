@@ -53,8 +53,8 @@ int DoIt(int argc, char *argv[]){
     typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>   InputImageType;
-    typedef itk::Image<float, Dimension>            GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  LabelImageType;
+    typedef itk::Image<float, Dimension>            GreyImageType;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
@@ -195,6 +195,7 @@ int DoIt(int argc, char *argv[]){
 	//gm->InPlaceOn();//not available
 	//gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
 	gradientImg= input;
+	input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
 
 	ws->SetMarkWatershedLine(false); //no use for a border in higher stages
 	ws->SetFullyConnected(ws_conn); 
@@ -230,7 +231,7 @@ int DoIt(int argc, char *argv[]){
 	    // compute a gradient
 	    gm->SetInput(gradientImg);
 	    gm->Update();
-	    gradientImg->Delete();//free mem of orig input / last gradientImg
+	    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
 	    gradientImg= gm->GetOutput();
 	    gradientImg->DisconnectPipeline();
 
