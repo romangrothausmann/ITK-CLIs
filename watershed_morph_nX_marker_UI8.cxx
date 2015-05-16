@@ -41,9 +41,9 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
 
     if(itk::ProgressEvent().CheckEvent(&event))
-	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
+        fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
     else if(itk::EndEvent().CheckEvent(&event))
-	std::cerr << std::endl << std::flush;   
+        std::cerr << std::endl << std::flush;
     }
 
 
@@ -65,81 +65,81 @@ int DoIt(int argc, char *argv[]){
     double page_size_mb = sysconf(_SC_PAGE_SIZE) / 1024. / 1024.; // in case x86-64 is configured to use 2MB pages
 
     typename GreyImageType::Pointer input;
-	{
-	typedef itk::ImageFileReader<InputImageType> ReaderType;
-	typename ReaderType::Pointer reader = ReaderType::New();
- 
-	reader->SetFileName(argv[1]);
-	reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	reader->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{ 
-	    reader->Update();
-	    }
-	catch(itk::ExceptionObject &ex){ 
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+        {
+        typedef itk::ImageFileReader<InputImageType> ReaderType;
+        typename ReaderType::Pointer reader = ReaderType::New();
 
-	typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
-	typename SSType::Pointer ss = SSType::New();
-	if(atoi(argv[6]))
-	    ss->SetScale(-1); //invert by mul. with -1
-	else
-	    ss->SetScale(1); //just convert to GreyImageType
-	ss->SetInput(reader->GetOutput());
-	ss->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	ss->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{ 
-	    ss->Update();
-	    }
-	catch(itk::ExceptionObject &ex){ 
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	input= ss->GetOutput();
-	input->DisconnectPipeline();//will need its own Delete later on!
-	}
+        reader->SetFileName(argv[1]);
+        reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+        reader->AddObserver(itk::EndEvent(), eventCallbackITK);
+        try{
+            reader->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+
+        typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
+        typename SSType::Pointer ss = SSType::New();
+        if(atoi(argv[6]))
+            ss->SetScale(-1); //invert by mul. with -1
+        else
+            ss->SetScale(1); //just convert to GreyImageType
+        ss->SetInput(reader->GetOutput());
+        ss->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+        ss->AddObserver(itk::EndEvent(), eventCallbackITK);
+        try{
+            ss->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        input= ss->GetOutput();
+        input->DisconnectPipeline();//will need its own Delete later on!
+        }
     look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
-	{
-	typedef itk::ImageFileReader<LabelImageType> ReaderType;
-	typename ReaderType::Pointer reader = ReaderType::New();
- 
-	reader->SetFileName(argv[2]);
-	reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	reader->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{ 
-	    reader->Update();
-	    }
-	catch(itk::ExceptionObject &ex){ 
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+        {
+        typedef itk::ImageFileReader<LabelImageType> ReaderType;
+        typename ReaderType::Pointer reader = ReaderType::New();
 
-	typedef itk::StatisticsImageFilter<LabelImageType> FilterType;
-	typename FilterType::Pointer stat= FilterType::New();
-	stat->SetInput(reader->GetOutput());
-	//stat->InPlaceOn();//not available
-	stat->ReleaseDataFlagOn();
+        reader->SetFileName(argv[2]);
+        reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+        reader->AddObserver(itk::EndEvent(), eventCallbackITK);
+        try{
+            reader->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
 
-	stat->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	stat->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{ 
-	    stat->Update();
-	    }
-	catch(itk::ExceptionObject &ex){ 
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+        typedef itk::StatisticsImageFilter<LabelImageType> FilterType;
+        typename FilterType::Pointer stat= FilterType::New();
+        stat->SetInput(reader->GetOutput());
+        //stat->InPlaceOn();//not available
+        stat->ReleaseDataFlagOn();
 
-	std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
+        stat->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+        stat->AddObserver(itk::EndEvent(), eventCallbackITK);
+        try{
+            stat->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
 
-	labelCnt= stat->GetMaximum();
-	labelImg= stat->GetOutput();
-	labelImg->DisconnectPipeline();//will need its own Delete later on!
-	}
+        std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
+
+        labelCnt= stat->GetMaximum();
+        labelImg= stat->GetOutput();
+        labelImg->DisconnectPipeline();//will need its own Delete later on!
+        }
     look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     bool ws0_conn= true;//true reduces amount of watersheds
@@ -160,97 +160,97 @@ int DoIt(int argc, char *argv[]){
     ws->SetMarkerImage(labelImg);
     ws->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     ws->AddObserver(itk::EndEvent(), eventCallbackITK);
-    ws->Update(); 
+    ws->Update();
 
     look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
     if(NumberOfExtraWS > 0){
 
-	    {//scoped for better consistency
-	    // extract the watershed lines and combine with the orginal markers
-	    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-	    typename ThreshType::Pointer th = ThreshType::New();
-	    th->SetUpperThreshold(0);
-	    th->SetOutsideValue(0);
-	    // set the inside value to the number of markers + 1
-	    th->SetInsideValue(labelCnt + 1);
-	    th->SetInput(ws->GetOutput());
-	    th->Update();
-	    borderImg= th->GetOutput();
-	    borderImg->DisconnectPipeline();
-	    }
+            {//scoped for better consistency
+            // extract the watershed lines and combine with the orginal markers
+            typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
+            typename ThreshType::Pointer th = ThreshType::New();
+            th->SetUpperThreshold(0);
+            th->SetOutsideValue(0);
+            // set the inside value to the number of markers + 1
+            th->SetInsideValue(labelCnt + 1);
+            th->SetInput(ws->GetOutput());
+            th->Update();
+            borderImg= th->GetOutput();
+            borderImg->DisconnectPipeline();
+            }
 
-	look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	// to combine the markers again
-	typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-	typename AddType::Pointer adder = AddType::New();
-	adder->InPlaceOn();
-	adder->ReleaseDataFlagOn();
+        look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+        // to combine the markers again
+        typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
+        typename AddType::Pointer adder = AddType::New();
+        adder->InPlaceOn();
+        adder->ReleaseDataFlagOn();
 
-	// to create gradient magnitude image
-	typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
-	typename GMType::Pointer gm = GMType::New();
+        // to create gradient magnitude image
+        typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
+        typename GMType::Pointer gm = GMType::New();
 
-	gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	gm->AddObserver(itk::EndEvent(), eventCallbackITK);
-	//gm->InPlaceOn();//not available
-	//gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
-	gradientImg= input;
-	input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
+        gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+        gm->AddObserver(itk::EndEvent(), eventCallbackITK);
+        //gm->InPlaceOn();//not available
+        //gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
+        gradientImg= input;
+        input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
 
-	ws->SetMarkWatershedLine(false); //no use for a border in higher stages
-	ws->SetFullyConnected(ws_conn); 
-	//ws->InPlaceOn();//not available
-	ws->ReleaseDataFlagOn();
+        ws->SetMarkWatershedLine(false); //no use for a border in higher stages
+        ws->SetFullyConnected(ws_conn);
+        //ws->InPlaceOn();//not available
+        ws->ReleaseDataFlagOn();
 
-	// to delete the background label
-	typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
-	typename ChangeLabType::Pointer ch= ChangeLabType::New();
-	ch->SetChange(labelCnt + 1, 0);
-	ch->InPlaceOn();
-	ch->ReleaseDataFlagOn();//will be handled by adder if adder->InPlaceOn() AND used for adder->SetInput1
+        // to delete the background label
+        typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
+        typename ChangeLabType::Pointer ch= ChangeLabType::New();
+        ch->SetChange(labelCnt + 1, 0);
+        ch->InPlaceOn();
+        ch->ReleaseDataFlagOn();//will be handled by adder if adder->InPlaceOn() AND used for adder->SetInput1
 
-	std::cerr << "Starting extra runs..." << std::endl;
+        std::cerr << "Starting extra runs..." << std::endl;
 
-	for(char i= 0; i < NumberOfExtraWS; i++){
-	    //// DisconnectPipeline() on outputs does not make sense here becauses:
-	    //// - the filter it belongs to is not scoped to the loop
-	    //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
+        for(char i= 0; i < NumberOfExtraWS; i++){
+            //// DisconnectPipeline() on outputs does not make sense here becauses:
+            //// - the filter it belongs to is not scoped to the loop
+            //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
 
-	    // Add the marker image to the watershed line image
-	    //// labelImg will not be needed again afterwards
-	    //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
-	    //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
-	    adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
-	    adder->SetInput2(borderImg);
-	    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
-	    markerImg= adder->GetOutput();
-	    //markerImg->DisconnectPipeline();
-	    //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
-	    
-	    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	    // compute a gradient
-	    gm->SetInput(gradientImg);
-	    gm->Update();
-	    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
-	    gradientImg= gm->GetOutput();
-	    gradientImg->DisconnectPipeline();
+            // Add the marker image to the watershed line image
+            //// labelImg will not be needed again afterwards
+            //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
+            //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
+            adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
+            adder->SetInput2(borderImg);
+            adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
+            markerImg= adder->GetOutput();
+            //markerImg->DisconnectPipeline();
+            //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
+        
+            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            // compute a gradient
+            gm->SetInput(gradientImg);
+            gm->Update();
+            //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
+            gradientImg= gm->GetOutput();
+            gradientImg->DisconnectPipeline();
 
-	    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	    // Now apply higher order watershed
-	    ws->SetInput(gradientImg);
-	    ws->SetMarkerImage(markerImg);
-	    ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
+            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            // Now apply higher order watershed
+            ws->SetInput(gradientImg);
+            ws->SetMarkerImage(markerImg);
+            ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
-	    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	    // delete the background label
-	    ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
-	    ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
-	    labelImg= ch->GetOutput();
-	    //labelImg->DisconnectPipeline();
-	    }
-	}
+            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            // delete the background label
+            ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
+            ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
+            labelImg= ch->GetOutput();
+            //labelImg->DisconnectPipeline();
+            }
+        }
     else
-	labelImg= ws->GetOutput();
+        labelImg= ws->GetOutput();
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -260,10 +260,10 @@ int DoIt(int argc, char *argv[]){
     writer->SetUseCompression(atoi(argv[4]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     writer->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{ 
+    try{
         writer->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
+    catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
@@ -334,7 +334,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   int res= 0;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
-    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX 
+    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
   switch (pixelType){
   case itk::ImageIOBase::SCALAR:{
@@ -361,7 +361,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -379,10 +379,10 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
   case 3:
     res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
     break;
-  default: 
+  default:
     std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
     break;
-  }//switch 
+  }//switch
   return res;
 }
 
@@ -407,29 +407,29 @@ void GetImageType (std::string fileName,
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
 
-    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;  
+    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
     std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
-    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl; 
-    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl; 
-    std::cerr << "pixel type: " << pixelType << std::endl << std::endl; 
+    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
+    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
+    std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
 
     }
-  
+
 
 
 int main(int argc, char *argv[]){
     if ( argc != 7 ){
-	std::cerr << "Missing Parameters: "
-		  << argv[0]
-		  << " Input_Image"
-		  << " Marker_Image"
-		  << " Output_Image"
-		  << " compress"
-		  << " NumberOfExtraWS invert"
-    		  << std::endl;
+        std::cerr << "Missing Parameters: "
+                  << argv[0]
+                  << " Input_Image"
+                  << " Marker_Image"
+                  << " Output_Image"
+                  << " compress"
+                  << " NumberOfExtraWS invert"
+                      << std::endl;
 
-	return EXIT_FAILURE;
-	}
+        return EXIT_FAILURE;
+        }
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
@@ -444,7 +444,7 @@ int main(int argc, char *argv[]){
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
         }
- 
+
     return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
     }
 
