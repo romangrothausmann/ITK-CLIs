@@ -94,7 +94,7 @@ int DoIt(int argc, char *argv[]){
         input= ss->GetOutput();
         input->DisconnectPipeline();//will need its own Delete later on!
         }
-    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
@@ -134,7 +134,7 @@ int DoIt(int argc, char *argv[]){
         labelImg= stat->GetOutput();
         labelImg->DisconnectPipeline();//will need its own Delete later on!
         }
-    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= false;
@@ -156,7 +156,7 @@ int DoIt(int argc, char *argv[]){
     ws->AddObserver(itk::EndEvent(), eventCallbackITK);
     ws->Update();
 
-    look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
     if(NumberOfExtraWS > 0){
 
             {//scoped for better consistency
@@ -173,7 +173,7 @@ int DoIt(int argc, char *argv[]){
             borderImg->DisconnectPipeline();
             }
 
-        look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+        look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
         // to combine the markers again
         typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
         typename AddType::Pointer adder = AddType::New();
@@ -222,7 +222,7 @@ int DoIt(int argc, char *argv[]){
             //markerImg->DisconnectPipeline();
             //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
 
-            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 	    gradientImg->ReleaseDataFlagOn();
             // compute a gradient
             gm->SetInput(gradientImg);
@@ -231,14 +231,14 @@ int DoIt(int argc, char *argv[]){
             gradientImg= gm->GetOutput();
             gradientImg->DisconnectPipeline();//segfaults without! Why?
 
-            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 	    markerImg->ReleaseDataFlagOn();
             // Now apply higher order watershed
             ws->SetInput(gradientImg);
             ws->SetMarkerImage(markerImg);
             ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
-            look_up_our_self(&usage); printf("vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
             // delete the background label
             ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
             ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
