@@ -281,3 +281,8 @@ SET(CurrentExe "resample_SDI")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "fill_holes")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
