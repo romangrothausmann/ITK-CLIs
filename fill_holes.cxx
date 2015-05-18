@@ -115,6 +115,14 @@ int DoIt(int argc, char *argv[]){
     //// ShapeOpeningLabelMapFilter calls std::map::erase(key) which seems not only to delete the contents but also reduces the total count of elements, so GetNumberOfLabelObjects() reflects the actually contained elements even if not labelled consecutively
     std::cerr << "# of holes removed: " << labelizer->GetOutput()->GetNumberOfLabelObjects() - opening->GetOutput()->GetNumberOfLabelObjects() << std::endl;
 
+    //// report sizes of filled holes
+    opening->SetLambda(0);
+    opening->ReverseOrderingOn();
+    opening->Update();//has to be placed after writer->Update()!
+    for(unsigned int i = 0; i < opening->GetOutput()->GetNumberOfLabelObjects(); ++i){
+	std::cerr << "hole: " << std::setw(6) << +i << " size: " << +opening->GetOutput()->GetNthLabelObject(i)->GetNumberOfPixels() << std::endl; //::SizeValueType
+	}
+
     return EXIT_SUCCESS;
 
     }
