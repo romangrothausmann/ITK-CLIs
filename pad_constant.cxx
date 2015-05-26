@@ -30,6 +30,11 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
+    if( argc != 3 + 2*Dimension + 1){
+        fprintf(stderr, "3 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension);
+        return EXIT_FAILURE;
+        }
+
     typedef InputPixelType OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
