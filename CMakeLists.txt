@@ -286,3 +286,8 @@ SET(CurrentExe "fill_holes")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "analyse_binary")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
