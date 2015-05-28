@@ -1,44 +1,56 @@
-////program for
-//01: based on template.cxx
+////program for itkVesselEnhancingDiffusion3DImageFilter
+///? a rewrite of (Enquobahrie2007) Enquobahrie, A.; Ibáñez, L.; Bullitt, E.; Aylward, S. (2007), which was never included in ITK? but ported to ITK4: https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
+///? based on (Manniesing2006) Manniesing, R.; Viergever, M. A.; Niessen, W. J. (2006) Vessel enhancing diffusion: A scale space representation of vessel structures
+//01: based on template.cxx, vtkVmtk/Segmentation/vtkvmtkVesselEnhancingDiffusion3DImageFilter.h and https://github.com/InsightSoftwareConsortium/LesionSizingToolkit/blob/master/test/itkVEDTest.cxx
 
-
-#include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkVesselEnhancingDiffusion3DImageFilter.h>//ITK-4.7.0: Module LesionSizingToolkit
 #include <itkImageFileWriter.h>
 
+/*
+enum{
+    EQUISPACED_STEPS,
+    LOGARITHMIC_STEPS
+    };
 
+double ComputeSigmaValue(int scaleLevel, int SigmaStepMethod){
+    double sigmaValue;
 
-// template<typename InputImageType, typename OutputImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
+    if (this->NumberOfSigmaSteps < 2)
+	return this->SigmaMin;
 
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
+    switch (SigmaStepMethod){
+    case EQUISPACED_STEPS:{
+        double stepSize = (SigmaMax - SigmaMin) / (NumberOfSigmaSteps - 1);
+        if (stepSize < 1e-10)
+	    stepSize = 1e-10;
+        sigmaValue = SigmaMin + stepSize * scaleLevel;
+	} break;
+    case LOGARITHMIC_STEPS:{
+	double stepSize = (vcl_log(SigmaMax) - vcl_log(SigmaMin)) / (NumberOfSigmaSteps - 1);
+	if (stepSize < 1e-10)
+	    stepSize = 1e-10;
+	sigmaValue = vcl_exp(vcl_log (SigmaMin) + stepSize * scaleLevel);
+	} break;
+    default:
+	vtkErrorMacro("Error: undefined sigma step method.");
+	sigmaValue = 0.0;
+	break;
+	}
 
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-//         std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
-
-
+    return sigmaValue;
+    }
+*/
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -58,18 +70,37 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    const double SigmaMin= atof(argv[4]);
+    const double SigmaMax= atof(argv[5]);
+    const int NumberOfSigmaSteps= atoi(argv[6]);
 
 
-    typedef itk::<InputImageType> FilterType;
+
+    typedef itk::VesselEnhancingDiffusion3DImageFilter<InputPixelType, Dimension> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    filter->SetDefaultPars();//sets default values
+    // filter->SetAlpha();
+    // filter->SetBeta();
+    // filter->SetGamma();
+    // filter->SetEpsilon();
+    // filter->SetOmega();//? AnisotropicDiffusionVesselEnhancementImageFilter: SetWStrength
+    filter->SetIterations(atoi(argv[7]));
+    filter->SetDarkObjectLightBackground(atoi(argv[8]));
+    // filter->SetRecalculateVesselness();
+    // filter->SetSensitivity();
+    // filter->SetTimeStep();
+
+    //// AnisotropicDiffusionVesselEnhancementImageFilter: SetSigmaMin, SetSigmaMax, SetNumberOfSigmaSteps
+    std::vector<typename FilterType::Precision> scales;
+    for (int i=0; i < NumberOfSigmaSteps; i++)
+	scales.push_back(SigmaMin + (SigmaMax - SigmaMin) / (NumberOfSigmaSteps - 1) * i);
+
+    filter->SetScales(scales);
+    filter->VerboseOn();
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -79,7 +110,7 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -87,8 +118,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -106,12 +136,7 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
+    //// even though VesselEnhancingDiffusion3DImageFilter is based on the Hessian matrix (which can be computed for 2D) it directly depends on 3 eigen-values, so only 3D is supported!
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
@@ -132,22 +157,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -182,6 +191,7 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef short InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
+/*
     case itk::ImageIOBase::UINT:{         // uint32_t
         typedef unsigned int InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
@@ -206,6 +216,7 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef double InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
+*/
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -245,12 +256,17 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 9 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " sigmaMin"
+                  << " sigmaMax"
+                  << " sigmaSteps"
+                  << " iterations"
+                  << " darkObject"
                   << std::endl;
 
         return EXIT_FAILURE;
