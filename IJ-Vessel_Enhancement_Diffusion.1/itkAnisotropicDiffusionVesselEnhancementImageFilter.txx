@@ -301,9 +301,12 @@ AnisotropicDiffusionVesselEnhancementImageFilter<TInputImage, TOutputImage>
   HessianWriter->Update(); 
 #endif
 
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   m_MultiScaleVesselnessFilter->SetInput( this->GetOutput() );
   m_MultiScaleVesselnessFilter->Modified();
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   m_MultiScaleVesselnessFilter->Update();
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
 
 #ifdef INTERMEDIATE_OUTPUTS
   typedef ImageFileWriter< typename MultiScaleVesselnessFilterType::OutputImageType > VesselnessImageWriterType;
@@ -315,6 +318,7 @@ AnisotropicDiffusionVesselEnhancementImageFilter<TInputImage, TOutputImage>
   VesselenssImageWriter->SetInput( m_MultiScaleVesselnessFilter->GetOutput());
   VesselenssImageWriter->Update(); 
 #endif
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
 
   // Hessian matrix 
   typename HessianFilterType::OutputImageType::Pointer   HessianOutputImage;
@@ -331,9 +335,11 @@ AnisotropicDiffusionVesselEnhancementImageFilter<TInputImage, TOutputImage>
   typedef  itk::ImageRegionIterator< OutputMatrixImageType > 
                                     EigenVectorMatrixIteratorType;
 
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   EigenVectorMatrixIteratorType   
                ig(eigenVectorMatrixOutputImage, eigenVectorMatrixOutputImage->GetLargestPossibleRegion());
 
+  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   ig.GoToBegin();
 
 #ifdef INTERMEDIATE_OUTPUTS
@@ -377,14 +383,13 @@ AnisotropicDiffusionVesselEnhancementImageFilter<TInputImage, TOutputImage>
 
   it.GoToBegin();
 
-
   /* For Debugging */
   /* ======================= */
   ImageRegionIterator<OutputImageType>  om(this->GetOutput(),
                                            this->GetOutput()->GetLargestPossibleRegion());
   om.GoToBegin();
 
-//  std::cout << "Generate tensor matrix: " << std::endl;
+  std::cout << "Generate tensor matrix: " << std::endl;
  
   //DEBUG: DELETE LATER
   // Generate a vector image of the eigen values
