@@ -66,6 +66,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
     filter->SetSize(outputSize);
+    filter->SetOutputOrigin(input->GetOrigin());//essential for images created with e.g. itkExtractImageFilter
+    filter->SetOutputDirection(input->GetDirection());
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     //filter->InPlaceOn();//not available
 
