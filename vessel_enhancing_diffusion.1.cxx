@@ -1,55 +1,24 @@
-////program for itkVesselEnhancingDiffusion3DImageFilter
-///? a rewrite of (Enquobahrie2007) Enquobahrie, A.; Ibáñez, L.; Bullitt, E.; Aylward, S. (2007), which was never included in ITK? but ported to ITK4: https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
-///? based on (Manniesing2006) Manniesing, R.; Viergever, M. A.; Niessen, W. J. (2006) Vessel enhancing diffusion: A scale space representation of vessel structures
-//01: based on template.cxx, vtkVmtk/Segmentation/vtkvmtkVesselEnhancingDiffusion3DImageFilter.h and https://github.com/InsightSoftwareConsortium/LesionSizingToolkit/blob/master/test/itkVEDTest.cxx
+////program for itkAnisotropicDiffusionVesselEnhancementImageFilter.h
+///as published by (Enquobahrie2007) Enquobahrie, A.; Ibáñez, L.; Bullitt, E.; Aylward, S. (2007), which was never included in ITK? but ported to ITK4: https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
+///based on (Manniesing2006) Manniesing, R.; Viergever, M. A.; Niessen, W. J. (2006) Vessel enhancing diffusion: A scale space representation of vessel structures
+//01: based on vessel_enhancing_diffusion.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkVesselEnhancingDiffusion3DImageFilter.h>//ITK-4.7.0: Module LesionSizingToolkit
+#include <itkCastImageFilter.h>
+#include "IJ-Vessel_Enhancement_Diffusion.1/itkAnisotropicDiffusionVesselEnhancementImageFilter.h" //from https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
 #include <itkImageFileWriter.h>
 
-/*
-enum{
-    EQUISPACED_STEPS,
-    LOGARITHMIC_STEPS
-    };
-
-double ComputeSigmaValue(int scaleLevel, int SigmaStepMethod){
-    double sigmaValue;
-
-    if (this->NumberOfSigmaSteps < 2)
-	return this->SigmaMin;
-
-    switch (SigmaStepMethod){
-    case EQUISPACED_STEPS:{
-        double stepSize = (SigmaMax - SigmaMin) / (NumberOfSigmaSteps - 1);
-        if (stepSize < 1e-10)
-	    stepSize = 1e-10;
-        sigmaValue = SigmaMin + stepSize * scaleLevel;
-	} break;
-    case LOGARITHMIC_STEPS:{
-	double stepSize = (vcl_log(SigmaMax) - vcl_log(SigmaMin)) / (NumberOfSigmaSteps - 1);
-	if (stepSize < 1e-10)
-	    stepSize = 1e-10;
-	sigmaValue = vcl_exp(vcl_log (SigmaMin) + stepSize * scaleLevel);
-	} break;
-    default:
-	vtkErrorMacro("Error: undefined sigma step method.");
-	sigmaValue = 0.0;
-	break;
-	}
-
-    return sigmaValue;
-    }
-*/
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType;
+    typedef double WorkPixelType;
+    typedef double OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<WorkPixelType, Dimension>   WorkImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -75,30 +44,33 @@ int DoIt(int argc, char *argv[]){
     const int NumberOfSigmaSteps= atoi(argv[6]);
 
 
+    typedef itk::CastImageFilter<InputImageType, WorkImageType> CastFilterType;
+    typename CastFilterType::Pointer castFilter = CastFilterType::New();
+    castFilter->SetInput(input);
+    castFilter->ReleaseDataFlagOn();//to save memory
+    castFilter->Update();
 
-    typedef itk::VesselEnhancingDiffusion3DImageFilter<InputPixelType, Dimension> FilterType;
+
+    typedef itk::AnisotropicDiffusionVesselEnhancementImageFilter<WorkImageType, WorkImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(castFilter->GetOutput());
     filter->ReleaseDataFlagOn();
-    filter->SetDefaultPars();//sets default values
+    filter->InPlaceOn();
     // filter->SetAlpha();
     // filter->SetBeta();
     // filter->SetGamma();
-    // filter->SetEpsilon();
+    filter->SetEpsilon(0.01);
     // filter->SetOmega();//? AnisotropicDiffusionVesselEnhancementImageFilter: SetWStrength
-    filter->SetIterations(atoi(argv[7]));
-    filter->SetDarkObjectLightBackground(atoi(argv[8]));
+    filter->SetNumberOfIterations(atoi(argv[7]));
     // filter->SetRecalculateVesselness();
-    // filter->SetSensitivity();
+    filter->SetSensitivity(5.0);
+    filter->SetWStrength(25.0);
     // filter->SetTimeStep();
 
-    //// AnisotropicDiffusionVesselEnhancementImageFilter: SetSigmaMin, SetSigmaMax, SetNumberOfSigmaSteps
-    std::vector<typename FilterType::Precision> scales;
-    for (int i=0; i < NumberOfSigmaSteps; i++)
-	scales.push_back(SigmaMin + (SigmaMax - SigmaMin) / (NumberOfSigmaSteps - 1) * i);
-
-    filter->SetScales(scales);
-    filter->VerboseOn();
+    filter->SetSigmaMin(SigmaMin);
+    filter->SetSigmaMax(SigmaMax);
+    filter->SetNumberOfSigmaSteps(NumberOfSigmaSteps);
+    filter->DebugOn();
 
     FilterWatcher watcher1(filter);
     try{
@@ -191,7 +163,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef short InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-/*
     case itk::ImageIOBase::UINT:{         // uint32_t
         typedef unsigned int InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
@@ -216,7 +187,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef double InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-*/
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
