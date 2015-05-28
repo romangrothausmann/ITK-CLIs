@@ -74,6 +74,10 @@ int DoIt(int argc, char *argv[]){
     const double SigmaMax= atof(argv[5]);
     const int NumberOfSigmaSteps= atoi(argv[6]);
 
+    if (NumberOfSigmaSteps < 2){
+	std::cerr << "sigmaSteps has to be greater than 1!" << std::endl;
+	return EXIT_FAILURE;
+	}
 
 
     typedef itk::VesselEnhancingDiffusion3DImageFilter<InputPixelType, Dimension> FilterType;
