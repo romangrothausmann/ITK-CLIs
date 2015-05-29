@@ -1,24 +1,21 @@
-////program for itkAnisotropicDiffusionVesselEnhancementImageFilter.h
+////program for itkMultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter
 ///as published by (Enquobahrie2007) Enquobahrie, A.; Ibáñez, L.; Bullitt, E.; Aylward, S. (2007), which was never included in ITK? but ported to ITK4: https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
 ///based on (Manniesing2006) Manniesing, R.; Viergever, M. A.; Niessen, W. J. (2006) Vessel enhancing diffusion: A scale space representation of vessel structures
-//01: based on vessel_enhancing_diffusion.cxx
+//01: based on vessel_enhancing_diffusion.1.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkCastImageFilter.h>
-#include "IJ-Vessel_Enhancement_Diffusion.1/itkAnisotropicDiffusionVesselEnhancementImageFilter.h" //from https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
+#include "IJ-Vessel_Enhancement_Diffusion.1/itkMultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter.h" //from https://github.com/rcasero/gerardus/tree/master/cpp/src/third-party/IJ-Vessel_Enhancement_Diffusion.1
 #include <itkImageFileWriter.h>
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef double WorkPixelType;
     typedef double OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<WorkPixelType, Dimension>   WorkImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -44,28 +41,13 @@ int DoIt(int argc, char *argv[]){
     const int NumberOfSigmaSteps= atoi(argv[6]);
 
 
-    typedef itk::CastImageFilter<InputImageType, WorkImageType> CastFilterType;
-    typename CastFilterType::Pointer castFilter = CastFilterType::New();
-    castFilter->SetInput(input);
-    castFilter->ReleaseDataFlagOn();//to save memory
-    castFilter->Update();
-
-
-    typedef itk::AnisotropicDiffusionVesselEnhancementImageFilter<WorkImageType, WorkImageType> FilterType;
+    typedef itk::MultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(castFilter->GetOutput());
+    filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
     // filter->SetAlpha();
     // filter->SetBeta();
     // filter->SetGamma();
-    filter->SetEpsilon(0.01);
-    // filter->SetOmega();//? AnisotropicDiffusionVesselEnhancementImageFilter: SetWStrength
-    filter->SetNumberOfIterations(atoi(argv[7]));
-    // filter->SetRecalculateVesselness();
-    filter->SetSensitivity(5.0);
-    filter->SetWStrength(25.0);
-    // filter->SetTimeStep();
 
     filter->SetSigmaMin(SigmaMin);
     filter->SetSigmaMax(SigmaMax);
@@ -226,7 +208,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 9 ){
+    if ( argc != 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -235,8 +217,6 @@ int main(int argc, char *argv[]){
                   << " sigmaMin"
                   << " sigmaMax"
                   << " sigmaSteps"
-                  << " iterations"
-                  << " darkObject"
                   << std::endl;
 
         return EXIT_FAILURE;

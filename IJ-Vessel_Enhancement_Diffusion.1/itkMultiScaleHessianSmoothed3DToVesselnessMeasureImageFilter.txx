@@ -119,17 +119,14 @@ MultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter
     scaleLevel++;
     } 
 
-  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   //Write out the best response to the output image
   ImageRegionIterator<UpdateBufferType> 
                it(m_UpdateBuffer,m_UpdateBuffer->GetLargestPossibleRegion());
   it.GoToBegin();
-  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
 
   ImageRegionIterator<TOutputImage> oit(this->GetOutput(),
                           this->GetOutput()->GetLargestPossibleRegion());
   oit.GoToBegin();
-  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
 
   while(!oit.IsAtEnd())
     {
@@ -146,7 +143,6 @@ MultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter
 ::UpdateMaximumResponse()
 {
 
-  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   ImageRegionIterator<UpdateBufferType> 
             oit(m_UpdateBuffer,m_UpdateBuffer->GetLargestPossibleRegion());
 
@@ -155,7 +151,6 @@ MultiScaleHessianSmoothed3DToVesselnessMeasureImageFilter
   typedef typename VesselnessFilterType::OutputImageType   
                                          VesselnessOutputImageType;
 
-  fprintf(stderr, "%s, %d\n", __FILE__,__LINE__);
   ImageRegionIterator<VesselnessOutputImageType> 
             it(m_VesselnessFilter->GetOutput(),
             this->m_VesselnessFilter->GetOutput()->GetLargestPossibleRegion());
