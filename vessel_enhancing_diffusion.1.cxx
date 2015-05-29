@@ -60,9 +60,7 @@ int DoIt(int argc, char *argv[]){
     // filter->SetBeta();
     // filter->SetGamma();
     filter->SetEpsilon(0.01);
-    // filter->SetOmega();//? AnisotropicDiffusionVesselEnhancementImageFilter: SetWStrength
     filter->SetNumberOfIterations(atoi(argv[7]));
-    // filter->SetRecalculateVesselness();
     filter->SetSensitivity(5.0);
     filter->SetWStrength(25.0);
     // filter->SetTimeStep();
@@ -226,7 +224,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 9 ){
+    if ( argc != 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -236,7 +234,6 @@ int main(int argc, char *argv[]){
                   << " sigmaMax"
                   << " sigmaSteps"
                   << " iterations"
-                  << " darkObject"
                   << std::endl;
 
         return EXIT_FAILURE;
