@@ -64,22 +64,37 @@ int DoIt(int argc, char *argv[]){
     // produce consecutive labels, so we can use a for loop and GetLabelObject() method to retrieve
     // the label objects. If the labels are not consecutive, the GetNthLabelObject() method must be
     // use instead of GetLabelObject(), or an iterator on the label object container of the label map.
+    //// list of quantities see: http://www.itk.org/Doxygen/html/classitk_1_1ShapeLabelObject.html
     typename LabelMapType::Pointer labelMap = filter->GetOutput();
-    std::cout << "#index\tbary_x\tbary_y\tbary_z\ta\tb\tc\ta_x\ta_y\ta_z\tb_x\tb_y\tb_z\tc_x\tc_y\tc_z\tvoxel\tV";
+    std::cout << "#index";
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tbbIndex_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tbbSize_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tbary_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tellALength_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        for (unsigned int j= 0; j < Dimension; j++)
+            std::cout << "\tellAOri_" << i+1 << j+1;
+    std::cout << "\tvoxel\tVphy";
     if (cp)
-        std::cout << "\tA";
+        std::cout << "\tAphy";
     std::cout << std::endl;
 
     for(LabelType label=1; label <= labelMap->GetNumberOfLabelObjects(); label++){
         const LabelObjectType* labelObject= labelMap->GetLabelObject(label);
         std::cout
-            << label << "\t"
-            << labelObject->GetCentroid()[0] << "\t"
-            << labelObject->GetCentroid()[1] << "\t"
-            << labelObject->GetCentroid()[2] << "\t"
-            << labelObject->GetEquivalentEllipsoidDiameter()[0] << "\t"
-            << labelObject->GetEquivalentEllipsoidDiameter()[1] << "\t"
-            << labelObject->GetEquivalentEllipsoidDiameter()[2] << "\t";
+            << label << "\t";
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << labelObject->GetBoundingBox().GetIndex()[i] << "\t";
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << labelObject->GetBoundingBox().GetSize()[i] << "\t";
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << labelObject->GetCentroid()[i] << "\t";
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << labelObject->GetEquivalentEllipsoidDiameter()[i] << "\t";
         for (unsigned int i= 0; i < labelObject->GetPrincipalAxes().GetVnlMatrix().columns(); i++)
             for (unsigned int j= 0; j < labelObject->GetPrincipalAxes().GetVnlMatrix().rows(); j++)
                 std::cout << labelObject->GetPrincipalAxes()[i][j] << "\t";
@@ -93,7 +108,7 @@ int DoIt(int argc, char *argv[]){
             << labelObject->GetNumberOfPixels() << "\t"
             << labelObject->GetPhysicalSize();
         if (cp)
-            std::cout << "\t" << labelObject->GetPerimeter();
+            std::cout << "\t" << labelObject->GetPerimeter();//takes physical voxel size into account!!!
         std::cout << std::endl;
         }
 
