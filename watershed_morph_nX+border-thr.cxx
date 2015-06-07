@@ -1,5 +1,5 @@
 ////program for iterative itkMorphologicalWatershedFromMarkersImageFilter
-//01: based on template_02.cxx
+//01: based on watershed_morph_nX.cxx, added masking of borderImg
 
 #include <string>
 #include <sstream>
@@ -92,8 +92,8 @@ int DoIt(int argc, char *argv[]){
     uint8_t NumberOfExtraWS= atoi(argv[6]);
     char* interMedOutPrefix= NULL;
 
-    if(argc == 8)
-        interMedOutPrefix= argv[7];
+    if(argc == 9)
+        interMedOutPrefix= argv[8];
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -181,8 +181,31 @@ int DoIt(int argc, char *argv[]){
 	    th->SetInsideValue(labelCnt + 1);
 	    th->SetInput(ws->GetOutput());
 	    th->Update();
-	    borderImg= th->GetOutput();
+
+	    typedef itk::BinaryThresholdImageFilter<InputImageType, MaskImageType> ThreshType2;
+	    typename ThreshType2::Pointer th2 = ThreshType2::New();
+	    th2->SetUpperThreshold(atof(argv[7]));
+	    th2->SetInput(reader->GetOutput());
+	    if(!atoi(argv[4])){ th2->SetOutsideValue(1); th2->SetInsideValue(0); }
+	    else{ th2->SetOutsideValue(0); th2->SetInsideValue(1); }
+	    th2->Update();
+
+	    typedef itk::MaskImageFilter<LabelImageType, MaskImageType, LabelImageType> MaskType;
+	    typename MaskType::Pointer mask = MaskType::New();
+	    mask->SetInput(th->GetOutput());
+	    mask->SetMaskImage(th2->GetOutput());
+	    mask->ReleaseDataFlagOn();
+	    mask->InPlaceOn();
+	    mask->Update();
+
+	    borderImg= mask->GetOutput();
 	    borderImg->DisconnectPipeline();
+
+	    if(interMedOutPrefix){
+		lwriter->SetFileName(std::string(interMedOutPrefix) + "_bimg.mha");
+		lwriter->SetInput(borderImg);
+		lwriter->Update();
+		}
 	    }
 
 	// to combine the markers again
@@ -393,13 +416,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 7 ){
+    if ( argc < 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " invert level WS-extra-runs"
+                  << " threshold"
                   << " interMedOutPrefix"
                   << std::endl;
 

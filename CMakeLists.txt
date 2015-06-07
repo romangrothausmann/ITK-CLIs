@@ -137,6 +137,11 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+SET(CurrentExe "watershed_morph_nX+border-thr")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 SET(CurrentExe "watershed_morph_nX_marker_float")
 ADD_EXECUTABLE(${CurrentExe}  "watershed_morph_nX_marker.cxx")
 SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT" LINK_FLAGS "-lprocps")#ADD_DEFINITIONS(-DUSE_FLOAT) is not target specific!
