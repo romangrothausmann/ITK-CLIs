@@ -17,7 +17,6 @@
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkChangeLabelImageFilter.h>
-#include <itkMaskImageFilter.h>
 
 
 

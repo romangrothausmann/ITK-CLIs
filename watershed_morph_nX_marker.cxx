@@ -17,7 +17,6 @@
 #include <itkAddImageFilter.h>
 #include <itkGradientMagnitudeImageFilter.h>
 #include <itkChangeLabelImageFilter.h>
-#include <itkMaskImageFilter.h>
 
 
 
