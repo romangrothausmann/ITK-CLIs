@@ -164,81 +164,85 @@ int DoIt(int argc, char *argv[]){
     ws->AddObserver(itk::AnyEvent(), eventCallbackITK);
     ws->Update();
 
-    if(interMedOutPrefix){
-        lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws0.mha");
-        lwriter->SetInput(ws->GetOutput());
-        lwriter->Update();
+    if(NumberOfExtraWS > 0){
+	if(interMedOutPrefix){
+	    lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws0.mha");
+	    lwriter->SetInput(ws->GetOutput());
+	    lwriter->Update();
+	    }
+
+	    {//scoped for better consistency
+	    // extract the watershed lines and combine with the orginal markers
+	    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
+	    typename ThreshType::Pointer th = ThreshType::New();
+	    th->SetUpperThreshold(0);
+	    th->SetOutsideValue(0);
+	    // set the inside value to the number of markers + 1
+	    th->SetInsideValue(labelCnt + 1);
+	    th->SetInput(ws->GetOutput());
+	    th->Update();
+	    borderImg= th->GetOutput();
+	    borderImg->DisconnectPipeline();
+	    }
+
+	// to combine the markers again
+	typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
+	typename AddType::Pointer adder = AddType::New();
+
+	// to create gradient magnitude image
+	typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
+	typename GMType::Pointer gm = GMType::New();
+
+	gm->AddObserver(itk::AnyEvent(), eventCallbackITK);
+	gradientImg= input;
+
+	ws->SetMarkWatershedLine(false); //no use for a border in higher stages
+	ws->SetFullyConnected(ws_conn);
+
+	// to delete the background label
+	typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
+	typename ChangeLabType::Pointer ch= ChangeLabType::New();
+	ch->SetChange(labelCnt + 1, 0);
+
+
+	for(char i= 0; i < NumberOfExtraWS; i++){
+
+	    // Add the marker image to the watershed line image
+	    adder->SetInput1(borderImg);
+	    adder->SetInput2(labelImg);
+	    adder->Update();
+	    markerImg= adder->GetOutput();
+	    markerImg->DisconnectPipeline();
+
+	    // compute a gradient
+	    gm->SetInput(gradientImg);
+	    gm->Update();
+	    gradientImg= gm->GetOutput();
+	    gradientImg->DisconnectPipeline();
+
+	    // Now apply higher order watershed
+	    ws->SetInput(gradientImg);
+	    ws->SetMarkerImage(markerImg);
+	    ws->Update();
+
+	    // delete the background label
+	    ch->SetInput(ws->GetOutput());
+	    ch->Update();
+	    labelImg= ch->GetOutput();
+	    labelImg->DisconnectPipeline();
+
+	    if(interMedOutPrefix){
+		std::stringstream sss;
+		sss << interMedOutPrefix << "_ws" << i+1 << ".mha";
+		lwriter->SetFileName(sss.str().c_str());
+		//lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws" + std::to_string(i+1) + ".mha");//c++11: std::to_string
+		lwriter->SetInput(labelImg);
+		lwriter->Update();
+		}
+	    }
         }
-
-        {//scoped for better consistency
-        // extract the watershed lines and combine with the orginal markers
-        typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-        typename ThreshType::Pointer th = ThreshType::New();
-        th->SetUpperThreshold(0);
-        th->SetOutsideValue(0);
-        // set the inside value to the number of markers + 1
-        th->SetInsideValue(labelCnt + 1);
-        th->SetInput(ws->GetOutput());
-        th->Update();
-        borderImg= th->GetOutput();
-        borderImg->DisconnectPipeline();
-        }
-
-    // to combine the markers again
-    typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-    typename AddType::Pointer adder = AddType::New();
-
-    // to create gradient magnitude image
-    typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
-    typename GMType::Pointer gm = GMType::New();
-
-    gm->AddObserver(itk::AnyEvent(), eventCallbackITK);
-    gradientImg= input;
-
-    ws->SetMarkWatershedLine(false); //no use for a border in higher stages
-    ws->SetFullyConnected(ws_conn);
-
-    // to delete the background label
-    typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
-    typename ChangeLabType::Pointer ch= ChangeLabType::New();
-    ch->SetChange(labelCnt + 1, 0);
-
-
-    for(char i= 0; i < NumberOfExtraWS; i++){
-
-        // Add the marker image to the watershed line image
-        adder->SetInput1(borderImg);
-        adder->SetInput2(labelImg);
-        adder->Update();
-        markerImg= adder->GetOutput();
-        markerImg->DisconnectPipeline();
-
-        // compute a gradient
-        gm->SetInput(gradientImg);
-        gm->Update();
-        gradientImg= gm->GetOutput();
-        gradientImg->DisconnectPipeline();
-
-        // Now apply higher order watershed
-        ws->SetInput(gradientImg);
-        ws->SetMarkerImage(markerImg);
-        ws->Update();
-
-        // delete the background label
-        ch->SetInput(ws->GetOutput());
-        ch->Update();
-        labelImg= ch->GetOutput();
-        labelImg->DisconnectPipeline();
-
-        if(interMedOutPrefix){
-            std::stringstream sss;
-            sss << interMedOutPrefix << "_ws" << i+1 << ".mha";
-            lwriter->SetFileName(sss.str().c_str());
-            //lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws" + std::to_string(i+1) + ".mha");//c++11: std::to_string
-            lwriter->SetInput(labelImg);
-            lwriter->Update();
-            }
-        }
+    else
+        labelImg= ws->GetOutput();
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
