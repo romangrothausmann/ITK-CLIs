@@ -82,8 +82,8 @@ int DoIt(int argc, char *argv[]){
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= false;
 
-    double MinRelFacetSize= atof(argv[4]);
-    uint8_t NumberOfExtraWS= atoi(argv[5]);
+    double MinRelFacetSize= atof(argv[5]);
+    uint8_t NumberOfExtraWS= atoi(argv[6]);
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -93,7 +93,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
     typename SSType::Pointer ss = SSType::New();
-    if(atoi(argv[3]))
+    if(atoi(argv[4]))
 	ss->SetScale(-1); //invert by mul. with -1
     else
 	ss->SetScale(1); //just convert to GreyImageType
@@ -209,8 +209,8 @@ int DoIt(int argc, char *argv[]){
 
     writer->SetFileName(argv[2]);
     writer->SetInput(labelImg);
-    writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[]));
+    //writer->UseCompressionOn();
+    writer->SetUseCompression(atoi(argv[3]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     writer->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
@@ -371,11 +371,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 7 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
+		  << " compress"
 		  << " invert level WS-extra-runs"
     		  << std::endl;
 
