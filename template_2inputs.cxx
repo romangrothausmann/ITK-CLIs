@@ -10,17 +10,21 @@
 
 
 
-// template<typename InputImageType, typename OutputImageType>
+// template<typename ReaderImageType, typename WriterImageType>
 // void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
 //     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
 
 //     if(itk::ProgressEvent().CheckEvent(&event))
 //         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
+//     else if(itk::StartEvent().CheckEvent(&event)){
+// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
+// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
+// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
+// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
+// 	}
 //     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-//         std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
+//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
 //     else if(itk::EndEvent().CheckEvent(&event))
 //         std::cerr << std::endl;
 //     }
