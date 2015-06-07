@@ -1,6 +1,8 @@
 ////program for iterative itkMorphologicalWatershedFromMarkersImageFilter
 //01: based on template_02.cxx
 
+#include <string>
+#include <sstream>
 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
@@ -34,14 +36,21 @@ int DoIt(int, char *argv[]);
 
 
 
+template<typename ReaderImageType, typename WriterImageType>
 void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
 
     if(itk::ProgressEvent().CheckEvent(&event))
         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
+    else if(itk::StartEvent().CheckEvent(&event)){
+        if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
+            std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName();//cast only works if reader was instanciated for ReaderImageType!
+        else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
+            std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
+        }
     else if(itk::EndEvent().CheckEvent(&event))
-        std::cerr << std::endl << std::flush;
+        std::cerr << std::endl;
     }
 
 
@@ -58,15 +67,14 @@ int DoIt(int argc, char *argv[]){
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
-    eventCallbackITK->SetCallback(FilterEventHandlerITK);
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType,LabelImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    reader->AddObserver(itk::EndEvent(), eventCallbackITK);
+    reader->AddObserver(itk::AnyEvent(), eventCallbackITK);
     try{
         reader->Update();
         }
@@ -82,6 +90,10 @@ int DoIt(int argc, char *argv[]){
 
     double MinRelFacetSize= atof(argv[5]);
     uint8_t NumberOfExtraWS= atoi(argv[6]);
+    char* interMedOutPrefix= NULL;
+
+    if(argc == 8)
+        interMedOutPrefix= argv[7];
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -89,12 +101,22 @@ int DoIt(int argc, char *argv[]){
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
 
+
+    typedef itk::ImageFileWriter<LabelImageType>  LWriterType;
+    typename LWriterType::Pointer lwriter = LWriterType::New();
+
+    lwriter->SetUseCompression(atoi(argv[3]));
+    lwriter->AddObserver(itk::AnyEvent(), eventCallbackITK);
+    //lwriter->SetInput(labelImg);//doing that before each update to not get confused
+
+
     typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
     typename SSType::Pointer ss = SSType::New();
     if(atoi(argv[4]))
         ss->SetScale(-1); //invert by mul. with -1
     else
         ss->SetScale(1); //just convert to GreyImageType
+    //ss->SetScale(atof(argv[4]));//abs(scaling) > 1 does not help gm to be more pronounced!
     ss->SetInput(reader->GetOutput());
     ss->Update();
     input= ss->GetOutput();
@@ -105,16 +127,14 @@ int DoIt(int argc, char *argv[]){
         hm->SetHeight(MinRelFacetSize);
         hm->SetFullyConnected(ws0_conn);
         hm->SetInput(input);
-        hm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-        hm->AddObserver(itk::EndEvent(), eventCallbackITK);
+        hm->AddObserver(itk::AnyEvent(), eventCallbackITK);
         hm->Update();
 
         typedef itk::RegionalMinimaImageFilter<GreyImageType, MaskImageType> RegMinType;
         typename RegMinType::Pointer rm = RegMinType::New();
         rm->SetFullyConnected(ws0_conn);
         rm->SetInput(hm->GetOutput());
-        rm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-        rm->AddObserver(itk::EndEvent(), eventCallbackITK);
+        rm->AddObserver(itk::AnyEvent(), eventCallbackITK);
         rm->Update();
 
         // connected component labelling
@@ -122,12 +142,17 @@ int DoIt(int argc, char *argv[]){
         typename CCType::Pointer labeller = CCType::New();
         labeller->SetFullyConnected(ws0_conn);
         labeller->SetInput(rm->GetOutput());
-        labeller->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-        labeller->AddObserver(itk::EndEvent(), eventCallbackITK);
+        labeller->AddObserver(itk::AnyEvent(), eventCallbackITK);
         labeller->Update();
         labelImg= labeller->GetOutput();
         labelImg->DisconnectPipeline();
         labelCnt= labeller->GetObjectCount();
+        }
+
+    if(interMedOutPrefix){
+        lwriter->SetFileName(std::string(interMedOutPrefix) + "_limg.mha");
+        lwriter->SetInput(labelImg);
+        lwriter->Update();
         }
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
@@ -136,9 +161,14 @@ int DoIt(int argc, char *argv[]){
     ws->SetFullyConnected(ws0_conn);
     ws->SetInput(input);
     ws->SetMarkerImage(labelImg);
-    ws->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    ws->AddObserver(itk::EndEvent(), eventCallbackITK);
+    ws->AddObserver(itk::AnyEvent(), eventCallbackITK);
     ws->Update();
+
+    if(interMedOutPrefix){
+        lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws0.mha");
+        lwriter->SetInput(ws->GetOutput());
+        lwriter->Update();
+        }
 
         {//scoped for better consistency
         // extract the watershed lines and combine with the orginal markers
@@ -162,8 +192,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
     typename GMType::Pointer gm = GMType::New();
 
-    gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    gm->AddObserver(itk::EndEvent(), eventCallbackITK);
+    gm->AddObserver(itk::AnyEvent(), eventCallbackITK);
     gradientImg= input;
 
     ws->SetMarkWatershedLine(false); //no use for a border in higher stages
@@ -200,6 +229,15 @@ int DoIt(int argc, char *argv[]){
         ch->Update();
         labelImg= ch->GetOutput();
         labelImg->DisconnectPipeline();
+
+        if(interMedOutPrefix){
+            std::stringstream sss;
+            sss << interMedOutPrefix << "_ws" << i+1 << ".mha";
+            lwriter->SetFileName(sss.str().c_str());
+            //lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws" + std::to_string(i+1) + ".mha");//c++11: std::to_string
+            lwriter->SetInput(labelImg);
+            lwriter->Update();
+            }
         }
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
@@ -207,10 +245,8 @@ int DoIt(int argc, char *argv[]){
 
     writer->SetFileName(argv[2]);
     writer->SetInput(labelImg);
-    //writer->UseCompressionOn();
     writer->SetUseCompression(atoi(argv[3]));
-    writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    writer->AddObserver(itk::EndEvent(), eventCallbackITK);
+    writer->AddObserver(itk::AnyEvent(), eventCallbackITK);
     try{
         writer->Update();
         }
@@ -353,13 +389,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc < 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " invert level WS-extra-runs"
+                  << " interMedOutPrefix"
                   << std::endl;
 
         return EXIT_FAILURE;
