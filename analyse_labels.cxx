@@ -1,10 +1,10 @@
-////program to label connected components of a binary image and to analyse the labels
-//01: based on template.cxx and analyse06.cxx
+////program to analyse the labels of a label image
+//01: based on analyse_binary.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryImageToShapeLabelMapFilter.h>
+#include <itkLabelImageToShapeLabelMapFilter.h>
 #include <itkShapeLabelObject.h>
 #include <itkLabelMap.h>
 #include <itkLabelMapToLabelImageFilter.h>
@@ -37,13 +37,11 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-    typedef itk::BinaryImageToShapeLabelMapFilter<InputImageType> FilterType;//default output is a LabelMap instanciated with SizeValueType (same as IdentifierType unsigned long: http://www.itk.org/Doxygen47/html/itkIntTypes_8h_source.html#l00143)
+    typedef itk::LabelImageToShapeLabelMapFilter<InputImageType> FilterType;//default output is a LabelMap instanciated with InputImageType::PixelType
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->SetInputForegroundValue(atoi(argv[2]));
-    filter->SetFullyConnected(atoi(argv[3]));
-    bool cp= atoi(argv[4]);
+    bool cp= atoi(argv[2]);
     filter->SetComputePerimeter(cp);
 
     FilterWatcher watcher1(filter);
@@ -57,7 +55,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef typename FilterType::OutputImageType LabelMapType;
     typedef typename FilterType::OutputImageType::LabelObjectType LabelObjectType;
-    typedef typename FilterType::OutputImageType::LabelType LabelType;//default: SizeValueType
+    typedef typename FilterType::OutputImageType::LabelType LabelType;//default: InputImageType::PixelType
 
     // then we can read the attribute values we're interested in. The BinaryImageToShapeLabelMapFilter
     // produce consecutive labels, so we can use a for loop and GetLabelObject() method to retrieve
@@ -85,9 +83,21 @@ int DoIt(int argc, char *argv[]){
     const LabelObjectType* labelObject;
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
+        try{//labels can be missing in contrast to itkBinaryImageToShapeLabelMapFilter
         labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
+            }
+        catch(itk::ExceptionObject exp){//this should not happen for GetNthLabelObject upto GetNumberOfLabelObjects()-1, but does when using GetLabelObject
+            if (strstr(exp.GetDescription(), "No label object with label")){//message for GetLabelObject, itkLabelMap.hxx l133
+                fprintf(stderr, "%d not found, omitting!\n", label);
+                continue;
+                }
+            if (strstr(exp.GetDescription(), "Can't access to label object at position ")){//message for GetNthLabelObject, itkLabelMap.hxx l207
+                fprintf(stderr, "%d outside label set, omitting!\n", label);
+                continue;
+                }
+            }
         std::cout
-            << labelObject->GetLabel() << "\t";//not label to be sure, even though labels are expected to be successive!
+            << labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
         for (unsigned int i= 0; i < Dimension; i++)
             std::cout << labelObject->GetBoundingBox().GetIndex()[i] << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
@@ -113,36 +123,6 @@ int DoIt(int argc, char *argv[]){
         std::cout << std::endl;
         }
 
-
-    if(argc < 6)
-        return EXIT_SUCCESS;
-
-    typedef unsigned short OutputPixelType; //todo: choose OutputPixelType depending on GetNumberOfLabelObjects()
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-
-    ////label map to a label image
-    typedef itk::LabelMapToLabelImageFilter<LabelMapType, OutputImageType> LMtLIType;
-    typename LMtLIType::Pointer lmtli = LMtLIType::New();
-    lmtli->SetInput(labelMap);
-
-
-    const typename OutputImageType::Pointer& output= lmtli->GetOutput();
-
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[5]);
-    writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[6]));
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
 
     return EXIT_SUCCESS;
 
@@ -201,34 +181,34 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef unsigned char InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-    // case itk::ImageIOBase::CHAR:{         // int8_t
-    //     typedef char InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::USHORT:{       // uint16_t
-    //     typedef unsigned short InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::SHORT:{        // int16_t
-    //     typedef short InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::UINT:{         // uint32_t
-    //     typedef unsigned int InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::INT:{          // int32_t
-    //     typedef int InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::ULONG:{        // uint64_t
-    //     typedef unsigned long InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::LONG:{         // int64_t
-    //     typedef long InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::CHAR:{         // int8_t
+        typedef char InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::USHORT:{       // uint16_t
+        typedef unsigned short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::SHORT:{        // int16_t
+        typedef short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::UINT:{         // uint32_t
+        typedef unsigned int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::INT:{          // int32_t
+        typedef int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::ULONG:{        // uint64_t
+        typedef unsigned long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -268,15 +248,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 5 ){
+    if ( argc != 3 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Input_Image"
-                  << " <foreground>"
-                  << " <bool: connected>"
+                  << " Label_Image"
                   << " <bool: calculate perimeter>"
-                  << " [label_output-file]"
-                  << " compress"
                   << std::endl;
 
         return EXIT_FAILURE;
