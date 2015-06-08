@@ -36,16 +36,11 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-    typedef itk::IdentifierType LabelType; //unsigned long LabelType;
-    typedef itk::ShapeLabelObject<LabelType, Dimension> LabelObjectType;
-    typedef itk::LabelMap<LabelObjectType> LabelMapType;
 
-
-    typedef itk::BinaryImageToShapeLabelMapFilter<InputImageType, LabelMapType> FilterType;
+    typedef itk::BinaryImageToShapeLabelMapFilter<InputImageType> FilterType;//default output is a LabelMap instanciated with SizeValueType (same as IdentifierType unsigned long: http://www.itk.org/Doxygen47/html/itkIntTypes_8h_source.html#l00143)
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    //filter->InPlaceOn();//not available
     filter->SetInputForegroundValue(atoi(argv[2]));
     filter->SetFullyConnected(atoi(argv[3]));
     bool cp= atoi(argv[4]);
@@ -59,6 +54,10 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    typedef typename FilterType::OutputImageType LabelMapType;
+    typedef typename FilterType::OutputImageType::LabelObjectType LabelObjectType;
+    typedef typename FilterType::OutputImageType::LabelType LabelType;//default: SizeValueType
 
     // then we can read the attribute values we're interested in. The BinaryImageToShapeLabelMapFilter
     // produce consecutive labels, so we can use a for loop and GetLabelObject() method to retrieve
@@ -83,8 +82,10 @@ int DoIt(int argc, char *argv[]){
         std::cout << "\tAphy";
     std::cout << std::endl;
 
-    for(LabelType label=1; label <= labelMap->GetNumberOfLabelObjects(); label++){
-        const LabelObjectType* labelObject= labelMap->GetLabelObject(label);
+    const LabelObjectType* labelObject;
+    for(LabelType label= labelMap->GetBackgroundValue()+1; label <= labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetBackgroundValue() defaults to: NonpositiveMin (http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html#a0ed2fffdfcd3a4c787cc760e7acda482) modifications to also analyse the bg are in branch: analyse_BG
+
+        labelObject= labelMap->GetLabelObject(label);
         std::cout
             << label << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
