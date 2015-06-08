@@ -83,19 +83,7 @@ int DoIt(int argc, char *argv[]){
     const LabelObjectType* labelObject;
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
-        try{//labels can be missing in contrast to itkBinaryImageToShapeLabelMapFilter
-        labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
-            }
-        catch(itk::ExceptionObject exp){//this should not happen for GetNthLabelObject upto GetNumberOfLabelObjects()-1, but does when using GetLabelObject
-            if (strstr(exp.GetDescription(), "No label object with label")){//message for GetLabelObject, itkLabelMap.hxx l133
-                fprintf(stderr, "%d not found, omitting!\n", label);
-                continue;
-                }
-            if (strstr(exp.GetDescription(), "Can't access to label object at position ")){//message for GetNthLabelObject, itkLabelMap.hxx l207
-                fprintf(stderr, "%d outside label set, omitting!\n", label);
-                continue;
-                }
-            }
+        labelObject= labelMap->GetNthLabelObject(label);//GetNthLabelObject essential in case of not consecutive labels! (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
         std::cout
             << labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
         for (unsigned int i= 0; i < Dimension; i++)
