@@ -83,11 +83,11 @@ int DoIt(int argc, char *argv[]){
     std::cout << std::endl;
 
     const LabelObjectType* labelObject;
-    for(LabelType label= labelMap->GetBackgroundValue()+1; label <= labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetBackgroundValue() defaults to: NonpositiveMin (http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html#a0ed2fffdfcd3a4c787cc760e7acda482) modifications to also analyse the bg are in branch: analyse_BG
+    for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
-        labelObject= labelMap->GetLabelObject(label);
+        labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
         std::cout
-            << label << "\t";
+            << labelObject->GetLabel() << "\t";//not label to be sure, even though labels are expected to be successive!
         for (unsigned int i= 0; i < Dimension; i++)
             std::cout << labelObject->GetBoundingBox().GetIndex()[i] << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
