@@ -1,5 +1,6 @@
 ////program to label connected components of a binary image and to analyse the labels
 //01: based on template.cxx and analyse06.cxx
+//02: allow analysis of bg label
 
 
 #include "itkFilterWatcher.h"
@@ -42,8 +43,10 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
     filter->SetInputForegroundValue(atoi(argv[2]));
-    filter->SetFullyConnected(atoi(argv[3]));
-    bool cp= atoi(argv[4]);
+    if(atoi(argv[3]))
+	filter->SetOutputBackgroundValue(itk::NumericTraits<InputPixelType>::max());
+    filter->SetFullyConnected(atoi(argv[4]));
+    bool cp= atoi(argv[5]);
     filter->SetComputePerimeter(cp);
 
     FilterWatcher watcher1(filter);
@@ -83,9 +86,12 @@ int DoIt(int argc, char *argv[]){
     std::cout << std::endl;
 
     const LabelObjectType* labelObject;
-    for(LabelType label= labelMap->GetBackgroundValue()+1; label <= labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetBackgroundValue() defaults to: NonpositiveMin (http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html#a0ed2fffdfcd3a4c787cc760e7acda482) modifications to also analyse the bg are in branch: analyse_BG
-
-        labelObject= labelMap->GetLabelObject(label);
+    for(LabelType label= itk::NumericTraits<InputPixelType>::NonpositiveMin(); label <= labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType
+	if (label == labelMap->GetBackgroundValue()){//GetBackgroundValue() defaults to: NonpositiveMin (http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html#a0ed2fffdfcd3a4c787cc760e7acda482) and cannot be analysed unless SetBackgroundValue() is used to set another label, e.g. labelMap->GetNumberOfLabelObjects()+1 or Max()
+	    fprintf(stderr, "Omitting bg label: %d!\n", label);
+	    continue;
+	    }
+        labelObject= labelMap->GetNthLabelObject(label);
         std::cout
             << label << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
@@ -114,7 +120,7 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    if(argc < 6)
+    if(argc < 7)
         return EXIT_SUCCESS;
 
     typedef unsigned short OutputPixelType; //todo: choose OutputPixelType depending on GetNumberOfLabelObjects()
@@ -133,9 +139,9 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[5]);
+    writer->SetFileName(argv[6]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[6]));
+    writer->SetUseCompression(atoi(argv[7]));
     try{
         writer->Update();
         }
@@ -268,11 +274,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 5 ){
+    if ( argc < 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " <foreground>"
+                  << " <analyse bg (instead of label == max())>"
                   << " <bool: connected>"
                   << " <bool: calculate perimeter>"
                   << " [label_output-file]"
