@@ -1,4 +1,4 @@
-////program for
+////program for itkChangeInformationImageFilter
 //01: based on template.cxx
 
 
@@ -6,42 +6,23 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkChangeInformationImageFilter.h>
 #include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    if( argc != 3 + 1*Dimension + 1){
+        fprintf(stderr, "3 + 1*Dimension = %d parameters are needed!\n", 3 + 1*Dimension);
+        return EXIT_FAILURE;
+        }
+
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -53,7 +34,7 @@ int DoIt(int argc, char *argv[]){
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
     try{
-        reader->Update();
+        reader->UpdateOutputInformation();
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
@@ -62,20 +43,23 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    std::cerr << "input spacing: " << input->GetSpacing() << std::endl;
+
+    typename InputImageType::SpacingType outputSpacing;
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSpacing[i]= atof(argv[4+i]);
 
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::ChangeInformationImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    filter->SetOutputSpacing(outputSpacing);
+    filter->ChangeSpacingOn();
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
-        filter->Update();
+        filter->UpdateOutputInformation();
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
@@ -83,7 +67,7 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -91,10 +75,10 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
+    //writer->SetUseCompression(reader->GetImageIO()->GetUseCompression());
     try{
-        writer->Update();
+        writer->Update();//UpdateOutputInformation does not do!
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
@@ -249,12 +233,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " spacing..."
                   << std::endl;
 
         return EXIT_FAILURE;

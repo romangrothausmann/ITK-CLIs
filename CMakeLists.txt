@@ -323,3 +323,8 @@ ELSE(LesionSizingToolkit_FOUND LESS 0)
   INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
   MESSAGE(STATUS "${CurrentExe} will be compiled!")
 ENDIF(LesionSizingToolkit_FOUND LESS 0)
+
+SET(CurrentExe "change_header")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
