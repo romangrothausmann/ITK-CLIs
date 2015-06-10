@@ -2,8 +2,6 @@
 //01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
 
 
-#include <complex>
-
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkIdentityTransform.h>
@@ -64,8 +62,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
     typename OutputImageType::SizeType outputSize;
 
+    typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
-        outputSize[i]= (double) inputSize[i] * inputSpacing[i] / outputSpacing[i];
+        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
@@ -79,7 +78,6 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetOutputDirection(input->GetDirection());
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
-    //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
     try{
@@ -169,9 +167,9 @@ int DoIt(int argc, char *argv[]){
         typedef itk::GaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-	typename InterpolatorType::ArrayType sigma;
-	for (unsigned int i= 0; i < Dimension; i++)
-	    sigma[i]= 0.8; //as suggested in pub: http://www.insight-journal.org/browse/publication/705
+        typename InterpolatorType::ArrayType sigma;
+        for (unsigned int i= 0; i < Dimension; i++)
+            sigma[i]= 0.8; //as suggested in pub: http://www.insight-journal.org/browse/publication/705
         interpolator->SetSigma(sigma);
         interpolator->SetAlpha(3.0);
         std::cerr << "Sigma: " << interpolator->GetSigma() << " Alpha: " << interpolator->GetAlpha() << std::endl;
@@ -181,9 +179,9 @@ int DoIt(int argc, char *argv[]){
         typedef itk::LabelImageGaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-	typename InterpolatorType::ArrayType sigma;
-	for (unsigned int i= 0; i < Dimension; i++)
-	    sigma[i]= 0.8; //as suggested in pub: http://www.insight-journal.org/browse/publication/705
+        typename InterpolatorType::ArrayType sigma;
+        for (unsigned int i= 0; i < Dimension; i++)
+            sigma[i]= 0.8; //as suggested in pub: http://www.insight-journal.org/browse/publication/705
         interpolator->SetSigma(sigma);
         interpolator->SetAlpha(3.0);
         std::cerr << "Sigma: " << interpolator->GetSigma() << " Alpha: " << interpolator->GetAlpha() << std::endl;
@@ -238,22 +236,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
         typedef InputComponentType InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
-        // case itk::ImageIOBase::RGB:{ //does not work with: BSplineInterpolateImageFunction
-        //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        // } break;
-        // case itk::ImageIOBase::RGBA:{
-        //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        // } break;
-        // case itk::ImageIOBase::COMPLEX:{ //does not work with: NearestNeighborInterpolateImageFunction
-        //   typedef std::complex<InputComponentType> InputPixelType;
-        //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        // } break;
-        // case itk::ImageIOBase::VECTOR:{ //does not work with: NearestNeighborInterpolateImageFunction
-        //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-        //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        // } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
