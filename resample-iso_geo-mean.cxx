@@ -47,13 +47,22 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
-    typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
-    typename TransformType::Pointer transform= TransformType::New();
-    transform->SetIdentity();
-
+    ////store header data before reader releases its output after it got used by the cast filter
     const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
+    const typename InputImageType::PointType& inputOrigin= input->GetOrigin();
+    const typename InputImageType::DirectionType& inputDirection= input->GetDirection();
+    const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
 
     const double isoSpacing = std::sqrt(inputSpacing[2] * inputSpacing[0]);
+    typename InputImageType::SpacingType outputSpacing;
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSpacing[i]= isoSpacing;
+
+    typename OutputImageType::SizeType outputSize;
+    typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
+
 
     typedef itk::CastImageFilter<InputImageType, InternalImageType> CastFilterType;
     typename CastFilterType::Pointer  caster=  CastFilterType::New();
@@ -80,17 +89,10 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     smootherY->InPlaceOn();
     FilterWatcher watcherY(smootherY);
 
-    typename InputImageType::SpacingType outputSpacing;
-    for (unsigned int i= 0; i < Dimension; i++)
-        outputSpacing[i]= isoSpacing;
 
-    const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
-    typename OutputImageType::SizeType outputSize;
-
-    typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
-    for (unsigned int i= 0; i < Dimension; i++)
-        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
-
+    typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
+    typename TransformType::Pointer transform= TransformType::New();
+    transform->SetIdentity();
 
     typedef itk::ResampleImageFilter<InternalImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
@@ -99,8 +101,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
     filter->SetSize(outputSize);
-    filter->SetOutputOrigin(input->GetOrigin());//essential for images created with e.g. itkExtractImageFilter
-    filter->SetOutputDirection(input->GetDirection());
+    filter->SetOutputOrigin(inputOrigin);//essential for images created with e.g. itkExtractImageFilter
+    filter->SetOutputDirection(inputDirection);
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
 
