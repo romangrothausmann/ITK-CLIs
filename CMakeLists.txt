@@ -293,10 +293,11 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-SET(CurrentExe "resample_SDI")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+## itkResampleImageFilter seems to need the whole input no matter what interpolator is used: see ll 538 Modules/Filtering/ImageGrid/include/itkResampleImageFilter.hxx
+# SET(CurrentExe "resample_SDI")
+# ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+# TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+# INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "fill_holes")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
