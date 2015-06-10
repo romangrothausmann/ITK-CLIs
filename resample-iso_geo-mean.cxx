@@ -60,9 +60,11 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename OutputImageType::SizeType outputSize;
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
-    for (unsigned int i= 0; i < Dimension; i++)
+    for (unsigned int i= 0; i < Dimension-1; i++)
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
+    const unsigned int i= Dimension-1;
+    outputSize[i]= static_cast<SizeValueType>((double) (inputSize[i]-1) * inputSpacing[i] / outputSpacing[i]);; //do not resample below last slice 
 
     typedef itk::CastImageFilter<InputImageType, InternalImageType> CastFilterType;
     typename CastFilterType::Pointer  caster=  CastFilterType::New();
