@@ -1,9 +1,11 @@
-////program for itkResampleImageFilter
-//01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
+////program to resample to iso voxels with additional smoothing of subsampled region
+//01: based on resample.cxx and Examples/Filtering/ResampleVolumesToBeIsotropic.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkCastImageFilter.h>
+#include <itkRecursiveGaussianImageFilter.h>
 #include <itkIdentityTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
@@ -21,12 +23,9 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename TCoordRep, typename InterpolatorType>
 int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
-    if( argc != 4 + 1*Dimension + 1){
-        fprintf(stderr, "4 + 1*Dimension = %d parameters are needed!\n", 4 + 1*Dimension);
-        return EXIT_FAILURE;
-        }
-
+    typedef float           InternalPixelType;
     typedef InputPixelType  OutputPixelType;
+    typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -48,16 +47,42 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
-
     typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
     typename TransformType::Pointer transform= TransformType::New();
     transform->SetIdentity();
 
     const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
 
+    const double isoSpacing = std::sqrt(inputSpacing[2] * inputSpacing[0]);
+
+    typedef itk::CastImageFilter<InputImageType, InternalImageType> CastFilterType;
+    typename CastFilterType::Pointer  caster=  CastFilterType::New();
+    caster->SetInput(input);
+    caster->ReleaseDataFlagOn();
+    caster->InPlaceOn();
+    FilterWatcher watcherC(caster);
+
+    typedef itk::RecursiveGaussianImageFilter<InternalImageType, InternalImageType> GaussianFilterType;
+
+    typename GaussianFilterType::Pointer smootherX = GaussianFilterType::New();
+    smootherX->SetInput(caster->GetOutput());
+    smootherX->SetSigma(isoSpacing);
+    smootherX->SetDirection(0);
+    smootherX->ReleaseDataFlagOn();
+    smootherX->InPlaceOn();
+    FilterWatcher watcherX(smootherX);
+
+    typename GaussianFilterType::Pointer smootherY = GaussianFilterType::New();
+    smootherY->SetInput(smootherX->GetOutput());
+    smootherY->SetSigma(isoSpacing);
+    smootherY->SetDirection(1);
+    smootherY->ReleaseDataFlagOn();
+    smootherY->InPlaceOn();
+    FilterWatcher watcherY(smootherY);
+
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
-        outputSpacing[i]= atof(argv[5+i]);
+        outputSpacing[i]= isoSpacing;
 
     const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
     typename OutputImageType::SizeType outputSize;
@@ -67,9 +92,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
 
-    typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ResampleImageFilter<InternalImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(smootherY->GetOutput());
     filter->SetTransform(transform);
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
@@ -116,23 +141,25 @@ int DoIt(int argc, char *argv[]){
 
     typedef double TCoordRep;
     typedef double TCoefficientType;
+    typedef float           InternalPixelType;
+    typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
     switch(atoi(argv[4])){
     case 0:{
-        typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+        typedef itk::NearestNeighborInterpolateImageFunction<InternalImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 1:{
-        typedef itk::LinearInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+        typedef itk::LinearInterpolateImageFunction<InternalImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 2:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
+        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         interpolator->SetSplineOrder(2);
@@ -140,7 +167,7 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 3:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
+        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         interpolator->SetSplineOrder(3);
@@ -148,7 +175,7 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 4:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
+        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         interpolator->SetSplineOrder(4);
@@ -156,7 +183,7 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 5:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
+        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         interpolator->SetSplineOrder(5);
@@ -164,7 +191,7 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 10:{
-        typedef itk::GaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+        typedef itk::GaussianInterpolateImageFunction<InternalImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         typename InterpolatorType::ArrayType sigma;
@@ -176,7 +203,7 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 11:{
-        typedef itk::LabelImageGaussianInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
+        typedef itk::LabelImageGaussianInterpolateImageFunction<InternalImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         typename InterpolatorType::ArrayType sigma;
@@ -188,10 +215,10 @@ int DoIt(int argc, char *argv[]){
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
     case 20:{//from: http://www.itk.org/Doxygen/html/Examples_2Filtering_2ResampleImageFilter8_8cxx-example.html#_a7
-        typedef itk::ConstantBoundaryCondition<InputImageType> BoundaryConditionType;
+        typedef itk::ConstantBoundaryCondition<InternalImageType> BoundaryConditionType;
         const unsigned int WindowRadius = 5;
         typedef itk::Function::HammingWindowFunction<WindowRadius> WindowFunctionType;
-        typedef itk::WindowedSincInterpolateImageFunction<InputImageType, WindowRadius, WindowFunctionType, BoundaryConditionType, TCoordRep> InterpolatorType;
+        typedef itk::WindowedSincInterpolateImageFunction<InternalImageType, WindowRadius, WindowFunctionType, BoundaryConditionType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         fprintf(stderr, "With a %s and a window size of: %d\n", "HammingWindowFunction", WindowRadius);//no GetNameOfClass() for itkWindowFunction: http://public.kitware.com/pipermail/insight-users/2004-July/009440.html
@@ -208,12 +235,9 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
+    // case 2:
+    //     res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+    //     break;
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
@@ -331,14 +355,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " Interpolator_Type"
-                  << " spacing..."
                   << std::endl;
 
         return EXIT_FAILURE;

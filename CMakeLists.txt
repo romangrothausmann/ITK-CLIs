@@ -299,6 +299,11 @@ INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 # TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 # INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
+SET(CurrentExe "resample-iso_geo-mean")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
 SET(CurrentExe "fill_holes")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
