@@ -53,7 +53,14 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     const typename InputImageType::DirectionType& inputDirection= input->GetDirection();
     const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
 
-    const double isoSpacing = std::sqrt(inputSpacing[2] * inputSpacing[0]);
+    double isoSpacing;
+    if(argc > 5)
+	isoSpacing= atof(argv[5]);
+    else{
+	isoSpacing = std::sqrt(inputSpacing[0] * inputSpacing[Dimension-1]);
+	std::cerr << "Using geometric mean between first and last spacing: " << isoSpacing << std::endl;
+	}
+
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
         outputSpacing[i]= isoSpacing;
@@ -359,13 +366,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " Interpolator_Type"
+                  << " [iso-spacing]"
                   << std::endl;
 
         return EXIT_FAILURE;
