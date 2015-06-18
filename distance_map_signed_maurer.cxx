@@ -33,7 +33,13 @@ int DoIt(int argc, char *argv[]){
     // if(atoi(argv[4]))
     // 	typedef int OutputPixelType; //OK for SquaredDistanceOn //wrongly imported by ij
     // else
-	typedef double OutputPixelType; //for SquaredDistanceOff
+#ifdef USE_FLOAT
+    typedef float   OutputPixelType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double  OutputPixelType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -43,6 +49,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
  
     reader->SetFileName(argv[1]);
+    reader->ReleaseDataFlagOn();
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -60,7 +67,9 @@ int DoIt(int argc, char *argv[]){
     typedef itk::SignedMaurerDistanceMapImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
+    filter->ReleaseDataFlagOn();
     filter->SetSquaredDistance(atoi(argv[4]));
+    //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
     try{ 
@@ -80,7 +89,6 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
     writer->SetUseCompression(atoi(argv[3]));
     try{ 
         writer->Update();

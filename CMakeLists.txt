@@ -166,8 +166,14 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "distance_map_signed_maurer")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+SET(CurrentExe "distance_map_signed_maurer_f32")
+ADD_EXECUTABLE(${CurrentExe}  "distance_map_signed_maurer.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "distance_map_signed_maurer_f64")
+ADD_EXECUTABLE(${CurrentExe}  "distance_map_signed_maurer.cxx")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
