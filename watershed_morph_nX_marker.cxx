@@ -136,7 +136,7 @@ int DoIt(int argc, char *argv[]){
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     bool ws0_conn= true;//true reduces amount of watersheds
-    bool ws_conn= false;
+    bool ws_conn= atoi(argv[7]);
 
     uint8_t NumberOfExtraWS= atoi(argv[5]);
 
@@ -465,7 +465,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc != 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -473,6 +473,7 @@ int main(int argc, char *argv[]){
                   << " Output_Image"
                   << " compress"
                   << " NumberOfExtraWS invert"
+                  << " border"
                   << std::endl;
 
         return EXIT_FAILURE;
