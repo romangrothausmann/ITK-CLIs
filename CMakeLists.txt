@@ -80,6 +80,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 ## check if specific modules are enabled
 LIST(FIND ITK_MODULES_ENABLED ITKReview ITKReview_FOUND)
 LIST(FIND ITK_MODULES_ENABLED LesionSizingToolkit LesionSizingToolkit_FOUND)
+LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)
 
 
 SET(CurrentExe "file_converter")
@@ -340,3 +341,13 @@ SET(CurrentExe "change_header")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "min-path_fm")
+IF(MinimalPathExtraction_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+ELSE(MinimalPathExtraction_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF(MinimalPathExtraction_FOUND LESS 0)

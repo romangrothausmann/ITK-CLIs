@@ -1,47 +1,34 @@
-////program for
-//01: based on template.cxx
+////program for itkSpeedFunctionToPathFilter (Fast Marching Minimal Path Extraction)
+//01: based on template.cxx and vo-img2v-skel_01.cxx
 
-
-#include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkRescaleIntensityImageFilter.h>
+#include <itkLinearInterpolateImageFunction.h>
+#include <itkSpeedFunctionToPathFilter.h>
+#include <itkGradientDescentOptimizer.h>
+#include <itkPathIterator.h>
+#include <itkPolyLineParametricPath.h>
 #include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    const char offset= 4;
+    if( argc != offset + 3*Dimension){
+        fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
+        return EXIT_FAILURE;
+        }
+
+    typedef double   SpeedPixelType;
+    typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<SpeedPixelType, Dimension>  SpeedImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -60,30 +47,103 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename InputImageType::Pointer& input= reader->GetOutput();
+    // scale image values to be in [0; 1]
+    typedef typename itk::RescaleIntensityImageFilter<InputImageType, SpeedImageType> RescaleFilterType;
+    typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
+    rescaleFilter->SetInput(reader->GetOutput());
+    rescaleFilter->SetOutputMinimum(0.0);
+    rescaleFilter->SetOutputMaximum(1.0);
 
+    const typename SpeedImageType::Pointer& input= rescaleFilter->GetOutput();
 
+    typedef itk::PolyLineParametricPath<Dimension> PathType;
+    typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
+    typedef typename PathFilterType::CostFunctionType::CoordRepType CoordRepType;
 
-    typedef itk::<InputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    // Create interpolator
+    typedef itk::LinearInterpolateImageFunction<SpeedImageType, CoordRepType> InterpolatorType;
+    typename InterpolatorType::Pointer interp = InterpolatorType::New();
 
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{
-        filter->Update();
+    // Create cost function
+    typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
+    cost->SetInterpolator(interp);
+
+    // Create optimizer
+    typedef itk::GradientDescentOptimizer OptimizerType;
+    typename OptimizerType::Pointer optimizer = OptimizerType::New();
+    optimizer->SetNumberOfIterations(1000);
+
+    // Create path filter
+    typename PathFilterType::Pointer pathFilter = PathFilterType::New();
+    pathFilter->SetInput(input); //needs the image values to be scaled to [0; 1]
+    pathFilter->SetCostFunction(cost);
+    pathFilter->SetOptimizer(optimizer);
+    pathFilter->SetTerminationValue(2.0);
+
+    // Setup path points
+    typename PathFilterType::PointType start, end, way;
+
+    for(int j= 0; j < Dimension; j++){
+        start[j]= atof(argv[j+offset]);
         }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
+
+    for(int j= 0; j < Dimension; j++){
+        end[j]= atof(argv[j+Dimension+offset]);
+        }
+
+    for(int j= 0; j < Dimension; j++){
+        way[j]= atof(argv[j+2*Dimension+offset]);
+        }
+
+    // Add path information
+    typename PathFilterType::PathInfo info;
+    info.SetStartPoint(start);
+    info.SetEndPoint(end);
+    info.AddWayPoint(way);
+    pathFilter->AddPathInfo(info);
+
+
+    // Compute the path
+    FilterWatcher watcher(pathFilter); //filter reports no progress so far
+    try {
+        pathFilter->Update();
+        }
+    catch (itk::ExceptionObject &ex){
+        std::cout << ex << std::endl;
         return EXIT_FAILURE;
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    // Allocate output image
+    typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
+
+    typename OutputImageType::Pointer output = OutputImageType::New();
+    output->SetRegions(input->GetLargestPossibleRegion());
+    output->SetSpacing(input->GetSpacing());
+    output->SetOrigin(input->GetOrigin());
+    output->Allocate();
+    output->FillBuffer(itk::NumericTraits<OutputPixelType>::Zero);
+
+    // Rasterize path
+    typedef itk::PathIterator<OutputImageType, PathType> PathIteratorType;
+    for (unsigned int i=0; i<pathFilter->GetNumberOfOutputs(); i++){
+
+        // Get the path
+        typename PathType::Pointer path = pathFilter->GetOutput(i);
+
+        // Check path is valid
+        if (path->GetVertexList()->Size() == 0){
+            std::cout << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
+            continue;
+            }
+
+        // Iterate path and convert to image
+        PathIteratorType it(output, path);
+        for (it.GoToBegin(); !it.IsAtEnd(); ++it){
+            it.Set(itk::NumericTraits<OutputPixelType>::max());
+            }
+        }
+
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -91,8 +151,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -110,9 +169,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -136,22 +192,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -249,13 +289,17 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc < 4 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " start-point..."
+                  << " end-point..."
+                  << " way-point..."
                   << std::endl;
+        std::cerr << " Point coordinates are expected in physical space!" << std::endl;
 
         return EXIT_FAILURE;
         }
