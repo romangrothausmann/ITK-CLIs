@@ -17,7 +17,7 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    const char offset= 4;
+    const char offset= 5;
     if( argc != offset + 3*Dimension){
         fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
         return EXIT_FAILURE;
@@ -71,7 +71,7 @@ int DoIt(int argc, char *argv[]){
     // Create optimizer
     typedef itk::GradientDescentOptimizer OptimizerType;
     typename OptimizerType::Pointer optimizer = OptimizerType::New();
-    optimizer->SetNumberOfIterations(1000);
+    optimizer->SetNumberOfIterations(atoi(argv[4]));
 
     // Create path filter
     typename PathFilterType::Pointer pathFilter = PathFilterType::New();
@@ -109,7 +109,7 @@ int DoIt(int argc, char *argv[]){
         pathFilter->Update();
         }
     catch (itk::ExceptionObject &ex){
-        std::cout << ex << std::endl;
+        std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
 
@@ -126,16 +126,19 @@ int DoIt(int argc, char *argv[]){
 
     // Rasterize path
     typedef itk::PathIterator<OutputImageType, PathType> PathIteratorType;
-    for (unsigned int i=0; i<pathFilter->GetNumberOfOutputs(); i++){
+    std::cout << "# of paths: " << pathFilter->GetNumberOfOutputs() << std::endl;
+    for (unsigned int i= 0; i < pathFilter->GetNumberOfOutputs(); i++){
 
         // Get the path
         typename PathType::Pointer path = pathFilter->GetOutput(i);
 
         // Check path is valid
         if (path->GetVertexList()->Size() == 0){
-            std::cout << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
+            std::cerr << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
             continue;
             }
+
+	printf("Path %3d contains %6d points.\n", i, path->GetVertexList()->Size());
 
         // Iterate path and convert to image
         PathIteratorType it(output, path);
@@ -289,12 +292,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 4 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " iterations"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
