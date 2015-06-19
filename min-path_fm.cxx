@@ -147,7 +147,7 @@ int DoIt(int argc, char *argv[]){
             continue;
             }
 
-	printf("Path %3d contains %6d points.\n", i, path->GetVertexList()->Size());
+        printf("Path %3d contains %6d points.\n", i, path->GetVertexList()->Size());
 
         // Iterate path and convert to image
         PathIteratorType it(output, path);
@@ -173,28 +173,21 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
     typename MeshType::Pointer  mesh = MeshType::New();
 
     for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
 
-	// Get the path
-	typename PathType::Pointer path = pathFilter->GetOutput(i);
+        // Get the path
+        typename PathType::Pointer path = pathFilter->GetOutput(i);
+        const typename PathType::VertexListType *vertexList = path->GetVertexList();
 
-	const typename PathType::VertexListType *vertexList = path->GetVertexList();
-
-	// Check path is valid
-	if (vertexList->Size() == 0){
-	    std::cerr << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
-	    continue;
-	    }
-      
-	for(unsigned int k = 0; k < vertexList->Size(); k++){
-	    //std::cout << i << "; "<< k << ": " << vertexList->GetElement(k) << std::endl;
-	    mesh->SetPoint(k, vertexList->GetElement(k));
-	    }
-	}
+        for(unsigned int k = 0; k < vertexList->Size(); k++){
+            mesh->SetPoint(k, vertexList->GetElement(k));
+            }
+        }
 
     std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
@@ -203,35 +196,15 @@ int DoIt(int argc, char *argv[]){
     typedef typename itk::LineCell<CellType> LineType;
     typedef typename CellType::CellAutoPointer  CellAutoPointer;
 
-    typedef typename MeshType::PointsContainer::Iterator PointsIterator;
- 
-    // PointsIterator pointIterator = mesh->GetPoints()->Begin();
-    // //pointIterator++; //skip first point
-    // PointsIterator end = mesh->GetPoints()->End();
-
-    // size_t cellId= 0;
-    // while(pointIterator != end)
-    // 	{
-    // 	MeshType::PointType p = pointIterator.Value();
-    // 	std::cout << p << std::endl;
-
-    // 	CellAutoPointer line;
-    // 	line.TakeOwnership(new LineType);
-    // 	line->SetPointId(0, pointIterator);
-    // 	pointIterator++;  // advance to next point
-    // 	line->SetPointId(1, pointIterator);
-    // 	mesh->SetCell(cellId, line);
-    // 	cellId++;
-    // 	}
- 
+    //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
     const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
     typename CellType::CellAutoPointer line;
     for(size_t cellId=0; cellId < numberOfCells; cellId++){
-	line.TakeOwnership(new LineType);
-	line->SetPointId(0, cellId); // first point
-	line->SetPointId(1, cellId+1); // second point
-	mesh->SetCell(cellId, line); // insert the cell
-	}
+        line.TakeOwnership(new LineType);
+        line->SetPointId(0, cellId);
+        line->SetPointId(1, cellId+1);
+        mesh->SetCell(cellId, line);
+        }
 
     std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
 
@@ -243,7 +216,7 @@ int DoIt(int argc, char *argv[]){
     mwriter->SetFileName(sss.str().c_str());
     mwriter->SetInput(mesh);
     mwriter->Update();
- 
+
 
     return EXIT_SUCCESS;
 
