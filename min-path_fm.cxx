@@ -23,7 +23,7 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    const char offset= 5;
+    const char offset= 6;
     if( argc != offset + 3*Dimension){
         fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
         return EXIT_FAILURE;
@@ -71,7 +71,7 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename SpeedImageType::Pointer& input= rescaleFilter->GetOutput();
+    const typename SpeedImageType::Pointer& speed= rescaleFilter->GetOutput();
 
     typedef itk::PolyLineParametricPath<Dimension> PathType;
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
@@ -89,10 +89,11 @@ int DoIt(int argc, char *argv[]){
     typedef itk::GradientDescentOptimizer OptimizerType;
     typename OptimizerType::Pointer optimizer = OptimizerType::New();
     optimizer->SetNumberOfIterations(atoi(argv[4]));
+    optimizer->SetLearningRate(atof(argv[5]));
 
     // Create path filter
     typename PathFilterType::Pointer pathFilter = PathFilterType::New();
-    pathFilter->SetInput(input); //needs the image values to be scaled to [0; 1]
+    pathFilter->SetInput(speed); //needs the image values to be scaled to [0; 1]
     pathFilter->SetCostFunction(cost);
     pathFilter->SetOptimizer(optimizer);
     pathFilter->SetTerminationValue(2.0);
@@ -114,9 +115,9 @@ int DoIt(int argc, char *argv[]){
 
     typename PathFilterType::PointType startP, endP, wayP;
 
-    input->TransformIndexToPhysicalPoint(start, startP);
-    input->TransformIndexToPhysicalPoint(end, endP);
-    input->TransformIndexToPhysicalPoint(way, wayP);
+    speed->TransformIndexToPhysicalPoint(start, startP);
+    speed->TransformIndexToPhysicalPoint(end, endP);
+    speed->TransformIndexToPhysicalPoint(way, wayP);
 
     // Add path information
     typename PathFilterType::PathInfo info;
@@ -141,9 +142,9 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
 
     typename OutputImageType::Pointer output = OutputImageType::New();
-    output->SetRegions(input->GetLargestPossibleRegion());
-    output->SetSpacing(input->GetSpacing());
-    output->SetOrigin(input->GetOrigin());
+    output->SetRegions(speed->GetLargestPossibleRegion());
+    output->SetSpacing(speed->GetSpacing());
+    output->SetOrigin(speed->GetOrigin());
     output->Allocate();
     output->FillBuffer(itk::NumericTraits<OutputPixelType>::Zero);
 
@@ -372,6 +373,7 @@ int main(int argc, char *argv[]){
                   << " Output_Image_Base"
                   << " compress"
                   << " iterations"
+                  << " step-scale (will correspond to distance between points for a speed function ~1 along path)"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
