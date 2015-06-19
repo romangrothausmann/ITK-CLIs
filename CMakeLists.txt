@@ -351,3 +351,8 @@ ELSE(MinimalPathExtraction_FOUND LESS 0)
   INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
   MESSAGE(STATUS "${CurrentExe} will be compiled!")
 ENDIF(MinimalPathExtraction_FOUND LESS 0)
+
+SET(CurrentExe "skeletonize_SBS")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
