@@ -1,10 +1,10 @@
-////program to run itkBinaryThinningImageFilter which does thinning on a slice basis (so far)
-//01: based on template.cxx
+////program to run itkBinaryThinningImageFilter3D which does 3D thinning
+//01: based on skeletonize_SBS.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryThinningImageFilter.h>
+#include "itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -38,7 +38,7 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-    typedef itk::BinaryThinningImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::BinaryThinningImageFilter3D<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
@@ -86,9 +86,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
