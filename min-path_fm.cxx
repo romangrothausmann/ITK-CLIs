@@ -62,6 +62,14 @@ int DoIt(int argc, char *argv[]){
     rescaleFilter->SetInput(reader->GetOutput());
     rescaleFilter->SetOutputMinimum(0.0);
     rescaleFilter->SetOutputMaximum(1.0);
+    FilterWatcher watcherR(rescaleFilter);
+    try {
+        rescaleFilter->Update();
+        }
+    catch (itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
 
     const typename SpeedImageType::Pointer& input= rescaleFilter->GetOutput();
 
@@ -90,25 +98,31 @@ int DoIt(int argc, char *argv[]){
     pathFilter->SetTerminationValue(2.0);
 
     // Setup path points
-    typename PathFilterType::PointType start, end, way;
+    typename SpeedImageType::IndexType start, end, way;
 
     for(int j= 0; j < Dimension; j++){
-        start[j]= atof(argv[j+offset]);
+        start[j]= atoi(argv[j+offset]) - 1;
         }
 
     for(int j= 0; j < Dimension; j++){
-        end[j]= atof(argv[j+Dimension+offset]);
+        end[j]= atoi(argv[j+Dimension+offset]) - 1;
         }
 
     for(int j= 0; j < Dimension; j++){
-        way[j]= atof(argv[j+2*Dimension+offset]);
+        way[j]= atoi(argv[j+2*Dimension+offset]) - 1;
         }
+
+    typename PathFilterType::PointType startP, endP, wayP;
+
+    input->TransformIndexToPhysicalPoint(start, startP);
+    input->TransformIndexToPhysicalPoint(end, endP);
+    input->TransformIndexToPhysicalPoint(way, wayP);
 
     // Add path information
     typename PathFilterType::PathInfo info;
-    info.SetStartPoint(start);
-    info.SetEndPoint(end);
-    info.AddWayPoint(way);
+    info.SetStartPoint(startP);
+    info.SetEndPoint(endP);
+    info.AddWayPoint(wayP);
     pathFilter->AddPathInfo(info);
 
 
@@ -152,9 +166,13 @@ int DoIt(int argc, char *argv[]){
         // Iterate path and convert to image
         PathIteratorType it(output, path);
         for (it.GoToBegin(); !it.IsAtEnd(); ++it){
-            it.Set(itk::NumericTraits<OutputPixelType>::max());
+            it.Set(itk::NumericTraits<OutputPixelType>::max()/2);
             }
         }
+
+    output->SetPixel(start,itk::NumericTraits<OutputPixelType>::max());
+    output->SetPixel(end,itk::NumericTraits<OutputPixelType>::max());
+    output->SetPixel(way,itk::NumericTraits<OutputPixelType>::max());
 
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
@@ -212,7 +230,7 @@ int DoIt(int argc, char *argv[]){
     typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
 
     FilterWatcher watcherMO(mwriter);
-    sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
+    sss.str(""); sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
     mwriter->SetFileName(sss.str().c_str());
     mwriter->SetInput(mesh);
     mwriter->Update();
@@ -351,14 +369,14 @@ int main(int argc, char *argv[]){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
-                  << " Output_Image"
+                  << " Output_Image_Base"
                   << " compress"
                   << " iterations"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
                   << std::endl;
-        std::cerr << " Point coordinates are expected in physical space!" << std::endl;
+        std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
 
         return EXIT_FAILURE;
         }
