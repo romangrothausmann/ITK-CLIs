@@ -2,6 +2,9 @@
 //01: based on template.cxx and vo-img2v-skel_01.cxx
 
 
+#include <string>
+#include <sstream>
+
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkRescaleIntensityImageFilter.h>
@@ -12,6 +15,9 @@
 #include <itkPolyLineParametricPath.h>
 #include <itkImageFileWriter.h>
 
+#include <itkMesh.h>
+#include <itkLineCell.h>
+#include <itkMeshFileWriter.h>
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
@@ -22,6 +28,9 @@ int DoIt(int argc, char *argv[]){
         fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
         return EXIT_FAILURE;
         }
+
+    char* outPrefix= argv[2];
+    std::stringstream sss;
 
     typedef double   SpeedPixelType;
     typedef uint8_t  OutputPixelType;
@@ -152,7 +161,8 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
+    sss << outPrefix << ".mha";
+    writer->SetFileName(sss.str().c_str());
     writer->SetInput(output);
     writer->SetUseCompression(atoi(argv[3]));
     try{
@@ -162,6 +172,78 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    //// create mesh to save in a VTK-file
+    typedef typename itk::Mesh<float, Dimension>  MeshType;
+    typename MeshType::Pointer  mesh = MeshType::New();
+
+    for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
+
+	// Get the path
+	typename PathType::Pointer path = pathFilter->GetOutput(i);
+
+	const typename PathType::VertexListType *vertexList = path->GetVertexList();
+
+	// Check path is valid
+	if (vertexList->Size() == 0){
+	    std::cerr << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
+	    continue;
+	    }
+      
+	for(unsigned int k = 0; k < vertexList->Size(); k++){
+	    //std::cout << i << "; "<< k << ": " << vertexList->GetElement(k) << std::endl;
+	    mesh->SetPoint(k, vertexList->GetElement(k));
+	    }
+	}
+
+    std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
+
+    //// create connecting lines
+    typedef typename MeshType::CellType CellType;
+    typedef typename itk::LineCell<CellType> LineType;
+    typedef typename CellType::CellAutoPointer  CellAutoPointer;
+
+    typedef typename MeshType::PointsContainer::Iterator PointsIterator;
+ 
+    // PointsIterator pointIterator = mesh->GetPoints()->Begin();
+    // //pointIterator++; //skip first point
+    // PointsIterator end = mesh->GetPoints()->End();
+
+    // size_t cellId= 0;
+    // while(pointIterator != end)
+    // 	{
+    // 	MeshType::PointType p = pointIterator.Value();
+    // 	std::cout << p << std::endl;
+
+    // 	CellAutoPointer line;
+    // 	line.TakeOwnership(new LineType);
+    // 	line->SetPointId(0, pointIterator);
+    // 	pointIterator++;  // advance to next point
+    // 	line->SetPointId(1, pointIterator);
+    // 	mesh->SetCell(cellId, line);
+    // 	cellId++;
+    // 	}
+ 
+    const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
+    typename CellType::CellAutoPointer line;
+    for(size_t cellId=0; cellId < numberOfCells; cellId++){
+	line.TakeOwnership(new LineType);
+	line->SetPointId(0, cellId); // first point
+	line->SetPointId(1, cellId+1); // second point
+	mesh->SetCell(cellId, line); // insert the cell
+	}
+
+    std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
+
+    typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
+    typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
+
+    FilterWatcher watcherMO(mwriter);
+    sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
+    mwriter->SetFileName(sss.str().c_str());
+    mwriter->SetInput(mesh);
+    mwriter->Update();
+ 
 
     return EXIT_SUCCESS;
 

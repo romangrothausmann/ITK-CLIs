@@ -80,7 +80,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 ## check if specific modules are enabled
 LIST(FIND ITK_MODULES_ENABLED ITKReview ITKReview_FOUND)
 LIST(FIND ITK_MODULES_ENABLED LesionSizingToolkit LesionSizingToolkit_FOUND)
-LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)
+LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/da17ae4d4955bb92d5259c6ac47bfce6c474be18
 
 
 SET(CurrentExe "file_converter")
