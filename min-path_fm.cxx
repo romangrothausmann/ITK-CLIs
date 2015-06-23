@@ -240,13 +240,15 @@ int DoIt(int argc, char *argv[]){
     typedef typename CellType::CellAutoPointer  CellAutoPointer;
 
     //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
-    const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
-    typename CellType::CellAutoPointer line;
-    for(size_t cellId=0; cellId < numberOfCells; cellId++){
-        line.TakeOwnership(new LineType);
-        line->SetPointId(0, cellId);
-        line->SetPointId(1, cellId+1);
-        mesh->SetCell(cellId, line);
+    if(mesh->GetNumberOfPoints() > 1){
+        const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
+        typename CellType::CellAutoPointer line;
+        for(size_t cellId=0; cellId < numberOfCells; cellId++){
+            line.TakeOwnership(new LineType);
+            line->SetPointId(0, cellId);
+            line->SetPointId(1, cellId+1);
+            mesh->SetCell(cellId, line);
+            }
         }
 
     std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
