@@ -20,6 +20,23 @@
 #include <itkMeshFileWriter.h>
 
 
+template<typename OptimizerType>
+void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
+
+    const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
+
+    if(itk::ProgressEvent().CheckEvent(&event))
+        fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
+    else if(itk::IterationEvent().CheckEvent(&event)){
+        OptimizerType* optimizer= dynamic_cast<OptimizerType *>(caller);
+        fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetValue());
+        std::cerr << optimizer->GetCurrentPosition();
+        }
+    else if(itk::EndEvent().CheckEvent(&event))
+        std::cerr << std::endl;
+    }
+
+
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
@@ -90,6 +107,11 @@ int DoIt(int argc, char *argv[]){
     typename OptimizerType::Pointer optimizer = OptimizerType::New();
     optimizer->SetNumberOfIterations(atoi(argv[4]));
     optimizer->SetLearningRate(atof(argv[5]));
+
+    itk::CStyleCommand::Pointer eventCallbackITK;
+    eventCallbackITK = itk::CStyleCommand::New();
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<OptimizerType>);
+    optimizer->AddObserver(itk::AnyEvent(), eventCallbackITK);
 
     // Create path filter
     typename PathFilterType::Pointer pathFilter = PathFilterType::New();
@@ -366,19 +388,20 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 5 ){
+    if ( argc < 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image_Base"
                   << " compress"
                   << " iterations"
-                  << " step-scale (will correspond to distance between points for a speed function ~1 along path)"
+                  << " step-scale"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
                   << std::endl;
         std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
+        std::cerr << " step-scale will correspond to distance between points for a speed function ~1 along path" << std::endl;
 
         return EXIT_FAILURE;
         }
