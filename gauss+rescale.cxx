@@ -6,8 +6,8 @@
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
-//#include <itkSmoothingRecursiveGaussianImageFilter.h>//works on each component independently, e.g. for RGB
-#include <itkRecursiveGaussianImageFilter.h>//can stream, needs slightly less memory
+#include <itkSmoothingRecursiveGaussianImageFilter.h>//works on each component independently, e.g. for RGB, ND kernel by default
+//#include <itkRecursiveGaussianImageFilter.h>//can stream, needs slightly less memory, ONLY one dimension (SetDirection)!!!
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageFileWriter.h>
 

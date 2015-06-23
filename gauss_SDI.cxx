@@ -7,7 +7,8 @@
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 //#include <itkSmoothingRecursiveGaussianImageFilter.h>//works on each component independently, e.g. for RGB; cannot stream!
-#include <itkRecursiveGaussianImageFilter.h>//can stream
+//#include <itkRecursiveGaussianImageFilter.h>//can stream, ONLY one dimension (SetDirection)!!!
+#include <itkDiscreteGaussianImageFilter.h>//ND kernel by default
 //#include <itkRescaleIntensityImageFilter.h>//results differ depending on chunk sizes and therefore on # of stream chunks!
 #include <itkPipelineMonitorImageFilter.h>
 #include <itkImageFileWriter.h>
@@ -44,10 +45,10 @@ int DoIt(int argc, char *argv[]){
  
     reader->SetFileName(argv[1]);
 
-    typedef itk::RecursiveGaussianImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::DiscreteGaussianImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(reader->GetOutput());
-    filter->SetSigma(atof(argv[4]));
+    filter->SetVariance(atof(argv[4]));
     //filter->InPlaceOn();//no effect if InputImageType != ProcessImageType !
     filter->ReleaseDataFlagOn();
 
