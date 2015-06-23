@@ -219,14 +219,16 @@ int DoIt(int argc, char *argv[]){
     typedef typename itk::Mesh<float, Dimension>  MeshType;
     typename MeshType::Pointer  mesh = MeshType::New();
 
+    typename MeshType::PointType mP;
     for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
 
-        // Get the path
+        // Get the path, coords are stored as continous index
         typename PathType::Pointer path = pathFilter->GetOutput(i);
         const typename PathType::VertexListType *vertexList = path->GetVertexList();
 
         for(unsigned int k = 0; k < vertexList->Size(); k++){
-            mesh->SetPoint(k, vertexList->GetElement(k));
+            speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
+            mesh->SetPoint(k, mP);
             }
         }
 
