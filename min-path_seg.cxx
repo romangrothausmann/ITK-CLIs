@@ -1,5 +1,8 @@
-////program for itkSpeedFunctionToPathFilter (Fast Marching Minimal Path Extraction)
-//01: based on template.cxx and vo-img2v-skel_01.cxx
+////program to segment a binray image along a minimal path
+//01: based on min-path_fm.cxx and skeletonize_3D.cxx
+
+////ToDo:
+// remove itkRescaleIntensityImageFilter and use scaleSpace for gaussian as skel consists only of 1
 
 
 #include <string>
@@ -7,12 +10,17 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include "itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
+#include <itkSmoothingRecursiveGaussianImageFilter.h>
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
+#include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkGradientDescentOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
+#include <itkShapedNeighborhoodIterator.h>
+#include <itkBinaryBallStructuringElement.h>
 #include <itkImageFileWriter.h>
 
 #include <itkMesh.h>
@@ -40,7 +48,7 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    const char offset= 6;
+    const char offset= 7;
     if( argc != offset + 3*Dimension){
         fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
         return EXIT_FAILURE;
@@ -50,10 +58,12 @@ int DoIt(int argc, char *argv[]){
     std::stringstream sss;
 
     typedef double   SpeedPixelType;
+    typedef double   DMPixelType;
     typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<SpeedPixelType, Dimension>  SpeedImageType;
+    typedef itk::Image<DMPixelType, Dimension>  DMImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -61,7 +71,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
+    //reader->ReleaseDataFlagOn();
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -73,10 +83,22 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    typedef itk::BinaryThinningImageFilter3D<InputImageType, InputImageType> SkelFilterType;
+    typename SkelFilterType::Pointer skelf= SkelFilterType::New();
+    skelf->SetInput(reader->GetOutput());
+    skelf->ReleaseDataFlagOn();
+    FilterWatcher watcherSF(skelf);
+
+    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, SpeedImageType> GaussFilterType;
+    typename GaussFilterType::Pointer gaussf= GaussFilterType::New();
+    gaussf->SetInput(skelf->GetOutput());
+    gaussf->SetSigma(atof(argv[4]));
+    FilterWatcher watcherGF(gaussf);
+
     // scale image values to be in [0; 1]
-    typedef typename itk::RescaleIntensityImageFilter<InputImageType, SpeedImageType> RescaleFilterType;
+    typedef typename itk::RescaleIntensityImageFilter<SpeedImageType, SpeedImageType> RescaleFilterType;
     typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
-    rescaleFilter->SetInput(reader->GetOutput());
+    rescaleFilter->SetInput(gaussf->GetOutput());
     rescaleFilter->SetOutputMinimum(0.0);
     rescaleFilter->SetOutputMaximum(1.0);
     FilterWatcher watcherR(rescaleFilter);
@@ -89,6 +111,24 @@ int DoIt(int argc, char *argv[]){
         }
 
     const typename SpeedImageType::Pointer& speed= rescaleFilter->GetOutput();
+
+        {//// for debugging
+        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
+        typename WriterType::Pointer writer = WriterType::New();
+
+        FilterWatcher watcherO(writer);
+        sss.str(""); sss << outPrefix << "_speed.mha";
+        writer->SetFileName(sss.str().c_str());
+        writer->SetInput(speed);
+        writer->SetUseCompression(atoi(argv[3]));
+        try{
+            writer->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        }
 
     typedef itk::PolyLineParametricPath<Dimension> PathType;
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
@@ -105,8 +145,8 @@ int DoIt(int argc, char *argv[]){
     // Create optimizer
     typedef itk::GradientDescentOptimizer OptimizerType;
     typename OptimizerType::Pointer optimizer = OptimizerType::New();
-    optimizer->SetNumberOfIterations(atoi(argv[4]));
-    optimizer->SetLearningRate(atof(argv[5]));
+    optimizer->SetNumberOfIterations(atoi(argv[5]));
+    optimizer->SetLearningRate(atof(argv[6]));
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
@@ -170,8 +210,44 @@ int DoIt(int argc, char *argv[]){
     output->Allocate();
     output->FillBuffer(itk::NumericTraits<OutputPixelType>::Zero);
 
+
+    typedef itk::SignedMaurerDistanceMapImageFilter<InputImageType, DMImageType> DMFilterType;
+    typename DMFilterType::Pointer dm= DMFilterType::New();
+    dm->SetInput(reader->GetOutput());
+    dm->InsideIsPositiveOn();
+    //dm->ReleaseDataFlagOn();
+    dm->SquaredDistanceOff();
+
+    FilterWatcher watcherDM(dm);
+    try{ 
+        dm->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+        {//// for debugging
+        typedef itk::ImageFileWriter<DMImageType>  WriterType;
+        typename WriterType::Pointer writer = WriterType::New();
+
+        FilterWatcher watcherO(writer);
+        sss.str(""); sss << outPrefix << "_dm.mha";
+        writer->SetFileName(sss.str().c_str());
+        writer->SetInput(dm->GetOutput());
+        writer->SetUseCompression(atoi(argv[3]));
+        try{
+            writer->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        }
+
     // Rasterize path
     typedef itk::PathIterator<OutputImageType, PathType> PathIteratorType;
+    typedef itk::PathConstIterator<DMImageType, PathType> PathConstIteratorType;
     std::cout << "# of paths: " << pathFilter->GetNumberOfOutputs() << std::endl;
     for (unsigned int i= 0; i < pathFilter->GetNumberOfOutputs(); i++){
 
@@ -185,11 +261,50 @@ int DoIt(int argc, char *argv[]){
             }
 
         printf("Path %3d contains %6d points.\n", i, path->GetVertexList()->Size());
+        std::cerr << path->EndOfInput() << std::endl;
 
         // Iterate path and convert to image
         PathIteratorType it(output, path);
-        for (it.GoToBegin(); !it.IsAtEnd(); ++it){
+        PathConstIteratorType cit(dm->GetOutput(), path);
+        int count= 0;
+        for (it.GoToBegin(); !it.IsAtEnd(); ++it, ++cit){//possibly more iterations than path->GetVertexList()->Size() !! can take long with large radii
+
+            //// draw a ball centered on path-point
+            typedef typename itk::BinaryBallStructuringElement<OutputPixelType, Dimension> StructuringElementType;
+            typename StructuringElementType::RadiusType elementRadius;
+            int radius= itk::Math::Round<typename StructuringElementType::RadiusType::SizeValueType, DMPixelType>(cit.Get());
+            if(radius < 1)
+                radius= 1;
+            elementRadius.Fill(radius);
+            fprintf(stderr, "\rradius %d", radius);
+ 
+ 
+            StructuringElementType structuringElement;
+            structuringElement.SetRadius(elementRadius);
+            structuringElement.CreateStructuringElement();
+ 
+            typedef typename itk::ShapedNeighborhoodIterator<OutputImageType> IteratorType;
+            IteratorType siterator(structuringElement.GetRadius(), output, output->GetLargestPossibleRegion());
+ 
+            siterator.CreateActiveListFromNeighborhood(structuringElement);
+            siterator.NeedToUseBoundaryConditionOff();
+ 
+            typename IteratorType::IndexType location;
+            siterator.SetLocation(it.GetIndex());
+            typename IteratorType::Iterator sit;
+            for (sit= siterator.Begin(); !sit.IsAtEnd(); ++sit)
+                if(!sit.Get())//only draw over bg
+                    sit.Set(radius);
+
+            //// mark center, will be overpainted by next ball unless extra run or ball painting only on bg voxels
             it.Set(itk::NumericTraits<OutputPixelType>::max()/2);
+
+            fprintf(stderr, " %d", count);
+            count++;
+            // if(count > path->EndOfInput() + 10){
+            //         std::cerr << "More iterations than points in the path, should this happen? Breaking!" << std::endl;
+            //         break;
+            //         }
             }
         }
 
@@ -202,7 +317,7 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    sss << outPrefix << ".mha";
+    sss.str(""); sss << outPrefix << ".mha";
     writer->SetFileName(sss.str().c_str());
     writer->SetInput(output);
     writer->SetUseCompression(atoi(argv[3]));
@@ -272,9 +387,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
@@ -317,42 +429,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef unsigned char InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::CHAR:{         // int8_t
-        typedef char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::USHORT:{       // uint16_t
-        typedef unsigned short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::SHORT:{        // int16_t
-        typedef short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UINT:{         // uint32_t
-        typedef unsigned int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::INT:{          // int32_t
-        typedef int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::ULONG:{        // uint64_t
-        typedef unsigned long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::LONG:{         // int64_t
-        typedef long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::FLOAT:{        // float32
-        typedef float InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::DOUBLE:{       // float64
-        typedef double InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -392,12 +468,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc < 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image_Base"
                   << " compress"
+                  << " sigma"
                   << " iterations"
                   << " step-scale"
                   << " start-point..."
