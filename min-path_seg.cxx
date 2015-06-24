@@ -89,16 +89,16 @@ int DoIt(int argc, char *argv[]){
     skelf->ReleaseDataFlagOn();
     FilterWatcher watcherSF(skelf);
 
-    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, SpeedImageType> GaussFilterType;
-    typename GaussFilterType::Pointer gaussf= GaussFilterType::New();
-    gaussf->SetInput(skelf->GetOutput());
-    gaussf->SetSigma(atof(argv[4]));
-    FilterWatcher watcherGF(gaussf);
+    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
+    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
+    smoother->SetInput(skelf->GetOutput());
+    smoother->SetSigma(atof(argv[4]));
+    FilterWatcher watcherSM(smoother);
 
     // scale image values to be in [0; 1]
     typedef typename itk::RescaleIntensityImageFilter<SpeedImageType, SpeedImageType> RescaleFilterType;
     typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
-    rescaleFilter->SetInput(gaussf->GetOutput());
+    rescaleFilter->SetInput(smoother->GetOutput());
     rescaleFilter->SetOutputMinimum(0.0);
     rescaleFilter->SetOutputMaximum(1.0);
     FilterWatcher watcherR(rescaleFilter);
