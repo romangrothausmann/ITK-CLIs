@@ -11,7 +11,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include "itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
-#include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkParabolicDilateImageFilter.h>
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
@@ -89,10 +89,10 @@ int DoIt(int argc, char *argv[]){
     skelf->ReleaseDataFlagOn();
     FilterWatcher watcherSF(skelf);
 
-    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
+    typedef itk::ParabolicDilateImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
     typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
     smoother->SetInput(skelf->GetOutput());
-    smoother->SetSigma(atof(argv[4]));
+    smoother->SetScale(atof(argv[4]));
     FilterWatcher watcherSM(smoother);
 
     // scale image values to be in [0; 1]
@@ -199,6 +199,24 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+        {//// for debugging
+        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
+        typename WriterType::Pointer writer = WriterType::New();
+
+        FilterWatcher watcherO(writer);
+        sss.str(""); sss << outPrefix << "_fm.mha";
+        writer->SetFileName(sss.str().c_str());
+        writer->SetInput(pathFilter->GetArrivalFunction());//needs adding under public of InputImageType * GetArrivalFunction(){return(m_CurrentArrivalFunction);} in Modules/Remote/MinimalPathExtraction/include/itkSpeedFunctionToPathFilter.h; only returns fm from last waypoint to end!
+
+        writer->SetUseCompression(atoi(argv[3]));
+        try{
+            writer->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        }
 
     // Allocate output image
     typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
