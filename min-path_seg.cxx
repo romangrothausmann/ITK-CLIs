@@ -85,7 +85,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::BinaryThinningImageFilter3D<InputImageType, InputImageType> SkelFilterType;
     typename SkelFilterType::Pointer skelf= SkelFilterType::New();
     skelf->SetInput(reader->GetOutput());
-    skelf->ReleaseDataFlagOn();
+    //skelf->ReleaseDataFlagOn();
     FilterWatcher watcherSF(skelf);
 
     typedef itk::ParabolicDilateImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
@@ -301,6 +301,37 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+        {//// for debugging
+	typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThrFilterType;
+	typename ThrFilterType::Pointer thr= ThrFilterType::New();
+	thr->SetInput(skelf->GetOutput());
+	thr->SetUpperThreshold(0);
+	thr->SetOutsideValue(0);
+	thr->SetInsideValue(1);
+	FilterWatcher watcherThr(thr);
+
+	dm->SetInput(thr->GetOutput());
+	//dm->ReleaseDataFlagOn();
+	dm->SqrDistOff();
+	dm->SetUseImageSpacing(false);
+	FilterWatcher watcherDM(dm);
+
+        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
+        typename WriterType::Pointer writer = WriterType::New();
+
+        FilterWatcher watcherO(writer);
+        sss.str(""); sss << outPrefix << "_skel-dm.mha";
+        writer->SetFileName(sss.str().c_str());
+        writer->SetInput(dm->GetOutput());
+        writer->SetUseCompression(atoi(argv[3]));
+        try{
+            writer->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        }
 
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
