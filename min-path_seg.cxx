@@ -19,6 +19,7 @@
 #include <itkGradientDescentOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
+#include <itkBinaryThresholdImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #include <itkMesh.h>
@@ -276,13 +277,21 @@ int DoIt(int argc, char *argv[]){
     pd->SetScale(.5);//0.5: unscaled
     FilterWatcher watcherPD(pd);
 
+    typedef itk::BinaryThresholdImageFilter<DMImageType, OutputImageType> ThrFilterType;
+    typename ThrFilterType::Pointer thr= ThrFilterType::New();
+    thr->SetInput(pd->GetOutput());
+    thr->SetUpperThreshold(0);
+    thr->SetOutsideValue(1);
+    thr->SetInsideValue(0);
+    FilterWatcher watcherThr(thr);
+
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     sss.str(""); sss << outPrefix << ".mha";
     writer->SetFileName(sss.str().c_str());
-    writer->SetInput(pd->GetOutput());
+    writer->SetInput(thr->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
