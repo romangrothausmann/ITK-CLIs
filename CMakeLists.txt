@@ -81,6 +81,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 LIST(FIND ITK_MODULES_ENABLED ITKReview ITKReview_FOUND)
 LIST(FIND ITK_MODULES_ENABLED LesionSizingToolkit LesionSizingToolkit_FOUND)
 LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/da17ae4d4955bb92d5259c6ac47bfce6c474be18
+LIST(FIND ITK_MODULES_ENABLED ParabolicMorphology ParabolicMorphology_FOUND)#in itk-4.8: https://github.com/InsightSoftwareConsortium/ITK/commit/2b3190575b82e8457c028040c3bfd0f69fa1ef35
 
 
 SET(CurrentExe "file_converter")
@@ -177,6 +178,17 @@ SET(CurrentExe "distance_map_signed_maurer_f64")
 ADD_EXECUTABLE(${CurrentExe}  "distance_map_signed_maurer.cxx")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "distance_map_parabolic_f32")
+IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+ELSE(ParabolicMorphology_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  "distance_map_parabolic.cxx")
+  SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "bin")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})

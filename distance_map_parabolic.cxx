@@ -1,5 +1,5 @@
-////program for itkSignedMaurerDistanceMapImageFilter
-//01: based on template_02.cxx
+////program for itkMorphologicalDistanceTransformImageFilter
+//01: based on distance_map_signed_maurer.cxx
 
 
 #include <complex>
@@ -8,7 +8,7 @@
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkSignedMaurerDistanceMapImageFilter.h>
+#include <itkMorphologicalDistanceTransformImageFilter.h>
 
 
 
@@ -64,11 +64,11 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::SignedMaurerDistanceMapImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::MorphologicalDistanceTransformImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->SetSquaredDistance(atoi(argv[4]));
+    filter->SetSqrDist(atoi(argv[4]));
     //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
