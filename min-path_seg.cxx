@@ -15,12 +15,10 @@
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
-#include <itkSignedMaurerDistanceMapImageFilter.h>
+#include <itkMorphologicalDistanceTransformImageFilter.h>
 #include <itkGradientDescentOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
-#include <itkShapedNeighborhoodIterator.h>
-#include <itkBinaryBallStructuringElement.h>
 #include <itkImageFileWriter.h>
 
 #include <itkMesh.h>
@@ -59,7 +57,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef double   SpeedPixelType;
     typedef double   DMPixelType;
-    typedef uint8_t  OutputPixelType;
+    typedef DMPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<SpeedPixelType, Dimension>  SpeedImageType;
@@ -199,24 +197,6 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-        {//// for debugging
-        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
-        typename WriterType::Pointer writer = WriterType::New();
-
-        FilterWatcher watcherO(writer);
-        sss.str(""); sss << outPrefix << "_fm.mha";
-        writer->SetFileName(sss.str().c_str());
-        writer->SetInput(pathFilter->GetArrivalFunction());//needs adding under public of InputImageType * GetArrivalFunction(){return(m_CurrentArrivalFunction);} in Modules/Remote/MinimalPathExtraction/include/itkSpeedFunctionToPathFilter.h; only returns fm from last waypoint to end!
-
-        writer->SetUseCompression(atoi(argv[3]));
-        try{
-            writer->Update();
-            }
-        catch(itk::ExceptionObject &ex){
-            std::cerr << ex << std::endl;
-            return EXIT_FAILURE;
-            }
-        }
 
     // Allocate output image
     typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
@@ -229,12 +209,12 @@ int DoIt(int argc, char *argv[]){
     output->FillBuffer(itk::NumericTraits<OutputPixelType>::Zero);
 
 
-    typedef itk::SignedMaurerDistanceMapImageFilter<InputImageType, DMImageType> DMFilterType;
+    typedef itk::MorphologicalDistanceTransformImageFilter<InputImageType, DMImageType> DMFilterType;
     typename DMFilterType::Pointer dm= DMFilterType::New();
     dm->SetInput(reader->GetOutput());
-    dm->InsideIsPositiveOn();
     //dm->ReleaseDataFlagOn();
-    dm->SquaredDistanceOff();
+    dm->SqrDistOn();
+    dm->SetUseImageSpacing(false);
 
     FilterWatcher watcherDM(dm);
     try{ 
@@ -286,50 +266,15 @@ int DoIt(int argc, char *argv[]){
         PathConstIteratorType cit(dm->GetOutput(), path);
         int count= 0;
         for (it.GoToBegin(); !it.IsAtEnd(); ++it, ++cit){//possibly more iterations than path->GetVertexList()->Size() !! can take long with large radii
-
-            //// draw a ball centered on path-point
-            typedef typename itk::BinaryBallStructuringElement<OutputPixelType, Dimension> StructuringElementType;
-            typename StructuringElementType::RadiusType elementRadius;
-            int radius= itk::Math::Round<typename StructuringElementType::RadiusType::SizeValueType, DMPixelType>(cit.Get());
-            if(radius < 1)
-                radius= 1;
-            elementRadius.Fill(radius);
-            fprintf(stderr, "\rradius %d", radius);
- 
- 
-            StructuringElementType structuringElement;
-            structuringElement.SetRadius(elementRadius);
-            structuringElement.CreateStructuringElement();
- 
-            typedef typename itk::ShapedNeighborhoodIterator<OutputImageType> IteratorType;
-            IteratorType siterator(structuringElement.GetRadius(), output, output->GetLargestPossibleRegion());
- 
-            siterator.CreateActiveListFromNeighborhood(structuringElement);
-            siterator.NeedToUseBoundaryConditionOff();
- 
-            typename IteratorType::IndexType location;
-            siterator.SetLocation(it.GetIndex());
-            typename IteratorType::Iterator sit;
-            for (sit= siterator.Begin(); !sit.IsAtEnd(); ++sit)
-                if(!sit.Get())//only draw over bg
-                    sit.Set(radius);
-
-            //// mark center, will be overpainted by next ball unless extra run or ball painting only on bg voxels
-            it.Set(itk::NumericTraits<OutputPixelType>::max()/2);
-
-            fprintf(stderr, " %d", count);
-            count++;
-            // if(count > path->EndOfInput() + 10){
-            //         std::cerr << "More iterations than points in the path, should this happen? Breaking!" << std::endl;
-            //         break;
-            //         }
+            it.Set(cit.Get());//mark center with squared hight, later used by ParabolicDilate
             }
         }
 
-    output->SetPixel(start,itk::NumericTraits<OutputPixelType>::max());
-    output->SetPixel(end,itk::NumericTraits<OutputPixelType>::max());
-    output->SetPixel(way,itk::NumericTraits<OutputPixelType>::max());
-
+    typedef itk::ParabolicDilateImageFilter<DMImageType, DMImageType> PDFilterType;
+    typename PDFilterType::Pointer pd= PDFilterType::New();
+    pd->SetInput(output);
+    pd->SetScale(.5);//0.5: unscaled
+    FilterWatcher watcherPD(pd);
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -337,7 +282,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     sss.str(""); sss << outPrefix << ".mha";
     writer->SetFileName(sss.str().c_str());
-    writer->SetInput(output);
+    writer->SetInput(pd->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
