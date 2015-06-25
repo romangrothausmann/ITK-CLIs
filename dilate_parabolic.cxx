@@ -1,5 +1,5 @@
-////program for itkMorphologicalDistanceTransformImageFilter
-//01: based on distance_map_signed_maurer.cxx
+////program for itkParabolicDilateImageFilter
+//01: based on distance_map_parabolic.cxx
 
 
 #include <complex>
@@ -8,7 +8,7 @@
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkMorphologicalDistanceTransformImageFilter.h>
+#include <itkParabolicDilateImageFilter.h>
 
 
 
@@ -64,11 +64,11 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::MorphologicalDistanceTransformImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ParabolicDilateImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->SetSqrDist(atoi(argv[4]));
+    filter->SetScale(atoi(argv[4]));
     //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]){
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
-		  << " squared_distance"
+		  << " scale"
     		  << std::endl;
 
 	return EXIT_FAILURE;
