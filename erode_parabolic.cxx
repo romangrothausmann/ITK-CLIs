@@ -8,7 +8,7 @@
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkParabolicDilateImageFilter.h>
+#include <itkParabolicErodeImageFilter.h>
 
 
 
@@ -64,7 +64,7 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::ParabolicDilateImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ParabolicErodeImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
