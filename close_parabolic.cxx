@@ -1,5 +1,5 @@
-////program for itkParabolicDilateImageFilter
-//01: based on distance_map_parabolic.cxx
+////program for itkParabolicCloseImageFilter
+//01: based on dilate_parabolic.cxx
 
 
 #include <complex>
@@ -8,7 +8,7 @@
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkParabolicDilateImageFilter.h>
+#include <itkParabolicCloseImageFilter.h>
 
 
 
@@ -64,7 +64,7 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::ParabolicDilateImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ParabolicCloseImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
