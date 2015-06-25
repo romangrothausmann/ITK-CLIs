@@ -41,8 +41,8 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     const char offset= 6;
-    if( argc != offset + 3*Dimension){
-        fprintf(stderr, "%d + 3*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 3*Dimension);
+    if((argc - offset) % Dimension){
+        fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
         return EXIT_FAILURE;
         }
 
@@ -121,7 +121,9 @@ int DoIt(int argc, char *argv[]){
     pathFilter->SetTerminationValue(2.0);
 
     // Setup path points
-    typename SpeedImageType::IndexType start, end, way;
+    typename SpeedImageType::IndexType start, end;
+    typename PathFilterType::PointType startP, endP;
+    typename PathFilterType::PathInfo info;
 
     for(int j= 0; j < Dimension; j++){
         start[j]= atoi(argv[j+offset]) - 1;
@@ -131,25 +133,25 @@ int DoIt(int argc, char *argv[]){
         end[j]= atoi(argv[j+Dimension+offset]) - 1;
         }
 
-    for(int j= 0; j < Dimension; j++){
-        way[j]= atoi(argv[j+2*Dimension+offset]) - 1;
-        }
-
-    typename PathFilterType::PointType startP, endP, wayP;
-
     speed->TransformIndexToPhysicalPoint(start, startP);
     speed->TransformIndexToPhysicalPoint(end, endP);
-    speed->TransformIndexToPhysicalPoint(way, wayP);
-
-    // Add path information
-    typename PathFilterType::PathInfo info;
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
-    info.AddWayPoint(wayP);
+
+    for(int i= offset + 2*Dimension; i < argc; i+= Dimension){
+	typename SpeedImageType::IndexType way;
+	typename PathFilterType::PointType wayP;
+
+	for(int j= 0; j < Dimension; j++){
+	    way[j]= atoi(argv[i+j]) - 1;
+	    }
+
+	speed->TransformIndexToPhysicalPoint(way, wayP);
+	info.AddWayPoint(wayP);
+        std::cerr << way << std::endl;	
+	}
+
     pathFilter->AddPathInfo(info);
-
-
-    // Compute the path
     FilterWatcher watcher(pathFilter); //filter reports no progress so far
     try {
         pathFilter->Update();
@@ -192,11 +194,6 @@ int DoIt(int argc, char *argv[]){
             it.Set(itk::NumericTraits<OutputPixelType>::max()/2);
             }
         }
-
-    output->SetPixel(start,itk::NumericTraits<OutputPixelType>::max());
-    output->SetPixel(end,itk::NumericTraits<OutputPixelType>::max());
-    output->SetPixel(way,itk::NumericTraits<OutputPixelType>::max());
-
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
