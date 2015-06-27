@@ -324,8 +324,8 @@ int DoIt(int argc, char *argv[]){
 	typename NodeContainer::Pointer ANodes = NodeContainer::New();
 	ANodes->Initialize();
 
-	typedef itk::ImageRegionConstIteratorWithIndex<InputImageType> IteratorType;
-	IteratorType it(skelf->GetOutput(), skelf->GetOutput()->GetLargestPossibleRegion());
+	typedef itk::ImageRegionConstIteratorWithIndex<OutputImageType> IteratorType;
+	IteratorType it(output, output->GetLargestPossibleRegion());
     
 	unsigned int count = 0;
 	for(it.GoToBegin(); !it.IsAtEnd(); ++it){
