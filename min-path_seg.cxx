@@ -20,6 +20,9 @@
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
 #include <itkBinaryThresholdImageFilter.h>
+#include <itkImageRegionConstIteratorWithIndex.h>
+#include <itkFastMarchingImageFilter.h>
+#include <itkMaskImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #include <itkMesh.h>
@@ -301,37 +304,67 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-        {//// for debugging
-	typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThrFilterType;
-	typename ThrFilterType::Pointer thr= ThrFilterType::New();
-	thr->SetInput(skelf->GetOutput());
-	thr->SetUpperThreshold(0);
-	thr->SetOutsideValue(0);
-	thr->SetInsideValue(1);
-	FilterWatcher watcherThr(thr);
+        {////geodesic of path to surface of segementation
 
-	dm->SetInput(thr->GetOutput());
-	//dm->ReleaseDataFlagOn();
-	dm->SqrDistOff();
-	dm->SetUseImageSpacing(false);
-	FilterWatcher watcherDM(dm);
+	typedef itk::RescaleIntensityImageFilter<InputImageType, SpeedImageType> RescaleType;
+	typename RescaleType::Pointer rescaler2 = RescaleType::New();
+	rescaler2->SetInput(reader->GetOutput());
+	rescaler2->SetOutputMinimum(0);
+	rescaler2->SetOutputMaximum(1);
+	rescaler2->Update();
 
-        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
-        typename WriterType::Pointer writer = WriterType::New();
+	typedef itk::FastMarchingImageFilter<SpeedImageType, SpeedImageType> FMFilterType;
+	typename FMFilterType::Pointer fm = FMFilterType::New();
+	fm->SetInput(rescaler2->GetOutput());//setting the speed image
+	//fm->SetUseImageSpacing(false);
 
-        FilterWatcher watcherO(writer);
-        sss.str(""); sss << outPrefix << "_skel-dm.mha";
-        writer->SetFileName(sss.str().c_str());
-        writer->SetInput(dm->GetOutput());
-        writer->SetUseCompression(atoi(argv[3]));
-        try{
-            writer->Update();
-            }
-        catch(itk::ExceptionObject &ex){
-            std::cerr << ex << std::endl;
-            return EXIT_FAILURE;
-            }
-        }
+	typedef typename FMFilterType::NodeContainer  NodeContainer;
+	typedef typename FMFilterType::NodeType       NodeType;
+
+	typename NodeContainer::Pointer ANodes = NodeContainer::New();
+	ANodes->Initialize();
+
+	typedef itk::ImageRegionConstIteratorWithIndex<InputImageType> IteratorType;
+	IteratorType it(skelf->GetOutput(), skelf->GetOutput()->GetLargestPossibleRegion());
+    
+	unsigned int count = 0;
+	for(it.GoToBegin(); !it.IsAtEnd(); ++it){
+	    if(it.Get() > 0){
+		NodeType node;
+		node.SetIndex(it.GetIndex());
+		ANodes->InsertElement(count, node);
+		count++;
+		}
+	    }
+
+	// Set nodes
+	fm->SetAlivePoints(ANodes);
+	fm->SetTrialPoints(ANodes); //try with trial points = alive points
+	FilterWatcher watcherFM(fm);
+        fm->Update();
+
+	typedef itk::MaskImageFilter<SpeedImageType, InputImageType, SpeedImageType> MFilterType;
+	typename MFilterType::Pointer mask = MFilterType::New();
+	mask->SetInput(fm->GetOutput());
+	mask->SetMaskImage(reader->GetOutput());
+	mask->Update();
+
+	typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
+	typename WriterType::Pointer writer = WriterType::New();
+
+	FilterWatcher watcherO(writer);
+	sss.str(""); sss << outPrefix << "_skel-fm.mha";
+	writer->SetFileName(sss.str().c_str());
+	writer->SetInput(mask->GetOutput());
+	writer->SetUseCompression(atoi(argv[3]));
+	try{
+	    writer->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
@@ -340,15 +373,15 @@ int DoIt(int argc, char *argv[]){
     typename MeshType::PointType mP;
     for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
 
-        // Get the path, coords are stored as continous index
-        typename PathType::Pointer path = pathFilter->GetOutput(i);
-        const typename PathType::VertexListType *vertexList = path->GetVertexList();
+	// Get the path, coords are stored as continous index
+	typename PathType::Pointer path = pathFilter->GetOutput(i);
+	const typename PathType::VertexListType *vertexList = path->GetVertexList();
 
-        for(unsigned int k = 0; k < vertexList->Size(); k++){
-            speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
-            mesh->SetPoint(k, mP);
-            }
-        }
+	for(unsigned int k = 0; k < vertexList->Size(); k++){
+	    speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
+	    mesh->SetPoint(k, mP);
+	    }
+	}
 
     std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
@@ -359,15 +392,15 @@ int DoIt(int argc, char *argv[]){
 
     //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
     if(mesh->GetNumberOfPoints() > 1){
-        const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
-        typename CellType::CellAutoPointer line;
-        for(size_t cellId=0; cellId < numberOfCells; cellId++){
-            line.TakeOwnership(new LineType);
-            line->SetPointId(0, cellId);
-            line->SetPointId(1, cellId+1);
-            mesh->SetCell(cellId, line);
-            }
-        }
+	const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
+	typename CellType::CellAutoPointer line;
+	for(size_t cellId=0; cellId < numberOfCells; cellId++){
+	    line.TakeOwnership(new LineType);
+	    line->SetPointId(0, cellId);
+	    line->SetPointId(1, cellId+1);
+	    mesh->SetCell(cellId, line);
+	    }
+	}
 
     std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
 
@@ -386,126 +419,126 @@ int DoIt(int argc, char *argv[]){
     }
 
 
-template<typename InputComponentType, typename InputPixelType>
-int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
-    switch (dimensionType){
-    case 3:
-        res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
-        break;
-    default:
-        std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
-        break;
-        }//switch
-    return res;
-    }
+    template<typename InputComponentType, typename InputPixelType>
+	int dispatch_D(size_t dimensionType, int argc, char *argv[]){
+	int res= 0;
+	switch (dimensionType){
+	case 3:
+	    res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
+	    break;
+	default:
+	    std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
+	    break;
+	    }//switch
+	return res;
+	}
 
-template<typename InputComponentType>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
-    //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
-    //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
-    //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
+    template<typename InputComponentType>
+	int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+	int res= 0;
+	//http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
+	//http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
+	//IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
-    switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
-        typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UNKNOWNPIXELTYPE:
-    default:
-        std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
-        break;
-        }//switch
-    return res;
-    }
+	switch (pixelType){
+	case itk::ImageIOBase::SCALAR:{
+	    typedef InputComponentType InputPixelType;
+	    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+	    } break;
+	case itk::ImageIOBase::UNKNOWNPIXELTYPE:
+	default:
+	    std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
+	    break;
+	    }//switch
+	return res;
+	}
 
-int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+	int res= 0;
 
-    //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
-    //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
-    //IOComponentType: UNKNOWNCOMPONENTTYPE, UCHAR, CHAR, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT, DOUBLE
+	//http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
+	//http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
+	//IOComponentType: UNKNOWNCOMPONENTTYPE, UCHAR, CHAR, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT, DOUBLE
 
-    switch (componentType){
-    case itk::ImageIOBase::UCHAR:{        // uint8_t
-        typedef unsigned char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
-    default:
-        std::cerr << "unknown component type" << std::endl;
-        break;
-        }//switch
-    return res;
-    }
+	switch (componentType){
+	case itk::ImageIOBase::UCHAR:{        // uint8_t
+	    typedef unsigned char InputComponentType;
+	    res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+	    } break;
+	case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
+	default:
+	    std::cerr << "unknown component type" << std::endl;
+	    break;
+	    }//switch
+	return res;
+	}
 
 
 ////from http://itk-users.7.n7.nabble.com/Pad-image-with-0-but-keep-its-type-what-ever-it-is-td27442.html
 //namespace itk{
-  // Description:
-  // Get the PixelType and ComponentType from fileName
+    // Description:
+    // Get the PixelType and ComponentType from fileName
 
-void GetImageType (std::string fileName,
-    itk::ImageIOBase::IOPixelType &pixelType,
-    itk::ImageIOBase::IOComponentType &componentType,
-    size_t &dimensionType
-    ){
-    typedef itk::Image<char, 1> ImageType; //template initialization parameters need to be given but can be arbitrary here
-    itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
-    imageReader->SetFileName(fileName.c_str());
-    imageReader->UpdateOutputInformation();
+    void GetImageType (std::string fileName,
+	itk::ImageIOBase::IOPixelType &pixelType,
+	itk::ImageIOBase::IOComponentType &componentType,
+	size_t &dimensionType
+	){
+	typedef itk::Image<char, 1> ImageType; //template initialization parameters need to be given but can be arbitrary here
+	itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
+	imageReader->SetFileName(fileName.c_str());
+	imageReader->UpdateOutputInformation();
 
-    pixelType = imageReader->GetImageIO()->GetPixelType();
-    componentType = imageReader->GetImageIO()->GetComponentType();
-    dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
+	pixelType = imageReader->GetImageIO()->GetPixelType();
+	componentType = imageReader->GetImageIO()->GetComponentType();
+	dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
 
-    std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
-    std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
-    std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
-    std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
-    std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
+	std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
+	std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
+	std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
+	std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
+	std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
 
-    }
-
-
-
-int main(int argc, char *argv[]){
-    if ( argc < 7 ){
-        std::cerr << "Missing Parameters: "
-                  << argv[0]
-                  << " Input_Image"
-                  << " Output_Image_Base"
-                  << " compress"
-                  << " sigma"
-                  << " iterations"
-                  << " step-scale"
-                  << " start-point..."
-                  << " end-point..."
-                  << " way-point..."
-                  << std::endl;
-        std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
-        std::cerr << " step-scale will correspond to distance between points for a speed function ~1 along path" << std::endl;
-
-        return EXIT_FAILURE;
-        }
-
-    itk::ImageIOBase::IOPixelType pixelType;
-    typename itk::ImageIOBase::IOComponentType componentType;
-    size_t dimensionType;
+	}
 
 
-    try {
-        GetImageType(argv[1], pixelType, componentType, dimensionType);
-        }//try
-    catch( itk::ExceptionObject &excep){
-        std::cerr << argv[0] << ": exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-        return EXIT_FAILURE;
-        }
 
-    return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
-    }
+    int main(int argc, char *argv[]){
+	if ( argc < 7 ){
+	    std::cerr << "Missing Parameters: "
+		      << argv[0]
+		      << " Input_Image"
+		      << " Output_Image_Base"
+		      << " compress"
+		      << " sigma"
+		      << " iterations"
+		      << " step-scale"
+		      << " start-point..."
+		      << " end-point..."
+		      << " way-point..."
+		      << std::endl;
+	    std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
+	    std::cerr << " step-scale will correspond to distance between points for a speed function ~1 along path" << std::endl;
+
+	    return EXIT_FAILURE;
+	    }
+
+	itk::ImageIOBase::IOPixelType pixelType;
+	typename itk::ImageIOBase::IOComponentType componentType;
+	size_t dimensionType;
+
+
+	try {
+	    GetImageType(argv[1], pixelType, componentType, dimensionType);
+	    }//try
+	catch( itk::ExceptionObject &excep){
+	    std::cerr << argv[0] << ": exception caught !" << std::endl;
+	    std::cerr << excep << std::endl;
+	    return EXIT_FAILURE;
+	    }
+
+	return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
+	}
 
 
 
