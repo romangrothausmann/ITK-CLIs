@@ -69,7 +69,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    //reader->ReleaseDataFlagOn();
+    reader->ReleaseDataFlagOn();//save mem, reader will re-execute later on
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -87,12 +87,14 @@ int DoIt(int argc, char *argv[]){
     rescaleFilter->SetInput(reader->GetOutput());
     rescaleFilter->SetOutputMinimum(0.0);
     rescaleFilter->SetOutputMaximum(1.0);
+    rescaleFilter->ReleaseDataFlagOn();//save mem
     FilterWatcher watcherR(rescaleFilter);
 
     typedef itk::ParabolicOpenImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
     typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
     smoother->SetInput(rescaleFilter->GetOutput());
     smoother->SetScale(atof(argv[4]));
+    smoother->ReleaseDataFlagOn();//save mem
     FilterWatcher watcherSM(smoother);
 
 
@@ -105,24 +107,6 @@ int DoIt(int argc, char *argv[]){
         }
 
     const typename SpeedImageType::Pointer& speed= smoother->GetOutput();
-
-        {//// for debugging
-        typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
-        typename WriterType::Pointer writer = WriterType::New();
-
-        FilterWatcher watcherO(writer);
-        sss.str(""); sss << outPrefix << "_speed.mha";
-        writer->SetFileName(sss.str().c_str());
-        writer->SetInput(speed);
-        writer->SetUseCompression(atoi(argv[3]));
-        try{
-            writer->Update();
-            }
-        catch(itk::ExceptionObject &ex){
-            std::cerr << ex << std::endl;
-            return EXIT_FAILURE;
-            }
-        }
 
     typedef itk::PolyLineParametricPath<Dimension> PathType;
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
@@ -225,23 +209,6 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-        {//// for debugging
-        typedef itk::ImageFileWriter<DMImageType>  WriterType;
-        typename WriterType::Pointer writer = WriterType::New();
-
-        FilterWatcher watcherO(writer);
-        sss.str(""); sss << outPrefix << "_dm.mha";
-        writer->SetFileName(sss.str().c_str());
-        writer->SetInput(dm->GetOutput());
-        writer->SetUseCompression(atoi(argv[3]));
-        try{
-            writer->Update();
-            }
-        catch(itk::ExceptionObject &ex){
-            std::cerr << ex << std::endl;
-            return EXIT_FAILURE;
-            }
-        }
 
     // Rasterize path
     typedef itk::PathIterator<OutputImageType, PathType> PathIteratorType;
@@ -269,11 +236,13 @@ int DoIt(int argc, char *argv[]){
             it.Set(cit.Get());//mark center with squared hight, later used by ParabolicDilate
             }
         }
+    dm->GetOutput()->ReleaseData();
 
     typedef itk::ParabolicDilateImageFilter<DMImageType, DMImageType> PDFilterType;
     typename PDFilterType::Pointer pd= PDFilterType::New();
     pd->SetInput(output);
     pd->SetScale(.5);//0.5: unscaled
+    pd->ReleaseDataFlagOn();
     FilterWatcher watcherPD(pd);
 
     typedef itk::BinaryThresholdImageFilter<DMImageType, OutputImageType> ThrFilterType;
@@ -282,6 +251,7 @@ int DoIt(int argc, char *argv[]){
     thr->SetUpperThreshold(0);
     thr->SetOutsideValue(1);
     thr->SetInsideValue(0);
+    thr->ReleaseDataFlagOn();
     FilterWatcher watcherThr(thr);
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
