@@ -2,7 +2,6 @@
 //01: based on min-path_fm.cxx and skeletonize_3D.cxx
 
 ////ToDo:
-// remove itkRescaleIntensityImageFilter and use scaleSpace for gaussian as skel consists only of 1
 
 
 #include <string>
@@ -10,8 +9,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include "itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
-#include <itkParabolicDilateImageFilter.h>
+#include <itkParabolicOpenImageFilter.h>
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
@@ -19,6 +17,7 @@
 #include <itkGradientDescentOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
+#include <itkParabolicDilateImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -82,34 +81,30 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    typedef itk::BinaryThinningImageFilter3D<InputImageType, InputImageType> SkelFilterType;
-    typename SkelFilterType::Pointer skelf= SkelFilterType::New();
-    skelf->SetInput(reader->GetOutput());
-    skelf->ReleaseDataFlagOn();
-    FilterWatcher watcherSF(skelf);
-
-    typedef itk::ParabolicDilateImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
-    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
-    smoother->SetInput(skelf->GetOutput());
-    smoother->SetScale(atof(argv[4]));
-    FilterWatcher watcherSM(smoother);
-
     // scale image values to be in [0; 1]
-    typedef typename itk::RescaleIntensityImageFilter<SpeedImageType, SpeedImageType> RescaleFilterType;
+    typedef typename itk::RescaleIntensityImageFilter<InputImageType, InputImageType> RescaleFilterType;
     typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
-    rescaleFilter->SetInput(smoother->GetOutput());
+    rescaleFilter->SetInput(reader->GetOutput());
     rescaleFilter->SetOutputMinimum(0.0);
     rescaleFilter->SetOutputMaximum(1.0);
     FilterWatcher watcherR(rescaleFilter);
+
+    typedef itk::ParabolicOpenImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
+    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
+    smoother->SetInput(rescaleFilter->GetOutput());
+    smoother->SetScale(atof(argv[4]));
+    FilterWatcher watcherSM(smoother);
+
+
     try {
-        rescaleFilter->Update();
+        smoother->Update();
         }
     catch (itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
 
-    const typename SpeedImageType::Pointer& speed= rescaleFilter->GetOutput();
+    const typename SpeedImageType::Pointer& speed= smoother->GetOutput();
 
         {//// for debugging
         typedef itk::ImageFileWriter<SpeedImageType>  WriterType;
@@ -176,6 +171,8 @@ int DoIt(int argc, char *argv[]){
     speed->TransformIndexToPhysicalPoint(end, endP);
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
+    std::cerr << "S: " << start << " physical coords: "<< startP << std::endl;	
+    std::cerr << "E: " << end << " physical coords: "<< endP << std::endl;	
 
     for(int i= offset + 2*Dimension; i < argc; i+= Dimension){
 	typename SpeedImageType::IndexType way;
@@ -187,7 +184,7 @@ int DoIt(int argc, char *argv[]){
 
 	speed->TransformIndexToPhysicalPoint(way, wayP);
 	info.AddWayPoint(wayP);
-        std::cerr << way << std::endl;	
+	std::cerr << "W: " << way << " physical coords: "<< wayP << std::endl;	
 	}
 
     pathFilter->AddPathInfo(info);
