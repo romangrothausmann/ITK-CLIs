@@ -151,12 +151,15 @@ int DoIt(int argc, char *argv[]){
         end[j]= atoi(argv[j+Dimension+offset]) - 1;
         }
 
+    const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
     speed->TransformIndexToPhysicalPoint(start, startP);
     speed->TransformIndexToPhysicalPoint(end, endP);
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
     std::cerr << "S: " << start << " physical coords: "<< startP << std::endl;	
     std::cerr << "E: " << end << " physical coords: "<< endP << std::endl;	
+    if(!region.IsInside(start)){std::cerr << "Start point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
+    if(!region.IsInside(end)){std::cerr << "End point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 
     for(int i= offset + 2*Dimension; i < argc; i+= Dimension){
 	typename SpeedImageType::IndexType way;
@@ -169,6 +172,7 @@ int DoIt(int argc, char *argv[]){
 	speed->TransformIndexToPhysicalPoint(way, wayP);
 	info.AddWayPoint(wayP);
 	std::cerr << "W: " << way << " physical coords: "<< wayP << std::endl;	
+	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 	}
 
     pathFilter->AddPathInfo(info);
