@@ -324,18 +324,14 @@ int DoIt(int argc, char *argv[]){
 	typename NodeContainer::Pointer ANodes = NodeContainer::New();
 	ANodes->Initialize();
 
+	typedef itk::ImageRegionConstIteratorWithIndex<OutputImageType> IteratorType;
+	IteratorType it(output, output->GetLargestPossibleRegion());
+    
 	unsigned int count = 0;
-	for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
-
-	    // Get the path, coords are stored as continous index
-	    typename PathType::Pointer path = pathFilter->GetOutput(i);
-	    const typename PathType::VertexListType *vertexList = path->GetVertexList();
-
-	    for(unsigned int k = 0; k < vertexList->Size(); k++){
+	for(it.GoToBegin(); !it.IsAtEnd(); ++it){
+	    if(it.Get() > 0){
 		NodeType node;
-		typename NodeType::IndexType index;
-		index.CopyWithRound(vertexList->GetElement(k));
-		node.SetIndex(index);
+		node.SetIndex(it.GetIndex());
 		ANodes->InsertElement(count, node);
 		count++;
 		}
