@@ -68,7 +68,7 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->SetScale(atoi(argv[4]));
+    filter->SetScale(atof(argv[4]));
     //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
