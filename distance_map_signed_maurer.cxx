@@ -69,6 +69,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
     filter->SetSquaredDistance(atoi(argv[4]));
+    filter->SetUseImageSpacing(atoi(argv[5]));
     //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
@@ -248,13 +249,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
 		  << " squared_distance"
+		  << " use_image-spacing"
     		  << std::endl;
 
 	return EXIT_FAILURE;
