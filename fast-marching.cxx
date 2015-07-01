@@ -1,48 +1,35 @@
-////program for
-//01: based on template_2inputs.cxx
+////program for itkFastMarchingImageFilter
+//01: based on template_2inputs.cxx and snippets from https://code.google.com/p/manageditk/source/browse/trunk/Source/Modules/LevelSetFilters/itkFastMarchingImageFilter.txx?r=2
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkRescaleIntensityImageFilter.h>
+#include <itkImageRegionConstIteratorWithIndex.h>
+#include <itkFastMarchingImageFilter.h>
+#include <itkBinaryThresholdImageFilter.h>
+#include <itkMaskImageFilter.h>
 #include <itkImageFileWriter.h>
 
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+#ifdef USE_FLOAT
+    typedef float   OutputPixelType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double  OutputPixelType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
 
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType1> ReaderType1;
@@ -82,18 +69,41 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType2::Pointer& input2= reader2->GetOutput();
 
+    ////convert input image to speed image, i.e. scale to [0; 1]
+    typedef itk::RescaleIntensityImageFilter<InputImageType2, OutputImageType> RescaleType;
+    typename RescaleType::Pointer rescaler2 = RescaleType::New();
+    rescaler2->SetInput(input2);
+    rescaler2->SetOutputMinimum(0);
+    rescaler2->SetOutputMaximum(1);
+    rescaler2->Update();
 
-    typedef itk::<InputImageType1, InputImageType2, OutputImageType> FilterType;
+    typedef itk::FastMarchingImageFilter<OutputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput1(reader1->GetOutput());
-    filter->SetInput2(reader2->GetOutput());
+    filter->SetInput(rescaler2->GetOutput());
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+
+    typedef typename FilterType::NodeContainer  NodeContainer;
+    typedef typename FilterType::NodeType       NodeType;
+
+    typename NodeContainer::Pointer ANodes = NodeContainer::New();
+    ANodes->Initialize();
+
+    typedef itk::ImageRegionConstIteratorWithIndex<InputImageType1> IteratorType;
+    IteratorType it(input1, input1->GetLargestPossibleRegion() );
+
+    unsigned int count = 0;
+    for(it.GoToBegin(); !it.IsAtEnd(); ++it){
+        if(it.Get() > 0){
+            NodeType node;
+            node.SetIndex(it.GetIndex());
+            ANodes->InsertElement(count, node);
+            count++;
+            }
+        }
+    //filter->SetAlivePoints(ANodes);//alive points are already part of the object, can be omitted?
+    filter->SetTrialPoints(ANodes);//trial points are considered for inclusion, eg the layer of pixels around AlivePoints
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -102,8 +112,22 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    ////set infinity value to 0
+    typedef itk::BinaryThresholdImageFilter<OutputImageType, OutputImageType> ThrFilterType; //could use less RAM if a uint8 image were used
+    typename ThrFilterType::Pointer thr= ThrFilterType::New();
+    thr->SetInput(filter->GetOutput());
+    thr->SetLowerThreshold(filter->GetLargeValue());//does not work, GetLargeValue() is protected
+    thr->SetOutsideValue(0);
+    thr->SetInsideValue(1);
+    FilterWatcher watcherThr(thr);
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    typedef itk::MaskImageFilter<OutputImageType, OutputImageType, OutputImageType> MFilterType;
+    typename MFilterType::Pointer mask = MFilterType::New();
+    mask->SetInput(filter->GetOutput());
+    mask->SetMaskImage(thr->GetOutput());
+    FilterWatcher watcherM(mask);
+
+    const typename OutputImageType::Pointer& output= mask->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -111,8 +135,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[3]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[4]));
+    writer->SetUseCompression(atoi(argv[4]));
     try{
         writer->Update();
         }
@@ -130,9 +153,6 @@ template<typename InputComponentType1, typename InputComponentType2, typename In
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= 0;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2, 2>(argc, argv);
         break;
@@ -158,22 +178,6 @@ int dispatch_pT2(itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType,
         typedef InputComponentType2 InputPixelType2;
         res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType2> InputPixelType2;
-        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType2> InputPixelType2;
-        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType2> InputPixelType2;
-        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType2> InputPixelType2;
-        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
-        } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -192,22 +196,6 @@ int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOP
     switch (pixelType1){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType1 InputPixelType1;
-        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType1> InputPixelType1;
-        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType1> InputPixelType1;
-        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType1> InputPixelType1;
-        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType1> InputPixelType1;
         res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -287,6 +275,7 @@ int dispatch_cT1(itk::ImageIOBase::IOComponentType componentType1, itk::ImageIOB
         typedef unsigned char InputComponentType1;
         res= dispatch_cT2<InputComponentType1>(componentType2, pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
+/*
     case itk::ImageIOBase::CHAR:{         // int8_t
         typedef char InputComponentType1;
         res= dispatch_cT2<InputComponentType1>(componentType2, pixelType1, pixelType2, dimensionType, argc, argv);
@@ -323,6 +312,7 @@ int dispatch_cT1(itk::ImageIOBase::IOComponentType componentType1, itk::ImageIOB
         typedef double InputComponentType1;
         res= dispatch_cT2<InputComponentType1>(componentType2, pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
+*/
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -365,8 +355,8 @@ int main(int argc, char *argv[]){
     if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Input_Image1"
-                  << " Input_Image2"
+                  << " Source_Image"
+                  << " Speed_Image"
                   << " Output_Image"
                   << " compress"
                   << std::endl;
