@@ -136,7 +136,7 @@ int DoIt(int argc, char *argv[]){
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     bool ws0_conn= true;//true reduces amount of watersheds
-    bool ws_conn= atoi(argv[7]);
+    bool ws_conn= ws0_conn;
 
     uint8_t NumberOfExtraWS= atoi(argv[5]);
 
@@ -190,7 +190,7 @@ int DoIt(int argc, char *argv[]){
         gradientImg= input;
         input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
 
-        ws->SetMarkWatershedLine(false); //no use for a border in higher stages
+        ws->SetMarkWatershedLine(atoi(argv[7]));//border in higher stages can make a difference but will not separate lables that initially touch already!
         ws->SetFullyConnected(ws_conn);
         //ws->InPlaceOn();//not available
         //ws->ReleaseDataFlagOn();//no problem but not needed as ch->InPlaceOn()
@@ -473,7 +473,7 @@ int main(int argc, char *argv[]){
                   << " Output_Image"
                   << " compress"
                   << " NumberOfExtraWS invert"
-                  << " border"
+                  << " borderExtraWS"
                   << std::endl;
 
         return EXIT_FAILURE;
