@@ -1,14 +1,12 @@
-////program for itkParabolicOpenImageFilter
-//01: based on dilate_parabolic.cxx
+////program for itkLabelSetErodeImageFilter
+//01: based on open_parabolic.cxx
 
-
-#include <complex>
 
 #include <itkImageFileReader.h>
+#include <itkLabelSetErodeImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #include "itkFilterWatcher.h" 
-#include <itkParabolicOpenImageFilter.h>
 
 
 
@@ -30,16 +28,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    // if(atoi(argv[4]))
-    // 	typedef int OutputPixelType; //OK for SquaredDistanceOn //wrongly imported by ij
-    // else
-#ifdef USE_FLOAT
-    typedef float   OutputPixelType;
-    std::cerr << "Using single precision (float)." << std::endl;
-#else
-    typedef double  OutputPixelType;
-    std::cerr << "Using double precision (double)." << std::endl;
-#endif
+    typedef InputPixelType   OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -64,12 +53,11 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::Pointer input= reader->GetOutput();
 
 
-    typedef itk::ParabolicOpenImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::LabelSetErodeImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->SetScale(atof(argv[4]));
-    //filter->InPlaceOn();//not available
+    filter->SetRadius(atof(argv[4]));
 
     FilterWatcher watcher1(filter);
     try{ 
@@ -238,7 +226,7 @@ int main(int argc, char *argv[]){
 		  << " Input_Image"
 		  << " Output_Image"
 		  << " compress"
-		  << " scale"
+		  << " radius"
     		  << std::endl;
 
 	return EXIT_FAILURE;
