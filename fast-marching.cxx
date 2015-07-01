@@ -9,7 +9,6 @@
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkFastMarchingImageFilter.h>
-#include <itkBinaryThresholdImageFilter.h>
 #include <itkMaskImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -55,7 +54,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
     reader2->SetFileName(argv[2]);
-    reader2->ReleaseDataFlagOn();
+    //reader2->ReleaseDataFlagOn();//needed twice
     FilterWatcher watcherI2(reader2);
     watcherI2.QuietOn();
     watcherI2.ReportTimeOn();
@@ -112,19 +111,12 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    ////set infinity value to 0
-    typedef itk::BinaryThresholdImageFilter<OutputImageType, OutputImageType> ThrFilterType; //could use less RAM if a uint8 image were used
-    typename ThrFilterType::Pointer thr= ThrFilterType::New();
-    thr->SetInput(filter->GetOutput());
-    thr->SetLowerThreshold(filter->GetLargeValue());//does not work, GetLargeValue() is protected
-    thr->SetOutsideValue(0);
-    thr->SetInsideValue(1);
-    FilterWatcher watcherThr(thr);
-
-    typedef itk::MaskImageFilter<OutputImageType, OutputImageType, OutputImageType> MFilterType;
+    ////remove infinity values within mask, there can still be inf in the output (as filter->GetLargeValue() is protected)!
+    typedef itk::MaskImageFilter<OutputImageType, InputImageType2, OutputImageType> MFilterType;
     typename MFilterType::Pointer mask = MFilterType::New();
     mask->SetInput(filter->GetOutput());
-    mask->SetMaskImage(thr->GetOutput());
+    mask->SetMaskImage(input2);
+    mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
     const typename OutputImageType::Pointer& output= mask->GetOutput();
