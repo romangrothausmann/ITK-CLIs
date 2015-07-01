@@ -1,4 +1,4 @@
-////program for itkBinaryMorphologicalOpeningImageFilter
+////program for itkBinaryErodeImageFilter
 //01: based on closing_bin_morph.cxx
 
 
@@ -6,7 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryMorphologicalOpeningImageFilter.h>
+#include <itkBinaryErodeImageFilter.h>
 #include <itkBinaryBallStructuringElement.h>
 #include <itkImageFileWriter.h>
 
@@ -59,13 +59,13 @@ int DoIt(int argc, char *argv[]){
     structuringElement.SetRadius(atoi(argv[4]));
     structuringElement.CreateStructuringElement();
 
-    typedef itk::BinaryMorphologicalOpeningImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
+    typedef itk::BinaryErodeImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     filter->SetForegroundValue(atoi(argv[5]));
+    filter->SetBackgroundValue(itk::NumericTraits<OutputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
-    //filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
     try{
