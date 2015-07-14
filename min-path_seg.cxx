@@ -15,6 +15,7 @@
 #include <itkSpeedFunctionToPathFilter.h>
 #include <itkMorphologicalDistanceTransformImageFilter.h>
 #include <itkGradientDescentOptimizer.h>
+#include <itkIterateNeighborhoodOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
 #include <itkParabolicDilateImageFilter.h>
@@ -35,7 +36,10 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
     else if(itk::IterationEvent().CheckEvent(&event)){
         OptimizerType* optimizer= dynamic_cast<OptimizerType *>(caller);
-        fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetValue());
+	if(dynamic_cast<itk::IterateNeighborhoodOptimizer*>(optimizer))
+	    fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetCurrentValue());
+	else
+	    fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetValue());
         std::cerr << optimizer->GetCurrentPosition();
         }
     else if(itk::EndEvent().CheckEvent(&event))
@@ -43,10 +47,10 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
     }
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int argc, char *argv[]){
+template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename OptimizerType>
+int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
-    const char offset= 7;
+    const char offset= 8;
     if((argc - offset) % Dimension){
         fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
         return EXIT_FAILURE;
@@ -120,11 +124,13 @@ int DoIt(int argc, char *argv[]){
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
     cost->SetInterpolator(interp);
 
-    // Create optimizer
-    typedef itk::GradientDescentOptimizer OptimizerType;
-    typename OptimizerType::Pointer optimizer = OptimizerType::New();
-    optimizer->SetNumberOfIterations(atoi(argv[5]));
-    optimizer->SetLearningRate(atof(argv[6]));
+    // some optimizer specific settings
+    if(dynamic_cast<itk::IterateNeighborhoodOptimizer*>(optimizer)){
+	typename itk::IterateNeighborhoodOptimizer::NeighborhoodSizeType size(Dimension);
+	for (unsigned int i=0; i<Dimension; i++)
+	    size[i] = speed->GetSpacing()[i] * atof(argv[7]);
+	optimizer->SetNeighborhoodSize(size);
+	}
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
@@ -325,6 +331,38 @@ int DoIt(int argc, char *argv[]){
 
     }
 
+template<typename InputComponentType, typename InputPixelType, size_t Dimension>
+int DoIt(int argc, char *argv[]){
+    int res= 0;
+
+    typedef double TCoordRep;
+    typedef double TCoefficientType;
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+
+    switch(atoi(argv[5])){
+    case 0:{
+	typedef itk::IterateNeighborhoodOptimizer OptimizerType;
+        typename OptimizerType::Pointer optimizer= OptimizerType::New();
+	optimizer->MinimizeOn();
+	optimizer->FullyConnectedOn();
+        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
+        }break;
+    case 1:{
+	typedef itk::GradientDescentOptimizer OptimizerType;
+	typename OptimizerType::Pointer optimizer = OptimizerType::New();
+	optimizer->SetNumberOfIterations(atoi(argv[6]));
+	optimizer->SetLearningRate(atof(argv[7]));
+        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
+        }break;
+    default:
+        std::cerr << "unknown interpolation type." << std::endl;
+        res= EXIT_FAILURE;
+        break;
+        }//switch
+    return res;
+    }
 
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
@@ -411,13 +449,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 7 ){
+    if ( argc < 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image_Base"
                   << " compress"
                   << " sigma"
+                  << " optimizer"
                   << " iterations"
                   << " step-scale"
                   << " start-point..."
