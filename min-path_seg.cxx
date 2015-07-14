@@ -185,6 +185,52 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    //// create mesh to save in a VTK-file
+    typedef typename itk::Mesh<float, Dimension>  MeshType;
+    typename MeshType::Pointer  mesh = MeshType::New();
+
+    typename MeshType::PointType mP;
+    for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
+
+        // Get the path, coords are stored as continous index
+        typename PathType::Pointer path = pathFilter->GetOutput(i);
+        const typename PathType::VertexListType *vertexList = path->GetVertexList();
+
+        for(unsigned int k = 0; k < vertexList->Size(); k++){
+            speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
+            mesh->SetPoint(k, mP);
+            }
+        }
+
+    std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
+
+    //// create connecting lines
+    typedef typename MeshType::CellType CellType;
+    typedef typename itk::LineCell<CellType> LineType;
+    typedef typename CellType::CellAutoPointer  CellAutoPointer;
+
+    //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
+    if(mesh->GetNumberOfPoints() > 1){
+        const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
+        typename CellType::CellAutoPointer line;
+        for(size_t cellId=0; cellId < numberOfCells; cellId++){
+            line.TakeOwnership(new LineType);
+            line->SetPointId(0, cellId);
+            line->SetPointId(1, cellId+1);
+            mesh->SetCell(cellId, line);
+            }
+        }
+
+    std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
+
+    typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
+    typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
+
+    FilterWatcher watcherMO(mwriter);
+    sss.str(""); sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
+    mwriter->SetFileName(sss.str().c_str());
+    mwriter->SetInput(mesh);
+    mwriter->Update();
 
     // Allocate output image
     typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
@@ -273,54 +319,6 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
-
-
-    //// create mesh to save in a VTK-file
-    typedef typename itk::Mesh<float, Dimension>  MeshType;
-    typename MeshType::Pointer  mesh = MeshType::New();
-
-    typename MeshType::PointType mP;
-    for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
-
-        // Get the path, coords are stored as continous index
-        typename PathType::Pointer path = pathFilter->GetOutput(i);
-        const typename PathType::VertexListType *vertexList = path->GetVertexList();
-
-        for(unsigned int k = 0; k < vertexList->Size(); k++){
-            speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
-            mesh->SetPoint(k, mP);
-            }
-        }
-
-    std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
-
-    //// create connecting lines
-    typedef typename MeshType::CellType CellType;
-    typedef typename itk::LineCell<CellType> LineType;
-    typedef typename CellType::CellAutoPointer  CellAutoPointer;
-
-    //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
-    if(mesh->GetNumberOfPoints() > 1){
-        const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
-        typename CellType::CellAutoPointer line;
-        for(size_t cellId=0; cellId < numberOfCells; cellId++){
-            line.TakeOwnership(new LineType);
-            line->SetPointId(0, cellId);
-            line->SetPointId(1, cellId+1);
-            mesh->SetCell(cellId, line);
-            }
-        }
-
-    std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
-
-    typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
-    typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
-
-    FilterWatcher watcherMO(mwriter);
-    sss.str(""); sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
-    mwriter->SetFileName(sss.str().c_str());
-    mwriter->SetInput(mesh);
-    mwriter->Update();
 
 
     return EXIT_SUCCESS;
