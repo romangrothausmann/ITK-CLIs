@@ -52,7 +52,7 @@ int DoIt(int argc, char *argv[]){
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
-    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType1>);//also works for InputImageType2
+    eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType1>);//only works for both readers if InputImageType1 == InputImageType2
 
     ////for mem monitoring: http://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-run-time-in-c
     struct proc_t usage;//description in: /usr/include/proc/readproc.h
@@ -102,7 +102,7 @@ int DoIt(int argc, char *argv[]){
         typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
         reader2->SetFileName(argv[2]);
-        reader2->AddObserver(itk::AnyEvent(), eventCallbackITK);
+        //reader2->AddObserver(itk::AnyEvent(), eventCallbackITK);
         try{
             reader2->Update();
             }
