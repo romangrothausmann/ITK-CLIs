@@ -27,6 +27,29 @@
 #include <itkMeshFileWriter.h>
 
 
+////this class just creates an alias from GetCurrentValue() to GetValue() in order to be API compliant
+namespace itk{
+    class MyIterateNeighborhoodOptimizer: public IterateNeighborhoodOptimizer{
+    public:
+
+	/** Standard class typedefs. */
+	typedef MyIterateNeighborhoodOptimizer   Self;
+	typedef IterateNeighborhoodOptimizer Superclass;
+	typedef SmartPointer<Self>             Pointer;
+	typedef SmartPointer<const Self>       ConstPointer;
+
+	/** Method for creation through the object factory. */
+	itkNewMacro(Self); //essential for typedef creation, needs all typedefs above!
+
+	/** Run-time type information (and related methods). */
+	itkTypeMacro(MyIterateNeighborhoodOptimizer, IterateNeighborhoodOptimizer);
+
+	// "rename" GetCurrentValue() to GetValue()
+	double GetValue(){this->GetCurrentValue();};
+	};
+    }
+
+
 template<typename OptimizerType>
 void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
@@ -36,11 +59,11 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
     else if(itk::IterationEvent().CheckEvent(&event)){
         OptimizerType* optimizer= dynamic_cast<OptimizerType *>(caller);
-	if(dynamic_cast<itk::IterateNeighborhoodOptimizer*>(optimizer))
-	    fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetCurrentValue());
-	else
-	    fprintf(stderr, "\r%5d: %7.3f ", optimizer->GetCurrentIteration(), optimizer->GetValue());
-        std::cerr << optimizer->GetCurrentPosition();
+	fprintf(stderr, "\r%5d: ", optimizer->GetCurrentIteration());
+	if(optimizer->GetValue() < 1e18){
+	    fprintf(stderr, "%7.3f ", optimizer->GetValue());
+	    std::cerr << optimizer->GetCurrentPosition();
+	    }
         }
     else if(itk::EndEvent().CheckEvent(&event))
         std::cerr << std::endl;
@@ -98,6 +121,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
     smoother->SetInput(rescaleFilter->GetOutput());
     smoother->SetScale(atof(argv[4]));
+    smoother->UseImageSpacingOff();
     smoother->ReleaseDataFlagOn();//save mem
     FilterWatcher watcherSM(smoother);
 
@@ -123,14 +147,6 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     // Create cost function
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
     cost->SetInterpolator(interp);
-
-    // some optimizer specific settings
-    if(dynamic_cast<itk::IterateNeighborhoodOptimizer*>(optimizer)){
-	typename itk::IterateNeighborhoodOptimizer::NeighborhoodSizeType size(Dimension);
-	for (unsigned int i=0; i<Dimension; i++)
-	    size[i] = speed->GetSpacing()[i] * atof(argv[7]);
-	optimizer->SetNeighborhoodSize(size);
-	}
 
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
@@ -341,10 +357,22 @@ int DoIt(int argc, char *argv[]){
 
     switch(atoi(argv[5])){
     case 0:{
-	typedef itk::IterateNeighborhoodOptimizer OptimizerType;
+	typedef itk::MyIterateNeighborhoodOptimizer OptimizerType;
         typename OptimizerType::Pointer optimizer= OptimizerType::New();
 	optimizer->MinimizeOn();
 	optimizer->FullyConnectedOn();
+
+	typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+	typedef itk::ImageFileReader<InputImageType> ReaderType;
+	typename ReaderType::Pointer reader = ReaderType::New();
+	reader->SetFileName(argv[1]);
+        reader->UpdateOutputInformation();
+
+	typename OptimizerType::NeighborhoodSizeType size(Dimension);
+	for (unsigned int i=0; i<Dimension; i++)
+	    size[i] = reader->GetOutput()->GetSpacing()[i] * atof(argv[7]);
+	optimizer->SetNeighborhoodSize(size);
+
         std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
