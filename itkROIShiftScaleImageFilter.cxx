@@ -24,7 +24,7 @@ namespace itk{
 
 	const typename TInputImage::ConstPointer input = this->GetInput();
 	const typename TInputImage::RegionType  region = input->GetRequestedRegion();
-	const typename TInputImage::SizeType      size = region.GetSize();
+	//const typename TInputImage::SizeType      size = region.GetSize();
  
 	typename TOutputImage::Pointer output = this->GetOutput();
  

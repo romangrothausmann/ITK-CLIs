@@ -22,7 +22,7 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension,
 int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     if( argc != 4 + 1*Dimension + 1){
-        fprintf(stderr, "4 + 1*Dimension = %d parameters are needed!\n", 4 + 1*Dimension);
+        fprintf(stderr, "4 + 1*Dimension = %ld parameters are needed!\n", 4 + 1*Dimension);
         return EXIT_FAILURE;
         }
 
@@ -204,6 +204,7 @@ int DoIt(int argc, char *argv[]){
         res= EXIT_FAILURE;
         break;
         }//switch
+    return res;
     }
 
 template<typename InputComponentType, typename InputPixelType>
