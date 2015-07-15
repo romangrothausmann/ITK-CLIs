@@ -14,8 +14,9 @@
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
 #include <itkMorphologicalDistanceTransformImageFilter.h>
-#include <itkGradientDescentOptimizer.h>
 #include <itkIterateNeighborhoodOptimizer.h>
+#include <itkGradientDescentOptimizer.h>
+#include <itkRegularStepGradientDescentOptimizer.h>
 #include <itkPathIterator.h>
 #include <itkPolyLineParametricPath.h>
 #include <itkParabolicDilateImageFilter.h>
@@ -392,7 +393,7 @@ int DoIt(int argc, char *argv[]){
 	    size[i] = reader->GetOutput()->GetSpacing()[i] * atof(argv[7]);
 	optimizer->SetNeighborhoodSize(size);
 
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 1:{
@@ -400,6 +401,16 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
+        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
+        }break;
+    case 2:{
+	typedef itk::RegularStepGradientDescentOptimizer OptimizerType;
+	typename OptimizerType::Pointer optimizer = OptimizerType::New();
+	optimizer->SetNumberOfIterations(atoi(argv[6]));
+	optimizer->SetRelaxationFactor(.5);
+	optimizer->SetMaximumStepLength(1.0);
+	optimizer->SetMinimumStepLength(atof(argv[7]));
         std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
