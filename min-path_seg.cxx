@@ -166,20 +166,26 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typename PathFilterType::PathInfo info;
 
     for(int j= 0; j < Dimension; j++){
-        start[j]= atoi(argv[j+offset]) - 1;
+        startP[j]= atof(argv[j+offset]+1);//+1 to skip prefix-letter
+	start[j]= startP[j] - 1;//-1 for ITK-Snap compat
         }
 
     for(int j= 0; j < Dimension; j++){
-        end[j]= atoi(argv[j+Dimension+offset]) - 1;
+        endP[j]= atof(argv[j+Dimension+offset]+1);//+1 to skip prefix-letter
+ 	end[j]= endP[j] - 1;//-1 for ITK-Snap compat
         }
 
-    const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
-    speed->TransformIndexToPhysicalPoint(start, startP);
-    speed->TransformIndexToPhysicalPoint(end, endP);
+    if(argv[offset][0]=='v')
+	speed->TransformIndexToPhysicalPoint(start, startP);//overwrites startP
+    if(argv[Dimension+offset][0]=='v')
+	speed->TransformIndexToPhysicalPoint(end, endP);//overwrites endP
+
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
-    std::cerr << "S: " << start << " physical coords: "<< startP << std::endl;	
-    std::cerr << "E: " << end << " physical coords: "<< endP << std::endl;	
+    std::cerr << "S: " << startP << std::endl;	
+    std::cerr << "E: " << endP << std::endl;
+	
+    const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
     if(!region.IsInside(start)){std::cerr << "Start point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
     if(!region.IsInside(end)){std::cerr << "End point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 
@@ -188,10 +194,13 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	typename PathFilterType::PointType wayP;
 
 	for(int j= 0; j < Dimension; j++){
-	    way[j]= atoi(argv[i+j]) - 1;
+	    wayP[j]= atof(argv[i+j]+1);//+1 to skip prefix-letter
+	    way[j]= wayP[j] - 1;//-1 for ITK-Snap compat
 	    }
 
-	speed->TransformIndexToPhysicalPoint(way, wayP);
+	if(argv[i][0]=='v')
+	    speed->TransformIndexToPhysicalPoint(way, wayP);//overwrites wayP
+
 	info.AddWayPoint(wayP);
 	std::cerr << "W: " << way << " physical coords: "<< wayP << std::endl;	
 	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
