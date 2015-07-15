@@ -60,11 +60,13 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer dm1= FilterType::New();
     dm1->ReleaseDataFlagOn();
     dm1->SquaredDistanceOff();
+    dm1->SetUseImageSpacing(atoi(argv[5]));
     FilterWatcher watcherDM1(dm1);
 
     typename FilterType::Pointer dm2= FilterType::New();
     dm2->ReleaseDataFlagOn();
     dm2->SquaredDistanceOff();
+    dm2->SetUseImageSpacing(atoi(argv[5]));
     FilterWatcher watcherDM2(dm2);
 
     typename THType::Pointer th1= THType::New();
@@ -229,13 +231,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " radius (positive: closing, negative: opening)"
+		  << " useImageSpacing"
                   << std::endl;
 
         return EXIT_FAILURE;
