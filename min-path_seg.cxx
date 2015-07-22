@@ -26,6 +26,8 @@
 #include <itkMesh.h>
 #include <itkLineCell.h>
 #include <itkMeshFileWriter.h>
+#include <itkVTKPolyDataMeshIO.h>
+#include <itkMetaDataObject.h>
 
 
 ////this class just creates an alias from GetCurrentValue() to GetValue() in order to be API compliant
@@ -217,6 +219,26 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         return EXIT_FAILURE;
         }
 
+
+    //// create dm to get max-inscribed sphere radius for the point data in the vector/mesh output and for the max-sphere segementation
+    typedef itk::MorphologicalDistanceTransformImageFilter<InputImageType, DMImageType> DMFilterType;
+    typename DMFilterType::Pointer dm= DMFilterType::New();
+    dm->SetInput(reader->GetOutput());
+    //dm->ReleaseDataFlagOn();
+    dm->SqrDistOn();
+    dm->SetUseImageSpacing(false);
+
+    FilterWatcher watcherDM(dm);
+    try{ 
+        dm->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+    const typename DMImageType::Pointer& dmap= dm->GetOutput();
+
+
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
     typename MeshType::Pointer  mesh = MeshType::New();
@@ -231,8 +253,17 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         for(unsigned int k = 0; k < vertexList->Size(); k++){
             speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
             mesh->SetPoint(k, mP);
+
+	    ////remeber to set scaling to voxel-size when visualizing point data with sphere glyphs in paraview
+	    typename SpeedImageType::IndexType index;
+	    index.CopyWithRound(vertexList->GetElement(k));
+            mesh->SetPointData(k, std::sqrt(dmap->GetPixel(index)));
             }
         }
+    // mesh->GetPointData()->SetObjectName("MaxInscrSphereRadius");
+    // itk::MetaDataDictionary & metaDic= mesh->GetPointData()->GetMetaDataDictionary();
+    // itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
+    // mesh->GetPointData()->SetMetaDataDictionary(metaDic);
 
     std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
@@ -262,7 +293,20 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     sss.str(""); sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
     mwriter->SetFileName(sss.str().c_str());
     mwriter->SetInput(mesh);
-    mwriter->Update();
+
+    itk::VTKPolyDataMeshIO::Pointer mio= itk::VTKPolyDataMeshIO::New();
+    itk::MetaDataDictionary & metaDic= mio->GetMetaDataDictionary();
+    itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
+    mwriter->SetMeshIO(mio);
+
+    try{
+	mwriter->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
 
     // Allocate output image
     typename DMImageType::Pointer output = DMImageType::New();
@@ -271,23 +315,6 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     output->SetOrigin(speed->GetOrigin());
     output->Allocate();
     output->FillBuffer(itk::NumericTraits<OutputPixelType>::Zero);
-
-
-    typedef itk::MorphologicalDistanceTransformImageFilter<InputImageType, DMImageType> DMFilterType;
-    typename DMFilterType::Pointer dm= DMFilterType::New();
-    dm->SetInput(reader->GetOutput());
-    //dm->ReleaseDataFlagOn();
-    dm->SqrDistOn();
-    dm->SetUseImageSpacing(false);
-
-    FilterWatcher watcherDM(dm);
-    try{ 
-        dm->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
 
 
     // Rasterize path
@@ -310,7 +337,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
         // Iterate path and convert to image
         PathIteratorType it(output, path);
-        PathConstIteratorType cit(dm->GetOutput(), path);
+        PathConstIteratorType cit(dmap, path);
         int count= 0;
 	typename PathConstIteratorType::PixelType value;
 	typename PathConstIteratorType::PixelType min_v= itk::NumericTraits<typename PathConstIteratorType::PixelType>::max();
@@ -326,7 +353,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	std::cerr << "Min radius along path: " << min_v << std::endl;
 	std::cerr << "Max radius along path: " << max_v << std::endl;
         }
-    dm->GetOutput()->ReleaseData();
+    dmap->ReleaseData();
 
 	// {
 	// typedef itk::ImageFileWriter<DMImageType>  WriterType;
