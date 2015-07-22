@@ -85,7 +85,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
     typedef double   SpeedPixelType;
     typedef double   DMPixelType;
-    typedef DMPixelType  OutputPixelType;
+    typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<SpeedPixelType, Dimension>  SpeedImageType;
@@ -265,9 +265,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     mwriter->Update();
 
     // Allocate output image
-    typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
-
-    typename OutputImageType::Pointer output = OutputImageType::New();
+    typename DMImageType::Pointer output = DMImageType::New();
     output->SetRegions(speed->GetLargestPossibleRegion());
     output->SetSpacing(speed->GetSpacing());
     output->SetOrigin(speed->GetOrigin());
@@ -293,7 +291,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
 
     // Rasterize path
-    typedef itk::PathIterator<OutputImageType, PathType> PathIteratorType;
+    typedef itk::PathIterator<DMImageType, PathType> PathIteratorType;
     typedef itk::PathConstIterator<DMImageType, PathType> PathConstIteratorType;
     std::cout << "# of paths: " << pathFilter->GetNumberOfOutputs() << std::endl;
     for (unsigned int i= 0; i < pathFilter->GetNumberOfOutputs(); i++){
@@ -330,6 +328,24 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         }
     dm->GetOutput()->ReleaseData();
 
+	// {
+	// typedef itk::ImageFileWriter<DMImageType>  WriterType;
+	// typename WriterType::Pointer writer = WriterType::New();
+
+	// FilterWatcher watcherO(writer);
+	// sss.str(""); sss << outPrefix << "_skel.mha";
+	// writer->SetFileName(sss.str().c_str());
+	// writer->SetInput(output);
+	// writer->SetUseCompression(atoi(argv[3]));
+	// try{
+	//     writer->Update();
+	//     }
+	// catch(itk::ExceptionObject &ex){
+	//     std::cerr << ex << std::endl;
+	//     return EXIT_FAILURE;
+	//     }
+	// }
+
     typedef itk::ParabolicDilateImageFilter<DMImageType, DMImageType> PDFilterType;
     typename PDFilterType::Pointer pd= PDFilterType::New();
     pd->SetInput(output);
@@ -350,7 +366,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    sss.str(""); sss << outPrefix << ".mha";
+    sss.str(""); sss << outPrefix << "_max-sphere.mha";
     writer->SetFileName(sss.str().c_str());
     writer->SetInput(thr->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
