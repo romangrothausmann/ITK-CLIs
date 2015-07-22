@@ -342,16 +342,21 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	typename PathConstIteratorType::PixelType value;
 	typename PathConstIteratorType::PixelType min_v= itk::NumericTraits<typename PathConstIteratorType::PixelType>::max();
 	typename PathConstIteratorType::PixelType max_v= itk::NumericTraits<typename PathConstIteratorType::PixelType>::min();
+	typename PathConstIteratorType::IndexType min_i, max_i;
         for (it.GoToBegin(); !it.IsAtEnd(); ++it, ++cit){//possibly more iterations than path->GetVertexList()->Size() !! can take long with large radii
 	    value= cit.Get();
             it.Set(value);//mark center with squared hight, later used by ParabolicDilate
-	    if(value < min_v)
+	    if(value < min_v){
 		min_v= value;
-	    if(value > max_v)
+		min_i= cit.GetIndex();
+		}
+	    if(value > max_v){
 		max_v= value;
+		max_i= cit.GetIndex();
+		}
             }
-	std::cerr << "Min radius along path: " << min_v << std::endl;
-	std::cerr << "Max radius along path: " << max_v << std::endl;
+	std::cerr << "Min radius along path: " << std::sqrt(min_v) << " @: " << min_i << std::endl;
+	std::cerr << "Max radius along path: " << std::sqrt(max_v) << " @: " << max_i << std::endl;
         }
     dmap->ReleaseData();
 
