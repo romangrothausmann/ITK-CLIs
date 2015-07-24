@@ -108,7 +108,7 @@ int DoIt(int argc, char *argv[]){
 
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
     switch (dimensionType){
     case 1:
         res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
@@ -128,7 +128,7 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
 
 template<typename InputComponentType>
 int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
@@ -163,7 +163,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     }
 
 int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
 
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
