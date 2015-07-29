@@ -1,5 +1,5 @@
-////program for morphological opening/closing with a "ball", based on thresholding distance maps (SignedMaurerDistanceMapImageFilter, BinaryThresholdImageFilter, which are both multi-threaded)
-//01: based on template.cxx and thresh-glob.cxx
+////program for morphological erosion/dilation with a "ball", based on thresholding distance maps (SignedMaurerDistanceMapImageFilter, BinaryThresholdImageFilter, which are both multi-threaded)
+//01: based on open-close_dm.cxx
 
 
 #include "itkFilterWatcher.h"
@@ -47,45 +47,30 @@ int DoIt(int argc, char *argv[]){
 
     const DMPixelType radius= atof(argv[4]);
     if(radius < 0)
-        std::cerr << "Doing opening (fg == non-zero) ... " << std::endl;
+        std::cerr << "Doing erosion (fg == non-zero) ... " << std::endl;
     else
-        std::cerr << "Doing closing (fg == non-zero)... " << std::endl;        
+        std::cerr << "Doing dilation (fg == non-zero)... " << std::endl;        
 
 
     typedef itk::SignedMaurerDistanceMapImageFilter<InputImageType, DMImageType> FilterType;
     typedef itk::BinaryThresholdImageFilter<DMImageType, OutputImageType> THType;
 
-    //// create filter instances
-    ///// only one of each would be needed, however the pipeline would have to be disconnected then!
     typename FilterType::Pointer dm1= FilterType::New();
     dm1->ReleaseDataFlagOn();
     dm1->SquaredDistanceOff();
     dm1->SetUseImageSpacing(atoi(argv[5]));
     FilterWatcher watcherDM1(dm1);
 
-    typename FilterType::Pointer dm2= FilterType::New();
-    dm2->ReleaseDataFlagOn();
-    dm2->SquaredDistanceOff();
-    dm2->SetUseImageSpacing(atoi(argv[5]));
-    FilterWatcher watcherDM2(dm2);
-
     typename THType::Pointer th1= THType::New();
     th1->ReleaseDataFlagOn();
     FilterWatcher watcherTH1(th1);
 
-    typename THType::Pointer th2= THType::New();
-    th2->ReleaseDataFlagOn();
-    FilterWatcher watcherTH2(th2);
-
     th1->SetUpperThreshold( radius);
-    th2->SetUpperThreshold(-radius);
 
     dm1->SetInput(input);
     th1->SetInput(dm1->GetOutput());
-    dm2->SetInput(th1->GetOutput());
-    th2->SetInput(dm2->GetOutput());
 
-    const typename OutputImageType::Pointer& output= th2->GetOutput();
+    const typename OutputImageType::Pointer& output= th1->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -237,7 +222,7 @@ int main(int argc, char *argv[]){
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
-                  << " radius (positive: closing, negative: opening)"
+                  << " radius (positive: dilation, negative: erosion)"
 		  << " useImageSpacing"
                   << std::endl;
 
