@@ -119,6 +119,14 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         return EXIT_FAILURE;
         }
 
+    ////check for isotropic image spacing as dm later on uses this image spacing
+    for(int i= 0; i < Dimension; i++)
+	if(reader->GetOutput()->GetSpacing()[0] != reader->GetOutput()->GetSpacing()[i]){
+	    std::cerr << "Image spacing not isotropic! This has not been tested, aborting." << std::endl;
+	    return EXIT_FAILURE;
+	    }
+		
+
     typename SpeedImageType::Pointer speed;
 	{////scoped to save mem and for consitency
 	// scale image values to be in [0; 1]
@@ -254,7 +262,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     dm->SetInput(reader->GetOutput());
     //dm->ReleaseDataFlagOn();
     dm->SqrDistOn();
-    dm->SetUseImageSpacing(false);
+    dm->SetUseImageSpacing(true);//use image spacing to make "MaxInscrSphereRadius" fit to resampled volumes
 
     FilterWatcher watcherDM(dm);
     try{ 
@@ -383,33 +391,17 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 		max_i= cit.GetIndex();
 		}
             }
-	std::cerr << "Min radius along path: " << std::sqrt(min_v) << " @: " << min_i << std::endl;
-	std::cerr << "Max radius along path: " << std::sqrt(max_v) << " @: " << max_i << std::endl;
-        }
+	std::cerr << "Min radius along path: " << std::sqrt(min_v) << " [" << std::sqrt(min_v)/speed->GetSpacing()[0] << " v] @: " << min_i << std::endl;
+	std::cerr << "Max radius along path: " << std::sqrt(max_v) << " [" << std::sqrt(max_v)/speed->GetSpacing()[0] << " v] @: " << max_i << std::endl;
+	}
     dmap->ReleaseData();
 
-	// {
-	// typedef itk::ImageFileWriter<DMImageType>  WriterType;
-	// typename WriterType::Pointer writer = WriterType::New();
-
-	// FilterWatcher watcherO(writer);
-	// sss.str(""); sss << outPrefix << "_skel.mha";
-	// writer->SetFileName(sss.str().c_str());
-	// writer->SetInput(output);
-	// writer->SetUseCompression(atoi(argv[3]));
-	// try{
-	//     writer->Update();
-	//     }
-	// catch(itk::ExceptionObject &ex){
-	//     std::cerr << ex << std::endl;
-	//     return EXIT_FAILURE;
-	//     }
-	// }
 
     typedef itk::ParabolicDilateImageFilter<DMImageType, DMImageType> PDFilterType;
     typename PDFilterType::Pointer pd= PDFilterType::New();
     pd->SetInput(output);
     pd->SetScale(.5);//0.5: unscaled
+    pd->SetUseImageSpacing(true);//needs to be concise with dm above
     pd->ReleaseDataFlagOn();
     FilterWatcher watcherPD(pd);
 
