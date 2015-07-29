@@ -85,8 +85,16 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     char* outPrefix= argv[2];
     std::stringstream sss;
 
+#ifdef USE_FLOAT
+    typedef float   SpeedPixelType;
+    typedef float   DMPixelType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
     typedef double   SpeedPixelType;
     typedef double   DMPixelType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
+
     typedef uint8_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
@@ -111,33 +119,53 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         return EXIT_FAILURE;
         }
 
-    // scale image values to be in [0; 1]
-    typedef typename itk::RescaleIntensityImageFilter<InputImageType, InputImageType> RescaleFilterType;
-    typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
-    rescaleFilter->SetInput(reader->GetOutput());
-    rescaleFilter->SetOutputMinimum(0.0);
-    rescaleFilter->SetOutputMaximum(1.0);
-    rescaleFilter->ReleaseDataFlagOn();//save mem
-    FilterWatcher watcherR(rescaleFilter);
+    typename SpeedImageType::Pointer speed;
+	{////scoped to save mem and for consitency
+	// scale image values to be in [0; 1]
+	typedef typename itk::RescaleIntensityImageFilter<InputImageType, SpeedImageType> RescaleFilterType;
+	typename RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
+	rescaleFilter->SetInput(reader->GetOutput());
+	rescaleFilter->SetOutputMinimum(0.0);
+	rescaleFilter->SetOutputMaximum(1.0);
+	rescaleFilter->ReleaseDataFlagOn();//save mem
+	FilterWatcher watcherR(rescaleFilter);
 
-    typedef itk::ParabolicOpenImageFilter<InputImageType, SpeedImageType> SmoothFilterType;
-    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
-    smoother->SetInput(rescaleFilter->GetOutput());
-    smoother->SetScale(atof(argv[4]));
-    smoother->UseImageSpacingOff();
-    smoother->ReleaseDataFlagOn();//save mem
-    FilterWatcher watcherSM(smoother);
+	if(atof(argv[4]) > 0){
+	    std::cerr << "Sigma > 0, expecting binary image as input, i.e. using ParabolicOpenImageFilter to create speed map." << std::endl;
 
+	    typedef itk::ParabolicOpenImageFilter<SpeedImageType, SpeedImageType> SmoothFilterType;
+	    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
+	    smoother->SetInput(rescaleFilter->GetOutput());
+	    smoother->SetScale(atof(argv[4]));
+	    smoother->UseImageSpacingOff();
+	    smoother->ReleaseDataFlagOn();//save mem
+	    FilterWatcher watcherSM(smoother);
 
-    try {
-        smoother->Update();
-        }
-    catch (itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	    try {
+		smoother->Update();
+		}
+	    catch (itk::ExceptionObject &ex){
+		std::cerr << ex << std::endl;
+		return EXIT_FAILURE;
+		}
 
-    const typename SpeedImageType::Pointer& speed= smoother->GetOutput();
+	    speed= smoother->GetOutput();
+	    speed->DisconnectPipeline();
+	    }
+	else{
+	    std::cerr << "Sigma <= 0, expecting speed map as input." << std::endl;
+	    try {
+		rescaleFilter->Update();
+		}
+	    catch (itk::ExceptionObject &ex){
+		std::cerr << ex << std::endl;
+		return EXIT_FAILURE;
+		}
+
+	    speed= rescaleFilter->GetOutput();
+	    speed->DisconnectPipeline();
+	    }
+	}
 
     typedef itk::PolyLineParametricPath<Dimension> PathType;
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
@@ -205,7 +233,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    speed->TransformIndexToPhysicalPoint(way, wayP);//overwrites wayP
 
 	info.AddWayPoint(wayP);
-	std::cerr << "W: " << way << " physical coords: "<< wayP << std::endl;	
+	std::cerr << "W: " << wayP << std::endl;	
 	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 	}
 
@@ -514,6 +542,42 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     switch (componentType){
     case itk::ImageIOBase::UCHAR:{        // uint8_t
         typedef unsigned char InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::CHAR:{         // int8_t
+        typedef char InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::USHORT:{       // uint16_t
+        typedef unsigned short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::SHORT:{        // int16_t
+        typedef short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::UINT:{         // uint32_t
+        typedef unsigned int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::INT:{          // int32_t
+        typedef int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::ULONG:{        // uint64_t
+        typedef unsigned long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::FLOAT:{        // float32
+        typedef float InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::DOUBLE:{       // float64
+        typedef double InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
