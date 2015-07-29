@@ -12,29 +12,6 @@
 
 
 template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
-int DoIt(int, char *argv[]);
-
-
-
-
-// template<typename InputImageType, typename OutputImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-// 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//      std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<InputImageType> *>(caller))->GetFileName() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-// 	std::cerr << std::endl;
-//     }
-
-
-
-template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef InputPixelType1 OutputPixelType;
@@ -42,10 +19,6 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType1> ReaderType1;
@@ -92,9 +65,6 @@ int DoIt(int argc, char *argv[]){
     filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -112,8 +82,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[3]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[4]));
+    writer->SetUseCompression(atoi(argv[4]));
     try{
         writer->Update();
         }
@@ -191,10 +160,6 @@ int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOP
     typedef std::complex<InputComponentType1> InputPixelType1;
     res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
   } break;
-  // case itk::ImageIOBase::VECTOR:{
-  //   typedef itk::VariableLengthVector<InputComponentType1> InputPixelType1;
-  //   res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-  // } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
