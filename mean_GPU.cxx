@@ -19,6 +19,8 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    itk::ObjectFactoryBase::RegisterFactory(itk::GPUImageFactory::New());//essential! http://public.kitware.com/pipermail/community/2014-April/005972.html
+
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
@@ -54,15 +56,6 @@ int DoIt(int argc, char *argv[]){
     catch(itk::ExceptionObject &ex){
 	std::cerr << std::endl << "There can be multiple errors thrown by OpenCL (e.g. CL_INVALID_COMMAND_QUEUE followed by CL_OUT_OF_RESOURCES), therefore not exiting here!" << std::endl;
 	std::cerr << ex << std::endl;
-        }
-
-    std::cerr << "Synchronizing memory: GPU->CPU" << std::endl;
-    try { 
-    	filter->GetOutput()->UpdateBuffers(); //sync GPU->CPU memcpy //seems not needed here
-    	}
-    catch (itk::ExceptionObject &ex){ 
-    	std::cerr << ex << std::endl;
-        exit(EXIT_FAILURE);
         }
 
     const typename OutputImageType::Pointer& output= filter->GetOutput();
