@@ -1,48 +1,23 @@
-////program for
-//01: based on template.cxx
+////program for itkGPUMeanImageFilter
+//01: based on template.cxx and mean-GPU_02.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkGPUMeanImageFilter.h>
 #include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -63,27 +38,34 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::GPUMeanImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+
+    typename FilterType::RadiusType radius;
+    radius.Fill(atoi(argv[4]));
+    filter->SetRadius(radius);
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
     catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
+	std::cerr << std::endl << "There can be multiple errors thrown by OpenCL (e.g. CL_INVALID_COMMAND_QUEUE followed by CL_OUT_OF_RESOURCES), therefore not exiting here!" << std::endl;
+	std::cerr << ex << std::endl;
         }
 
+    std::cerr << "Synchronizing memory: GPU->CPU" << std::endl;
+    try { 
+    	filter->GetOutput()->UpdateBuffers(); //sync GPU->CPU memcpy //seems not needed here
+    	}
+    catch (itk::ExceptionObject &ex){ 
+    	std::cerr << ex << std::endl;
+        exit(EXIT_FAILURE);
+        }
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -91,8 +73,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -136,22 +117,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -249,12 +214,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " radius"
                   << std::endl;
 
         return EXIT_FAILURE;
