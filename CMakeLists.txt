@@ -468,6 +468,16 @@ ELSE(ParabolicMorphology_FOUND LESS 0)
   MESSAGE(STATUS "${CurrentExe} will be compiled!")
 ENDIF(ParabolicMorphology_FOUND LESS 0)
 
+SET(CurrentExe "close_bin_para")
+IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+ELSE(ParabolicMorphology_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF(ParabolicMorphology_FOUND LESS 0)
+
 SET(CurrentExe "anti-alias_f32")
 ADD_EXECUTABLE(${CurrentExe}  "anti-alias.cxx")
 SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")

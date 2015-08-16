@@ -1,11 +1,11 @@
-////program for itkBinaryOpenParaImageFilter
-//01: based on template.cxx
+////program for itkBinaryCloseParaImageFilter
+//01: based on open_bin_para.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <itkBinaryOpenParaImageFilter.h>
+#include <itkBinaryCloseParaImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -47,7 +47,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherThr(thr);
 
 
-    typedef itk::BinaryOpenParaImageFilter<OutputImageType> FilterType;
+    typedef itk::BinaryCloseParaImageFilter<OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(thr->GetOutput());
     filter->SetRadius(atof(argv[4]));
