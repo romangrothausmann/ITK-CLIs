@@ -101,14 +101,20 @@ int DoIt(int argc, char *argv[]){
     if (th_l > th_h){
         filter->SetLowerThreshold(th_h);
         filter->SetUpperThreshold(th_l);
-        filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
-        filter->SetInsideValue (itk::NumericTraits<OutputPixelType>::Zero);
+	if(argc > 6)
+	    filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
+	else
+	    filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
+        filter->SetInsideValue(itk::NumericTraits<OutputPixelType>::Zero);
         }
     else {
         filter->SetLowerThreshold(th_l);
         filter->SetUpperThreshold(th_h);
         filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::Zero);
-        filter->SetInsideValue (itk::NumericTraits<OutputPixelType>::max());
+	if(argc > 6)
+	    filter->SetInsideValue(static_cast<OutputPixelType>(atof(argv[6])));
+	else
+	    filter->SetInsideValue(itk::NumericTraits<OutputPixelType>::max());
         }
 
     std::cerr << "lower_th: "<< +filter->GetLowerThreshold() << "   upper_th: " << +filter->GetUpperThreshold() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
@@ -292,7 +298,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc < 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -303,6 +309,7 @@ int main(int argc, char *argv[]){
                   << " stream-chunks"
 #endif
 		  << " lower upper"
+		  << " [inside-value]"
 		  << std::endl;
 
         return EXIT_FAILURE;
