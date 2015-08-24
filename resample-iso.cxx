@@ -105,7 +105,10 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typedef itk::ResampleImageFilter<InternalImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(smootherY->GetOutput());
+    if(atoi(argv[4]))//expecting 0 <=> NN
+	filter->SetInput(smootherY->GetOutput());
+    else
+	filter->SetInput(caster->GetOutput());
     filter->SetTransform(transform);
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
