@@ -58,7 +58,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetRadius(radius);
     filter->SetCountNonZero();
     filter->SetValueOfInterest(static_cast<InputPixelType>(atof(argv[3])));
-    filter->ReleaseDataFlagOn();
+    //filter->ReleaseDataFlagOn();//will be needed multiple times!
     //filter->InPlaceOn();//not available
 
     FilterWatcher watcher1(filter);
@@ -120,7 +120,7 @@ int DoIt(int argc, char *argv[]){
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
 
         mesh->SetPoint(label, labelObject->GetCentroid());
-        //mesh->SetPointData(label, output->GetPixel(lit.GetIndex()));
+        mesh->SetPointData(label, output->GetPixel(lit.GetIndex()));//make sure filter->ReleaseDataFlagOn() is NOT set!
         }
 
     typename MeshType::PointIdentifier pointIndex= mesh->GetNumberOfPoints();
