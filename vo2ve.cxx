@@ -14,7 +14,7 @@
 #include <itkLabelMapToLabelImageFilter.h>
 
 #include <itkMesh.h>
-//#include <itkLineCell.h>
+#include <itkLineCell.h>
 #include <itkMeshFileWriter.h>
 #include <itkVTKPolyDataMeshIO.h>
 #include <itkMetaDataObject.h>
@@ -25,8 +25,10 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef uint8_t  OutputPixelType;
+    typedef uint32_t  LabelPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<LabelPixelType, Dimension>  LabelImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -126,6 +128,24 @@ int DoIt(int argc, char *argv[]){
     typename MeshType::PointIdentifier pointIndex= mesh->GetNumberOfPoints();
     std::cerr << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
+    typename LabelImageType::Pointer bpi;
+	{//scoped for better consistency
+	typedef itk::LabelMapToLabelImageFilter<LabelMapType, LabelImageType> LMtLIType;
+	typename LMtLIType::Pointer lmtli = LMtLIType::New();
+	lmtli->SetInput(labelMap);
+	FilterWatcher watcher3(lmtli);
+	try{
+	    lmtli->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	bpi= lmtli->GetOutput();
+	bpi->DisconnectPipeline();
+	}
+
+
     //// create connecting lines
     thr->SetLowerThreshold(2);//only connecting nodes of branches
     thr->SetUpperThreshold(2);//only connecting nodes of branches
@@ -138,22 +158,58 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    typedef typename MeshType::CellType CellType;
+    typedef typename itk::LineCell<CellType> LineType;
+    typedef typename CellType::CellAutoPointer  CellAutoPointer;
+
+    size_t cellId=0;
     typename MeshType::PointType mP;
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){
 
         labelObject= labelMap->GetNthLabelObject(label);
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
 	
+	typename LabelImageType::RegionType region= bpi->GetLargestPossibleRegion();
+	typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
+	typename NeighborhoodIteratorType::RadiusType radius;
+	radius.Fill(1); //26-connectivity
+	NeighborhoodIteratorType nit(radius, bpi, region);
+	nit.SetLocation(lit.GetIndex());//only need neighbourhood of one pixel
+
+	LabelPixelType v;
+	for(unsigned int i = 0; i < nit.Size(); ++i){
+	    if(i == nit.GetCenterNeighborhoodIndex()) 
+		continue;//skips center pixel
+	    if(v= nit.GetPixel(i)) 
+		break;
+	    }
+
+	//typename MeshType::PointIdentifier pPointIndex= v;//join with bp, bpi value > 0 is index
+	typename MeshType::PointIdentifier pPointIndex= pointIndex;//do not join with bp
+
 	while(!lit.IsAtEnd()){
 	    labelMap->TransformIndexToPhysicalPoint(lit.GetIndex(), mP);
 	    mesh->SetPoint(pointIndex, mP);
 	    mesh->SetPointData(pointIndex, 2);//only connecting nodes of branches
+
+	    typename CellType::CellAutoPointer line;
+	    line.TakeOwnership(new LineType);
+	    line->SetPointId(0, pPointIndex);
+	    line->SetPointId(1, pointIndex);
+	    mesh->SetCell(cellId, line);
+	    //mesh->SetCellData(cellId, label);//this would be logical but turns out to  be wrong if VTK-file is loaded by e.g. paraview
+
+	    pPointIndex= pointIndex;
 	    pointIndex++;
+	    cellId++;
 	    ++lit;
 	    }
+	mesh->SetCellData(label, label);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
 	}
 
     std::cerr << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
+    std::cerr << "cellIDs: " << cellId << std::endl;
+    std::cerr << "labels: " << labelMap->GetNumberOfLabelObjects() << std::endl;
 
     typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
     typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
@@ -165,6 +221,7 @@ int DoIt(int argc, char *argv[]){
     itk::VTKPolyDataMeshIO::Pointer mio= itk::VTKPolyDataMeshIO::New();
     itk::MetaDataDictionary & metaDic= mio->GetMetaDataDictionary();
     itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "Degree");
+    itk::EncapsulateMetaData<std::string>(metaDic, "cellScalarDataName", "BranchId");
     mwriter->SetMeshIO(mio);
 
     try{
