@@ -151,6 +151,17 @@ int DoIt(int argc, char *argv[]){
     thr->SetUpperThreshold(2);//only connecting nodes of branches
 
     try{
+        thr->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    typename OutputImageType::Pointer thrimg= thr->GetOutput();
+    thrimg->DisconnectPipeline();
+
+    try{
         ana->Update();//also updates thr
         }
     catch(itk::ExceptionObject &ex){
@@ -174,8 +185,36 @@ int DoIt(int argc, char *argv[]){
 	typename NeighborhoodIteratorType::RadiusType radius;
 	radius.Fill(1); //26-connectivity
 	NeighborhoodIteratorType nit(radius, bpi, region);
-	nit.SetLocation(lit.GetIndex());//only need neighbourhood of one pixel
 
+	typedef itk::ConstNeighborhoodIterator<OutputImageType> ThrNeighborhoodIteratorType;
+	ThrNeighborhoodIteratorType tit(radius, thrimg, region);
+	tit.SetLocation(lit.GetIndex());//lit initial position can be on any pixel of the label
+	typename ThrNeighborhoodIteratorType::IndexType lastIndex;
+
+	////find one branch end
+	bool foundEnd= false;
+        std::cerr << "searching for one end... ";
+	while(!foundEnd){
+	    foundEnd=true;
+	    typename ThrNeighborhoodIteratorType::OffsetType nextMove;
+	    nextMove.Fill(0);
+	    for(unsigned int i = 0; i < tit.Size(); ++i){
+		if(i == tit.GetCenterNeighborhoodIndex()) 
+		    continue;//skips center pixel
+		if(tit.GetIndex(i) == lastIndex)
+		    continue;//skips last visited pixel
+		if(tit.GetPixel(i)){
+		    nextMove= tit.GetOffset(i);
+		    foundEnd=false;//this is not an end pixel
+		    }
+		}
+	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
+	    tit+= nextMove;
+	    }
+        std::cerr << "found one end";
+
+
+	nit.SetLocation(tit.GetIndex());//only need neighbourhood of end pixel
 	LabelPixelType v;
 	for(unsigned int i = 0; i < nit.Size(); ++i){
 	    if(i == nit.GetCenterNeighborhoodIndex()) 
@@ -183,12 +222,14 @@ int DoIt(int argc, char *argv[]){
 	    if(v= nit.GetPixel(i)) 
 		break;
 	    }
+        std::cerr << " connected to bp: " << v << std::endl;
 
 	//typename MeshType::PointIdentifier pPointIndex= v;//join with bp, bpi value > 0 is index
 	typename MeshType::PointIdentifier pPointIndex= pointIndex;//do not join with bp
+	bool foundOtherEnd= false;
+	while(!foundOtherEnd){
 
-	while(!lit.IsAtEnd()){
-	    labelMap->TransformIndexToPhysicalPoint(lit.GetIndex(), mP);
+	    labelMap->TransformIndexToPhysicalPoint(tit.GetIndex(), mP);
 	    mesh->SetPoint(pointIndex, mP);
 	    mesh->SetPointData(pointIndex, 2);//only connecting nodes of branches
 
@@ -202,8 +243,35 @@ int DoIt(int argc, char *argv[]){
 	    pPointIndex= pointIndex;
 	    pointIndex++;
 	    cellId++;
-	    ++lit;
+
+	    foundOtherEnd=true;
+	    typename ThrNeighborhoodIteratorType::OffsetType nextMove;
+	    nextMove.Fill(0);
+	    for(unsigned int i = 0; i < tit.Size(); ++i){
+		if(i == tit.GetCenterNeighborhoodIndex()) 
+		    continue;//skips center pixel
+		if(tit.GetIndex(i) == lastIndex) 
+		    continue;//skips last visited pixel
+		if(tit.GetPixel(i)){
+		    nextMove = tit.GetOffset(i);
+		    foundOtherEnd=false;//this is not an end pixel
+		    }
+		}
+	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
+	    tit+= nextMove;
 	    }
+        std::cerr << "found other end";
+
+	////connect other end of branch poly-line to its branch point
+	nit.SetLocation(tit.GetIndex());//only need neighbourhood of end pixel
+	for(unsigned int i = 0; i < nit.Size(); ++i){
+	    if(i == nit.GetCenterNeighborhoodIndex()) 
+		continue;//skips center pixel
+	    if(v= nit.GetPixel(i)) 
+		break;
+	    }
+        std::cerr << " connected to bp: " << v << std::endl;
+
 	mesh->SetCellData(label, label);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
 	}
 
