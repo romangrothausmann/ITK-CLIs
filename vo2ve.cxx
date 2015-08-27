@@ -214,7 +214,6 @@ int DoIt(int argc, char *argv[]){
 	lastVIndex.Fill(-1);
 	LabelPixelType v= 0;
 	bool foundEnd= false;
-        std::cerr << "searching for one end... ";
 	while(!foundEnd){
 	    foundEnd=true;
 	    typename NeighborhoodIteratorType::OffsetType nextMove;
@@ -239,7 +238,6 @@ int DoIt(int argc, char *argv[]){
 	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
 	    tit+= nextMove;
 	    }
-        std::cerr << "found one end connected to bp: " << v << std::endl;
 
 
 	typename MeshType::PointIdentifier pPointIndex= v-1;//join with bp, bpi value > 0 is index-1 (-1 because labelMap object 0 is mapped to value 1 by LabelMapToLabelImageFilter
@@ -283,7 +281,6 @@ int DoIt(int argc, char *argv[]){
 	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
 	    tit+= nextMove;
 	    }
-        std::cerr << "found other end connected to bp: " << v << std::endl;
 
 	typename CellType::CellAutoPointer line;
 	line.TakeOwnership(new LineType);
@@ -296,9 +293,8 @@ int DoIt(int argc, char *argv[]){
 	mesh->SetCellData(label, label+1);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
 	}
 
+    std::cerr << std::endl << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
     std::cerr << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
-    std::cerr << "cellIDs: " << cellId << std::endl;
-    std::cerr << "labels: " << labelMap->GetNumberOfLabelObjects() << std::endl;
 
     typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
     typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
