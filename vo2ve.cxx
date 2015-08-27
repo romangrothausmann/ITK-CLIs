@@ -7,6 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include "filter/external/itkCountNeighborsImageFilter/itkCountNeighborsImageFilter.h"
+#include <itkChangeLabelImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeLabelObject.h>
@@ -80,10 +81,15 @@ int DoIt(int argc, char *argv[]){
     const OutputPixelType bg= 0;
 
     //// get all verts that are neither end-nodes (NN=1) nor primitive connection nodes (NN=2)
+    typedef itk::ChangeLabelImageFilter<OutputImageType, OutputImageType> ChangeLabType;
+    typename ChangeLabType::Pointer ch= ChangeLabType::New();
+    ch->SetInput(filter->GetOutput());
+    ch->SetChange(2, 0);//delete connecting nodes of branches
+
     typedef itk::BinaryThresholdImageFilter<OutputImageType, OutputImageType> ThrFilterType;
     typename ThrFilterType::Pointer thr= ThrFilterType::New();
-    thr->SetInput(filter->GetOutput());
-    thr->SetLowerThreshold(3);//all branching nodes of any degree
+    thr->SetInput(ch->GetOutput());
+    thr->SetLowerThreshold(1);//all non-connecting nodes of any degree
     thr->SetOutsideValue(bg);
     thr->SetInsideValue(fg);
     thr->ReleaseDataFlagOn();
