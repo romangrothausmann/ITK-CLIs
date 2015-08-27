@@ -296,6 +296,9 @@ int DoIt(int argc, char *argv[]){
     std::cerr << std::endl << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
     std::cerr << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
 
+    int64_t EPC= mesh->GetNumberOfPoints() - mesh->GetNumberOfCells();
+    std::cerr << std::endl << "EPC of mesh: " << EPC << std::endl;
+
     typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
     typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
 
