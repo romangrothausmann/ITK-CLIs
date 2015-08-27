@@ -13,6 +13,7 @@
 #include <itkShapeLabelObject.h>
 #include <itkLabelMap.h>
 #include <itkLabelMapToLabelImageFilter.h>
+#include <itkAddImageFilter.h>
 
 #include <itkMesh.h>
 #include <itkLineCell.h>
@@ -86,7 +87,7 @@ int DoIt(int argc, char *argv[]){
     ch->SetInput(filter->GetOutput());
     ch->SetChange(2, 0);//delete connecting nodes of branches
 
-    typedef itk::BinaryThresholdImageFilter<OutputImageType, OutputImageType> ThrFilterType;
+    typedef itk::BinaryThresholdImageFilter<OutputImageType, LabelImageType> ThrFilterType; //thr needs to output LabelImageType such that sd rund with a big cbl is inside value range
     typename ThrFilterType::Pointer thr= ThrFilterType::New();
     thr->SetInput(ch->GetOutput());
     thr->SetLowerThreshold(1);//all non-connecting nodes of any degree
@@ -95,7 +96,7 @@ int DoIt(int argc, char *argv[]){
     thr->ReleaseDataFlagOn();
     FilterWatcher watcherThr(thr);
 
-    typedef itk::BinaryImageToShapeLabelMapFilter<OutputImageType> AnaFilterType;
+    typedef itk::BinaryImageToShapeLabelMapFilter<LabelImageType> AnaFilterType;
     typename AnaFilterType::Pointer ana= AnaFilterType::New();
     ana->SetInput(thr->GetOutput());
     ana->SetInputForegroundValue(fg);
@@ -121,6 +122,7 @@ int DoIt(int argc, char *argv[]){
 
     typename LabelMapType::Pointer labelMap = ana->GetOutput();
     const LabelObjectType* labelObject;
+    LabelType cbl= labelMap->GetNumberOfLabelObjects() + 1;
 
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){
 
@@ -147,28 +149,39 @@ int DoIt(int argc, char *argv[]){
 	    std::cerr << ex << std::endl;
 	    return EXIT_FAILURE;
 	    }
-	bpi= lmtli->GetOutput();
+	typename LabelImageType::Pointer li= lmtli->GetOutput();
+	li->DisconnectPipeline();//essential, otherwise changes to thr will triger a re-update of ana and then lmtli
+
+	//// get connecting nodes
+	thr->SetInput(filter->GetOutput());
+	thr->SetLowerThreshold(2);//only connecting nodes of branches
+	thr->SetUpperThreshold(2);//only connecting nodes of branches
+	thr->SetInsideValue(cbl);
+
+	//// add to bpi the connecting nodes with a label of cbl
+	typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
+	typename AddType::Pointer adder = AddType::New();
+	adder->SetInput1(thr->GetOutput());
+	adder->SetInput2(li);
+	FilterWatcher watcher4(adder);
+
+	try{
+	    adder->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	bpi= adder->GetOutput();
 	bpi->DisconnectPipeline();
 	}
 
 
-    //// create connecting lines
-    thr->SetLowerThreshold(2);//only connecting nodes of branches
-    thr->SetUpperThreshold(2);//only connecting nodes of branches
+    ana->SetInput(bpi);
+    ana->SetInputForegroundValue(cbl);
 
     try{
-        thr->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
-    typename OutputImageType::Pointer thrimg= thr->GetOutput();
-    thrimg->DisconnectPipeline();
-
-    try{
-        ana->Update();//also updates thr
+        ana->Update();
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
@@ -190,49 +203,48 @@ int DoIt(int argc, char *argv[]){
 	typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
 	typename NeighborhoodIteratorType::RadiusType radius;
 	radius.Fill(1); //26-connectivity
-	NeighborhoodIteratorType nit(radius, bpi, region);
+	NeighborhoodIteratorType tit(radius, bpi, region);
 
-	typedef itk::ConstNeighborhoodIterator<OutputImageType> ThrNeighborhoodIteratorType;
-	ThrNeighborhoodIteratorType tit(radius, thrimg, region);
 	tit.SetLocation(lit.GetIndex());//lit initial position can be on any pixel of the label
-	typename ThrNeighborhoodIteratorType::IndexType lastIndex;
 
 	////find one branch end
+	typename NeighborhoodIteratorType::IndexType lastIndex;
+	typename NeighborhoodIteratorType::IndexType lastVIndex;
+	lastIndex.Fill(-1);
+	lastVIndex.Fill(-1);
+	LabelPixelType v= 0;
 	bool foundEnd= false;
         std::cerr << "searching for one end... ";
 	while(!foundEnd){
 	    foundEnd=true;
-	    typename ThrNeighborhoodIteratorType::OffsetType nextMove;
+	    typename NeighborhoodIteratorType::OffsetType nextMove;
 	    nextMove.Fill(0);
 	    for(unsigned int i = 0; i < tit.Size(); ++i){
 		if(i == tit.GetCenterNeighborhoodIndex()) 
 		    continue;//skips center pixel
 		if(tit.GetIndex(i) == lastIndex)
 		    continue;//skips last visited pixel
-		if(tit.GetPixel(i)){
-		    nextMove= tit.GetOffset(i);
-		    foundEnd=false;//this is not an end pixel
+		LabelPixelType t= tit.GetPixel(i);
+		if(t){
+		    if(t == cbl){
+			nextMove= tit.GetOffset(i);
+			foundEnd=false;//this is not an end pixel
+			}
+		    else{
+			v= t;
+			lastVIndex= tit.GetIndex(i);
+			}
 		    }
 		}
 	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
 	    tit+= nextMove;
 	    }
-        std::cerr << "found one end";
+        std::cerr << "found one end connected to bp: " << v << std::endl;
 
 
-	nit.SetLocation(tit.GetIndex());//only need neighbourhood of end pixel
-	LabelPixelType v;
-	for(unsigned int i = 0; i < nit.Size(); ++i){
-	    if(i == nit.GetCenterNeighborhoodIndex()) 
-		continue;//skips center pixel
-	    if(v= nit.GetPixel(i)) 
-		break;
-	    }
-        std::cerr << " connected to bp: " << v << std::endl;
-
-	//typename MeshType::PointIdentifier pPointIndex= v;//join with bp, bpi value > 0 is index
-	typename MeshType::PointIdentifier pPointIndex= pointIndex;//do not join with bp
+	typename MeshType::PointIdentifier pPointIndex= v-1;//join with bp, bpi value > 0 is index-1 (-1 because labelMap object 0 is mapped to value 1 by LabelMapToLabelImageFilter
 	bool foundOtherEnd= false;
+	lastIndex= lastVIndex;//for skipping last found bp in first run to find other bp
 	while(!foundOtherEnd){
 
 	    labelMap->TransformIndexToPhysicalPoint(tit.GetIndex(), mP);
@@ -251,34 +263,37 @@ int DoIt(int argc, char *argv[]){
 	    cellId++;
 
 	    foundOtherEnd=true;
-	    typename ThrNeighborhoodIteratorType::OffsetType nextMove;
+	    typename NeighborhoodIteratorType::OffsetType nextMove;
 	    nextMove.Fill(0);
 	    for(unsigned int i = 0; i < tit.Size(); ++i){
 		if(i == tit.GetCenterNeighborhoodIndex()) 
 		    continue;//skips center pixel
 		if(tit.GetIndex(i) == lastIndex) 
 		    continue;//skips last visited pixel
-		if(tit.GetPixel(i)){
-		    nextMove = tit.GetOffset(i);
-		    foundOtherEnd=false;//this is not an end pixel
+		LabelPixelType t= tit.GetPixel(i);
+		if(t){
+		    if(t == cbl){
+			nextMove= tit.GetOffset(i);
+			foundOtherEnd=false;//this is not an end pixel
+			}
+		    else
+			v= t;
 		    }
 		}
 	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
 	    tit+= nextMove;
 	    }
-        std::cerr << "found other end";
+        std::cerr << "found other end connected to bp: " << v << std::endl;
 
-	////connect other end of branch poly-line to its branch point
-	nit.SetLocation(tit.GetIndex());//only need neighbourhood of end pixel
-	for(unsigned int i = 0; i < nit.Size(); ++i){
-	    if(i == nit.GetCenterNeighborhoodIndex()) 
-		continue;//skips center pixel
-	    if(v= nit.GetPixel(i)) 
-		break;
-	    }
-        std::cerr << " connected to bp: " << v << std::endl;
+	typename CellType::CellAutoPointer line;
+	line.TakeOwnership(new LineType);
+	line->SetPointId(0, pPointIndex);
+	line->SetPointId(1, v-1);
+	mesh->SetCell(cellId, line);
+	cellId++;
 
-	mesh->SetCellData(label, label);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
+
+	mesh->SetCellData(label, label+1);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
 	}
 
     std::cerr << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
