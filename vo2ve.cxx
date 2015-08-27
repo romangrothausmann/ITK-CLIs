@@ -137,44 +137,44 @@ int DoIt(int argc, char *argv[]){
     std::cerr << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
     typename LabelImageType::Pointer bpi;
-	{//scoped for better consistency
-	typedef itk::LabelMapToLabelImageFilter<LabelMapType, LabelImageType> LMtLIType;
-	typename LMtLIType::Pointer lmtli = LMtLIType::New();
-	lmtli->SetInput(labelMap);
-	FilterWatcher watcher3(lmtli);
-	try{
-	    lmtli->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	typename LabelImageType::Pointer li= lmtli->GetOutput();
-	li->DisconnectPipeline();//essential, otherwise changes to thr will triger a re-update of ana and then lmtli
+        {//scoped for better consistency
+        typedef itk::LabelMapToLabelImageFilter<LabelMapType, LabelImageType> LMtLIType;
+        typename LMtLIType::Pointer lmtli = LMtLIType::New();
+        lmtli->SetInput(labelMap);
+        FilterWatcher watcher3(lmtli);
+        try{
+            lmtli->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        typename LabelImageType::Pointer li= lmtli->GetOutput();
+        li->DisconnectPipeline();//essential, otherwise changes to thr will triger a re-update of ana and then lmtli
 
-	//// get connecting nodes
-	thr->SetInput(filter->GetOutput());
-	thr->SetLowerThreshold(2);//only connecting nodes of branches
-	thr->SetUpperThreshold(2);//only connecting nodes of branches
-	thr->SetInsideValue(cbl);
+        //// get connecting nodes
+        thr->SetInput(filter->GetOutput());
+        thr->SetLowerThreshold(2);//only connecting nodes of branches
+        thr->SetUpperThreshold(2);//only connecting nodes of branches
+        thr->SetInsideValue(cbl);
 
-	//// add to bpi the connecting nodes with a label of cbl
-	typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-	typename AddType::Pointer adder = AddType::New();
-	adder->SetInput1(thr->GetOutput());
-	adder->SetInput2(li);
-	FilterWatcher watcher4(adder);
+        //// add to bpi the connecting nodes with a label of cbl
+        typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
+        typename AddType::Pointer adder = AddType::New();
+        adder->SetInput1(thr->GetOutput());
+        adder->SetInput2(li);
+        FilterWatcher watcher4(adder);
 
-	try{
-	    adder->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	bpi= adder->GetOutput();
-	bpi->DisconnectPipeline();
-	}
+        try{
+            adder->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+        bpi= adder->GetOutput();
+        bpi->DisconnectPipeline();
+        }
 
 
     ana->SetInput(bpi);
@@ -198,100 +198,100 @@ int DoIt(int argc, char *argv[]){
 
         labelObject= labelMap->GetNthLabelObject(label);
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
-	
-	typename LabelImageType::RegionType region= bpi->GetLargestPossibleRegion();
-	typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
-	typename NeighborhoodIteratorType::RadiusType radius;
-	radius.Fill(1); //26-connectivity
-	NeighborhoodIteratorType tit(radius, bpi, region);
+        
+        typename LabelImageType::RegionType region= bpi->GetLargestPossibleRegion();
+        typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
+        typename NeighborhoodIteratorType::RadiusType radius;
+        radius.Fill(1); //26-connectivity
+        NeighborhoodIteratorType tit(radius, bpi, region);
 
-	tit.SetLocation(lit.GetIndex());//lit initial position can be on any pixel of the label
+        tit.SetLocation(lit.GetIndex());//lit initial position can be on any pixel of the label
 
-	////find one branch end
-	typename NeighborhoodIteratorType::IndexType lastIndex;
-	typename NeighborhoodIteratorType::IndexType lastVIndex;
-	lastIndex.Fill(-1);
-	lastVIndex.Fill(-1);
-	LabelPixelType v= 0;
-	bool foundEnd= false;
-	while(!foundEnd){
-	    foundEnd=true;
-	    typename NeighborhoodIteratorType::OffsetType nextMove;
-	    nextMove.Fill(0);
-	    for(unsigned int i = 0; i < tit.Size(); ++i){
-		if(i == tit.GetCenterNeighborhoodIndex()) 
-		    continue;//skips center pixel
-		if(tit.GetIndex(i) == lastIndex)
-		    continue;//skips last visited pixel
-		LabelPixelType t= tit.GetPixel(i);
-		if(t){
-		    if(t == cbl){
-			nextMove= tit.GetOffset(i);
-			foundEnd=false;//this is not an end pixel
-			}
-		    else{
-			v= t;
-			lastVIndex= tit.GetIndex(i);
-			}
-		    }
-		}
-	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
-	    tit+= nextMove;
-	    }
-
-
-	typename MeshType::PointIdentifier pPointIndex= v-1;//join with bp, bpi value > 0 is index-1 (-1 because labelMap object 0 is mapped to value 1 by LabelMapToLabelImageFilter
-	bool foundOtherEnd= false;
-	lastIndex= lastVIndex;//for skipping last found bp in first run to find other bp
-	while(!foundOtherEnd){
-
-	    labelMap->TransformIndexToPhysicalPoint(tit.GetIndex(), mP);
-	    mesh->SetPoint(pointIndex, mP);
-	    mesh->SetPointData(pointIndex, 2);//only connecting nodes of branches
-
-	    typename CellType::CellAutoPointer line;
-	    line.TakeOwnership(new LineType);
-	    line->SetPointId(0, pPointIndex);
-	    line->SetPointId(1, pointIndex);
-	    mesh->SetCell(cellId, line);
-	    //mesh->SetCellData(cellId, label);//this would be logical but turns out to  be wrong if VTK-file is loaded by e.g. paraview
-
-	    pPointIndex= pointIndex;
-	    pointIndex++;
-	    cellId++;
-
-	    foundOtherEnd=true;
-	    typename NeighborhoodIteratorType::OffsetType nextMove;
-	    nextMove.Fill(0);
-	    for(unsigned int i = 0; i < tit.Size(); ++i){
-		if(i == tit.GetCenterNeighborhoodIndex()) 
-		    continue;//skips center pixel
-		if(tit.GetIndex(i) == lastIndex) 
-		    continue;//skips last visited pixel
-		LabelPixelType t= tit.GetPixel(i);
-		if(t){
-		    if(t == cbl){
-			nextMove= tit.GetOffset(i);
-			foundOtherEnd=false;//this is not an end pixel
-			}
-		    else
-			v= t;
-		    }
-		}
-	    lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
-	    tit+= nextMove;
-	    }
-
-	typename CellType::CellAutoPointer line;
-	line.TakeOwnership(new LineType);
-	line->SetPointId(0, pPointIndex);
-	line->SetPointId(1, v-1);
-	mesh->SetCell(cellId, line);
-	cellId++;
+        ////find one branch end
+        typename NeighborhoodIteratorType::IndexType lastIndex;
+        typename NeighborhoodIteratorType::IndexType lastVIndex;
+        lastIndex.Fill(-1);
+        lastVIndex.Fill(-1);
+        LabelPixelType v= 0;
+        bool foundEnd= false;
+        while(!foundEnd){
+            foundEnd=true;
+            typename NeighborhoodIteratorType::OffsetType nextMove;
+            nextMove.Fill(0);
+            for(unsigned int i = 0; i < tit.Size(); ++i){
+                if(i == tit.GetCenterNeighborhoodIndex())
+                    continue;//skips center pixel
+                if(tit.GetIndex(i) == lastIndex)
+                    continue;//skips last visited pixel
+                LabelPixelType t= tit.GetPixel(i);
+                if(t){
+                    if(t == cbl){
+                        nextMove= tit.GetOffset(i);
+                        foundEnd=false;//this is not an end pixel
+                        }
+                    else{
+                        v= t;
+                        lastVIndex= tit.GetIndex(i);
+                        }
+                    }
+                }
+            lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
+            tit+= nextMove;
+            }
 
 
-	mesh->SetCellData(label, label+1);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
-	}
+        typename MeshType::PointIdentifier pPointIndex= v-1;//join with bp, bpi value > 0 is index-1 (-1 because labelMap object 0 is mapped to value 1 by LabelMapToLabelImageFilter
+        bool foundOtherEnd= false;
+        lastIndex= lastVIndex;//for skipping last found bp in first run to find other bp
+        while(!foundOtherEnd){
+
+            labelMap->TransformIndexToPhysicalPoint(tit.GetIndex(), mP);
+            mesh->SetPoint(pointIndex, mP);
+            mesh->SetPointData(pointIndex, 2);//only connecting nodes of branches
+
+            typename CellType::CellAutoPointer line;
+            line.TakeOwnership(new LineType);
+            line->SetPointId(0, pPointIndex);
+            line->SetPointId(1, pointIndex);
+            mesh->SetCell(cellId, line);
+            //mesh->SetCellData(cellId, label);//this would be logical but turns out to  be wrong if VTK-file is loaded by e.g. paraview
+
+            pPointIndex= pointIndex;
+            pointIndex++;
+            cellId++;
+
+            foundOtherEnd=true;
+            typename NeighborhoodIteratorType::OffsetType nextMove;
+            nextMove.Fill(0);
+            for(unsigned int i = 0; i < tit.Size(); ++i){
+                if(i == tit.GetCenterNeighborhoodIndex())
+                    continue;//skips center pixel
+                if(tit.GetIndex(i) == lastIndex)
+                    continue;//skips last visited pixel
+                LabelPixelType t= tit.GetPixel(i);
+                if(t){
+                    if(t == cbl){
+                        nextMove= tit.GetOffset(i);
+                        foundOtherEnd=false;//this is not an end pixel
+                        }
+                    else
+                        v= t;
+                    }
+                }
+            lastIndex= tit.GetIndex();//it.GetIndex() == it.GetIndex(it.GetCenterNeighborhoodIndex())
+            tit+= nextMove;
+            }
+
+        typename CellType::CellAutoPointer line;
+        line.TakeOwnership(new LineType);
+        line->SetPointId(0, pPointIndex);
+        line->SetPointId(1, v-1);
+        mesh->SetCell(cellId, line);
+        cellId++;
+
+
+        mesh->SetCellData(label, label+1);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
+        }
 
     std::cerr << std::endl << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
     std::cerr << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
