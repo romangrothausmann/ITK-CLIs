@@ -15,6 +15,7 @@
 #include <itkLabelMapToLabelImageFilter.h>
 #include <itkAddImageFilter.h>
 
+#include <itkVector.h>
 #include <itkMesh.h>
 #include <itkLineCell.h>
 #include <itkMeshFileWriter.h>
@@ -113,7 +114,9 @@ int DoIt(int argc, char *argv[]){
         }
 
     //// create mesh to save in a VTK-file
-    typedef typename itk::Mesh<float, Dimension>  MeshType;
+    typedef itk::Vector<uint8_t, 3> VectorType; //actually only 2 components are needed (Degree and BP-Size) but the way the VTK-file is exported paraview/VTK expects 3-tuples (2D not tested), also signed int do not work for (possibly because paraview/VTK expects RGBs here)
+    typedef itk::DefaultStaticMeshTraits<VectorType, Dimension, 1, double, double, double> MeshTraits; //needed for multi component PointData
+    typedef typename itk::Mesh<double, Dimension, MeshTraits>  MeshType;
     typename MeshType::Pointer  mesh = MeshType::New();
 
     typedef typename AnaFilterType::OutputImageType LabelMapType;
@@ -122,6 +125,9 @@ int DoIt(int argc, char *argv[]){
 
     typename LabelMapType::Pointer labelMap = ana->GetOutput();
     const LabelObjectType* labelObject;
+    VectorType vectCont;
+    for(int i= 0; i < Dimension; i++)
+	vectCont[i]= 0;
     LabelType cbl= labelMap->GetNumberOfLabelObjects() + 1;
 
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){
@@ -130,7 +136,9 @@ int DoIt(int argc, char *argv[]){
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
 
         mesh->SetPoint(label, labelObject->GetCentroid());
-        mesh->SetPointData(label, output->GetPixel(lit.GetIndex()));//make sure filter->ReleaseDataFlagOn() is NOT set!
+	vectCont[0]= output->GetPixel(lit.GetIndex());
+	vectCont[1]= labelObject->GetNumberOfPixels();
+        mesh->SetPointData(label, vectCont);//make sure filter->ReleaseDataFlagOn() is NOT set!
         }
 
     typename MeshType::PointIdentifier pointIndex= mesh->GetNumberOfPoints();
@@ -198,7 +206,7 @@ int DoIt(int argc, char *argv[]){
 
         labelObject= labelMap->GetNthLabelObject(label);
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
-        
+
         typename LabelImageType::RegionType region= bpi->GetLargestPossibleRegion();
         typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
         typename NeighborhoodIteratorType::RadiusType radius;
@@ -247,7 +255,9 @@ int DoIt(int argc, char *argv[]){
 
             labelMap->TransformIndexToPhysicalPoint(tit.GetIndex(), mP);
             mesh->SetPoint(pointIndex, mP);
-            mesh->SetPointData(pointIndex, 2);//only connecting nodes of branches
+	    vectCont[0]= 2;
+	    vectCont[1]= labelObject->GetNumberOfPixels();
+            mesh->SetPointData(pointIndex, vectCont);//only connecting nodes of branches
 
             typename CellType::CellAutoPointer line;
             line.TakeOwnership(new LineType);
