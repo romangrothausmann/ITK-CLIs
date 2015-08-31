@@ -1,47 +1,38 @@
-////program for
+////program to prune ends of a voxel representation of a simplical 2-complex (e.g. voxel-skeleton consisting only of vertices and lines)
 //01: based on template.cxx
 
 
-#include <complex>
+/**************************************************************************
+NOTE: does not resolve if a branchpoint is no longer necessary/apropriate,
+e.g. does not resovle this case (neither does prune-ends of skeleton analyzer in fiji):
+ 
+this:     becomes:   ought to be:
+     1
+     2
+     3         2
+ .2233     .2233      .2222
+      2         2          2
+       2.        2.         2.
+ 
+ 
+this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
+***************************************************************************/
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkNeighborhoodIterator.h>
 #include <itkImageFileWriter.h>
 
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -63,27 +54,44 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
+    typedef itk::NeighborhoodIterator<InputImageType> NeighborhoodIteratorType;
+    typename NeighborhoodIteratorType::RadiusType radius;
+    radius.Fill(1); //26-connectivity
+    NeighborhoodIteratorType nit(radius, input, input->GetLargestPossibleRegion());
+    std::cerr << "nit.size: " << nit.Size() << std::endl;
 
-    typedef itk::<InputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    int noi= 0;
+    bool allRemoved= false;
+    while(!allRemoved){
+	int noe= 0;
+	for (nit.GoToBegin(); !nit.IsAtEnd(); ++nit){
+	    if(nit.GetCenterPixel() == itk::NumericTraits<InputPixelType>::Zero)
+		continue;//only count neighbours for non-zero pixels
 
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	    int non= 0;
+	    for(unsigned int i = 0; i < nit.Size(); i++){
+                if(i == nit.GetCenterNeighborhoodIndex()){
+		    if(nit.GetCenterPixel() == itk::NumericTraits<InputPixelType>::Zero)
+		        std::cerr << "Center is zero. This should not happen!" << std::endl;	
+                    continue;//skips center pixel
+		    }
+		if(nit.GetPixel(i) != itk::NumericTraits<InputPixelType>::Zero)
+		    non++;
+		}
+	    if(non == 1){
+		nit.SetCenterPixel(itk::NumericTraits<InputPixelType>::Zero);
+		noe++;
+		}
+	    }
+	if(noe == 0)
+	    allRemoved= true;
+
+	noi++;
+	fprintf(stderr, "Iteration %i removed %d end-nodes.\n", noi, noe);
+	}
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    const typename OutputImageType::Pointer& output= input;
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -91,8 +99,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -110,9 +117,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -136,22 +140,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
