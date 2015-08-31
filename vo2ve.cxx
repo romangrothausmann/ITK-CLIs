@@ -2,7 +2,25 @@
 //01: based on count_neighbours.cxx
 
 
-#include <complex>
+/**************************************************************************
+NOTE: does not resolve if a branchpoint is no longer necessary/apropriate,
+e.g. does not resovle this case (neither does prune-ends of skeleton analyzer in fiji):
+
+this:     becomes:   ought to be:
+     1
+     2
+     3         2
+ .2233     .2233      .2222
+      2         2          2
+       2.        2.         2.
+
+
+this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
+***************************************************************************/
+
+////ToDo:
+// - resovle branchpoints correctly
+
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
