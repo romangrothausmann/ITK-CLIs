@@ -5,7 +5,7 @@
 /**************************************************************************
 NOTE: does not resolve if a branchpoint is no longer necessary/apropriate,
 e.g. does not resovle this case (neither does prune-ends of skeleton analyzer in fiji):
- 
+
 this:     becomes:   ought to be:
      1
      2
@@ -13,10 +13,15 @@ this:     becomes:   ought to be:
  .2233     .2233      .2222
       2         2          2
        2.        2.         2.
- 
- 
+
+
 this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 ***************************************************************************/
+
+////ToDo:
+// - resovle branchpoints correctly
+// - put iterator into an ITK-filter for multithreading
+
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
@@ -58,7 +63,6 @@ int DoIt(int argc, char *argv[]){
     typename NeighborhoodIteratorType::RadiusType radius;
     radius.Fill(1); //26-connectivity
     NeighborhoodIteratorType nit(radius, input, input->GetLargestPossibleRegion());
-    std::cerr << "nit.size: " << nit.Size() << std::endl;
 
     int noi= 0;
     bool allRemoved= false;
@@ -70,11 +74,8 @@ int DoIt(int argc, char *argv[]){
 
 	    int non= 0;
 	    for(unsigned int i = 0; i < nit.Size(); i++){
-                if(i == nit.GetCenterNeighborhoodIndex()){
-		    if(nit.GetCenterPixel() == itk::NumericTraits<InputPixelType>::Zero)
-		        std::cerr << "Center is zero. This should not happen!" << std::endl;	
+                if(i == nit.GetCenterNeighborhoodIndex())
                     continue;//skips center pixel
-		    }
 		if(nit.GetPixel(i) != itk::NumericTraits<InputPixelType>::Zero)
 		    non++;
 		}
