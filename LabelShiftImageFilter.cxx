@@ -8,7 +8,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include "itkLabelShiftImageFilter.h"
+#include "filter/self-made/itkLabelShiftImageFilter.h"
 #include <itkPipelineMonitorImageFilter.h>
 #include <itkStreamingImageFilter.h>
 
