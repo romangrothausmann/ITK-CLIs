@@ -1,4 +1,4 @@
-////program to convert a voxel representation of a simplical 2-complex (e.g. voxel-skeleton consisting only of vertices and lines) into a vector/graph representation
+////program to convert a voxel representation of a simplical 1-complex (e.g. voxel-skeleton consisting only of vertices and lines) into a vector/graph representation
 //01: based on count_neighbours.cxx
 
 

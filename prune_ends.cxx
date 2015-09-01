@@ -1,5 +1,6 @@
-////program to prune ends of a voxel representation of a simplical 2-complex (e.g. voxel-skeleton consisting only of vertices and lines)
+////program to prune ends of a voxel representation of a simplical 1-complex (e.g. voxel-skeleton consisting only of vertices and lines)
 //01: based on template.cxx
+//02: resovling remaining branchpoints done by itkBinaryThinningImageFilter3D, works, but could probably be done more effective (e.g. use Boost as vtkBoostBiconnectedComponents does (NOTE: results differ by definition!))
 
 
 /**************************************************************************
@@ -16,16 +17,24 @@ this:     becomes:   ought to be:
 
 
 this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
+
+
+This situation can lead to an increase of removed endpoints during iteration:
+
+1...2
+     222.
+1...2
+
 ***************************************************************************/
 
 ////ToDo:
-// - resovle branchpoints correctly
 // - put iterator into an ITK-filter for multithreading
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkNeighborhoodIterator.h>
+#include "filter/external/itkBinaryThinningImageFilter3D/itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
 #include <itkImageFileWriter.h>
 
 
@@ -56,40 +65,66 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename InputImageType::Pointer& input= reader->GetOutput();
+    typename InputImageType::Pointer input= reader->GetOutput();
 
 
     typedef itk::NeighborhoodIterator<InputImageType> NeighborhoodIteratorType;
     typename NeighborhoodIteratorType::RadiusType radius;
     radius.Fill(1); //26-connectivity
-    NeighborhoodIteratorType nit(radius, input, input->GetLargestPossibleRegion());
 
-    int noi= 0;
-    bool allRemoved= false;
-    while(!allRemoved){
-	int noe= 0;
-	for (nit.GoToBegin(); !nit.IsAtEnd(); ++nit){
-	    if(nit.GetCenterPixel() == itk::NumericTraits<InputPixelType>::Zero)
-		continue;//only count neighbours for non-zero pixels
+    bool iterationEnd= false;
+    while(!iterationEnd){
+        NeighborhoodIteratorType nit(radius, input, input->GetLargestPossibleRegion());
 
-	    int non= 0;
-	    for(unsigned int i = 0; i < nit.Size(); i++){
-                if(i == nit.GetCenterNeighborhoodIndex())
-                    continue;//skips center pixel
-		if(nit.GetPixel(i) != itk::NumericTraits<InputPixelType>::Zero)
-		    non++;
-		}
-	    if(non == 1){
-		nit.SetCenterPixel(itk::NumericTraits<InputPixelType>::Zero);
-		noe++;
-		}
-	    }
-	if(noe == 0)
-	    allRemoved= true;
+        int noi= 0;
+        bool allRemoved= false;
+        while(!allRemoved){
+            int noe= 0;
+            for (nit.GoToBegin(); !nit.IsAtEnd(); ++nit){
+                if(nit.GetCenterPixel() == itk::NumericTraits<InputPixelType>::Zero)
+                    continue;//only count neighbours for non-zero pixels
 
-	noi++;
-	fprintf(stderr, "Iteration %i removed %d end-nodes.\n", noi, noe);
-	}
+                int non= 0;
+                for(unsigned int i = 0; i < nit.Size(); i++){
+                    if(i == nit.GetCenterNeighborhoodIndex())
+                        continue;//skips center pixel
+                    if(nit.GetPixel(i) != itk::NumericTraits<InputPixelType>::Zero)
+                        non++;
+                    }
+                if(non == 1){
+                    nit.SetCenterPixel(itk::NumericTraits<InputPixelType>::Zero);
+                    noe++;
+                    }
+                }
+            if(noe == 0){
+                if(noi == 0)
+                    iterationEnd= true;
+                allRemoved= true;
+                }
+
+            noi++;
+            fprintf(stderr, "Iteration %i removed %d end-nodes.\n", noi, noe);
+            }
+
+        if(!iterationEnd){
+            typedef itk::BinaryThinningImageFilter3D<InputImageType, InputImageType> FilterType;
+            typename FilterType::Pointer filter= FilterType::New();
+            filter->SetInput(input);
+            //filter->InPlaceOn();//not available
+            filter->ReleaseDataFlagOn();
+            FilterWatcher watcher1(filter);
+            try{
+                filter->Update();
+                }
+            catch(itk::ExceptionObject &ex){
+                std::cerr << ex << std::endl;
+                return EXIT_FAILURE;
+                }
+
+            input= filter->GetOutput();
+            input->DisconnectPipeline();
+            }
+        }
 
 
     const typename OutputImageType::Pointer& output= input;
@@ -118,9 +153,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
