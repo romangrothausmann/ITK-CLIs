@@ -1,0 +1,52 @@
+
+vo2ve sheet-flow_vo-skel.mha sheet-flow_vo-skel_vo2ve+255.vtk 255
+
+dimensions: 3
+component type: unsigned_char
+component size: 1
+pixel type (string): scalar
+pixel type: 1
+
+ImageFileReader progress: 100.0% done. (real= 0.0s, CPUs= 0.4s)
+CountNeighborsImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 4.6s)
+BinaryThresholdImageFilter progress: 100.0% done. (real= 1.0s, CPUs= 0.9s)
+BinaryImageToStatisticsLabelMapFilter progress: 100.0% done. (real= 0.0s, CPUs= 1.4s)
+# of mesh points: 1281
+LabelMapToLabelImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.2s)
+BinaryThresholdImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.8s)
+AddImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.9s)
+BinaryImageToStatisticsLabelMapFilter progress: 100.0% done. (real= 1.0s, CPUs= 4.1s)
+
+# of mesh points: 18672
+# of mesh cells: 18904
+
+EPC of mesh: -232
+MeshFileWriter  done. (real= 0.0s, CPUs= 0.1s)
+
+
+
+
+
+vo2ve sheet-flow_vo-skel_pe.mha sheet-flow_vo-skel_pe_vo2ve+01.vtk 1
+
+dimensions: 3
+component type: unsigned_char
+component size: 1
+pixel type (string): scalar
+pixel type: 1
+
+ImageFileReader progress: 100.0% done. (real= 0.0s, CPUs= 0.4s)
+CountNeighborsImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 4.6s)
+BinaryThresholdImageFilter progress: 100.0% done. (real= 1.0s, CPUs= 0.8s)
+BinaryImageToStatisticsLabelMapFilter progress: 100.0% done. (real= 0.0s, CPUs= 1.1s)
+# of mesh points: 440
+LabelMapToLabelImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.2s)
+BinaryThresholdImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.8s)
+AddImageFilter progress: 100.0% done. (real= 0.0s, CPUs= 0.8s)
+BinaryImageToStatisticsLabelMapFilter progress: 100.0% done. (real= 1.0s, CPUs= 3.0s)
+
+# of mesh points: 14440
+# of mesh cells: 14672
+
+EPC of mesh: -232
+MeshFileWriter  done. (real= 0.0s, CPUs= 0.1s)

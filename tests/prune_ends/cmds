@@ -1,0 +1,48 @@
+
+time \
+prune_ends sheet-flow_vo-skel.mha sheet-flow_vo-skel_pe.mha 1
+
+.
+.
+.
+Iteration 24 removed 5 end-nodes.
+Iteration 25 removed 5 end-nodes.
+Iteration 26 removed 5 end-nodes.
+Iteration 27 removed 4 end-nodes.
+Iteration 28 removed 5 end-nodes.
+Iteration 29 removed 4 end-nodes.
+Iteration 30 removed 5 end-nodes.
+Iteration 31 removed 5 end-nodes.
+Iteration 32 removed 3 end-nodes.
+Iteration 33 removed 9 end-nodes.
+Iteration 34 removed 0 end-nodes.
+BinaryThinningImageFilter3D  done. (real= 25.0s, CPUs= 25.4s)
+Iteration 1 removed 1 end-nodes.
+Iteration 2 removed 1 end-nodes.
+Iteration 3 removed 1 end-nodes.
+Iteration 4 removed 1 end-nodes.
+Iteration 5 removed 1 end-nodes.
+Iteration 6 removed 1 end-nodes.
+Iteration 7 removed 1 end-nodes.
+Iteration 8 removed 1 end-nodes.
+Iteration 9 removed 1 end-nodes.
+Iteration 10 removed 1 end-nodes.
+Iteration 11 removed 1 end-nodes.
+Iteration 12 removed 1 end-nodes.
+Iteration 13 removed 1 end-nodes.
+Iteration 14 removed 1 end-nodes.
+Iteration 15 removed 1 end-nodes.
+Iteration 16 removed 1 end-nodes.
+Iteration 17 removed 1 end-nodes.
+Iteration 18 removed 1 end-nodes.
+Iteration 19 removed 0 end-nodes.
+BinaryThinningImageFilter3D  done. (real= 12.0s, CPUs= 12.4s)
+Iteration 1 removed 0 end-nodes.
+ImageFileWriter progress: 100.0% done. (real= 1.0s, CPUs= 0.9s)
+
+
+real	4m32.129s
+user	4m31.737s
+sys	0m0.292s
+
+
