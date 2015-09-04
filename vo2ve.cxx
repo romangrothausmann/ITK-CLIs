@@ -3,7 +3,7 @@
 
 
 /**************************************************************************
-NOTE: does not resolve if a branchpoint is no longer necessary/apropriate,
+NOTE: does not resolve if a branch-point is no longer necessary/apropriate,
 e.g. does not resovle this case (neither does prune-ends of skeleton analyzer in fiji):
 
 this:     becomes:   ought to be:
@@ -130,6 +130,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+    std::cerr << "# of branching nodes: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
 
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
@@ -206,6 +207,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+    std::cerr << "# of branches: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
 
     typedef typename MeshType::CellType CellType;
     typedef typename itk::LineCell<CellType> LineType;

@@ -4,7 +4,7 @@
 
 
 /**************************************************************************
-NOTE: does not resolve if a branchpoint is no longer necessary/apropriate,
+NOTE: does not resolve if a branch-point is no longer necessary/apropriate,
 e.g. does not resovle this case (neither does prune-ends of skeleton analyzer in fiji):
 
 this:     becomes:   ought to be:
@@ -19,12 +19,7 @@ this:     becomes:   ought to be:
 this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 
 
-This situation can lead to an increase of removed endpoints during iteration:
-
-1...2
-     222.
-1...2
-
+An increase in removed end-points can occure if a branch section lies such that successive branch-nodes are reached during a single iteration.
 ***************************************************************************/
 
 ////ToDo:
@@ -72,6 +67,7 @@ int DoIt(int argc, char *argv[]){
     typename NeighborhoodIteratorType::RadiusType radius;
     radius.Fill(1); //26-connectivity
 
+    int nos= 0;
     bool iterationEnd= false;
     while(!iterationEnd){
         NeighborhoodIteratorType nit(radius, input, input->GetLargestPossibleRegion());
@@ -103,7 +99,7 @@ int DoIt(int argc, char *argv[]){
                 }
 
             noi++;
-            fprintf(stderr, "Iteration %i removed %d end-nodes.\n", noi, noe);
+            fprintf(stderr, "Run %d: Iteration %d removed %d end-nodes.\n", nos, noi, noe);
             }
 
         if(!iterationEnd){
@@ -124,6 +120,7 @@ int DoIt(int argc, char *argv[]){
             input= filter->GetOutput();
             input->DisconnectPipeline();
             }
+	nos++;
         }
 
 
