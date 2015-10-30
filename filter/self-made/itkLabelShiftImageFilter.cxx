@@ -46,7 +46,7 @@ namespace itk{
 	{
 	Superclass::PrintSelf(os, indent);
 
-	os << indent << "LastMax: " << m_LastMax << std::endl;
+	os << indent << "LastMax: " << +m_LastMax << std::endl;
 	}
 
 

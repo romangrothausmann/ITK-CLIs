@@ -6,7 +6,7 @@
 
 #include <complex>
 
-//#include "itkFilterWatcher.h" 
+#include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
@@ -43,12 +43,12 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
     else if(itk::IterationEvent().CheckEvent(&event)){
 	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
-		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl;
+		  << " Max: " << +(dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl;
 	m_lastMax= (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum();
 	}
     else if(itk::EndEvent().CheckEvent(&event))
 	std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetSliceIndex()
-		  << " Max: " << (dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl; 
+		  << " Max: " << +(dynamic_cast<itk::StatisticsImageFilter<SBSInputImageType> *>((dynamic_cast<itk::SliceBySliceImageFilter<InputImageType, OutputImageType> *>(caller))->GetInputFilter()))->GetMaximum() << std::endl; 
     }
 
 
@@ -136,7 +136,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
-    //FilterWatcher watcherO(writer);
+    FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
     //writer->UseCompressionOn();
