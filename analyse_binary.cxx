@@ -87,18 +87,18 @@ int DoIt(int argc, char *argv[]){
 
         labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
         std::cout
-            << labelObject->GetLabel() << "\t";//not label to be sure, even though labels are expected to be successive!
+            << +labelObject->GetLabel() << "\t";//not label to be sure, even though labels are expected to be successive!
         for (unsigned int i= 0; i < Dimension; i++)
-            std::cout << labelObject->GetBoundingBox().GetIndex()[i] << "\t";
+            std::cout << +labelObject->GetBoundingBox().GetIndex()[i] << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
-            std::cout << labelObject->GetBoundingBox().GetSize()[i] << "\t";
+            std::cout << +labelObject->GetBoundingBox().GetSize()[i] << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
-            std::cout << labelObject->GetCentroid()[i] << "\t";
+            std::cout << +labelObject->GetCentroid()[i] << "\t";
         for (unsigned int i= 0; i < Dimension; i++)
-            std::cout << labelObject->GetEquivalentEllipsoidDiameter()[i] << "\t";
+            std::cout << +labelObject->GetEquivalentEllipsoidDiameter()[i] << "\t";
         for (unsigned int i= 0; i < labelObject->GetPrincipalAxes().GetVnlMatrix().columns(); i++)
             for (unsigned int j= 0; j < labelObject->GetPrincipalAxes().GetVnlMatrix().rows(); j++)
-                std::cout << labelObject->GetPrincipalAxes()[i][j] << "\t";
+                std::cout << +labelObject->GetPrincipalAxes()[i][j] << "\t";
         std::cout
             //<< labelObject->GetFeretDiameter() << "\t"
             //<< labelObject->GetElongation() << "\t"
@@ -106,10 +106,10 @@ int DoIt(int argc, char *argv[]){
             //<< labelObject->GetFlatness() << "\t"
             //<< labelObject->GetEquivalentSphericalRadius() << "\t"
             //<< labelObject->GetEquivalentSphericalPerimeter() << "\t"
-            << labelObject->GetNumberOfPixels() << "\t"
-            << labelObject->GetPhysicalSize();
+            << +labelObject->GetNumberOfPixels() << "\t"
+            << +labelObject->GetPhysicalSize();
         if (cp)
-            std::cout << "\t" << labelObject->GetPerimeter();//takes physical voxel size into account!!!
+            std::cout << "\t" << +labelObject->GetPerimeter();//takes physical voxel size into account!!!
         std::cout << std::endl;
         }
 
