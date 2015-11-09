@@ -32,6 +32,8 @@ this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 #include <itkLabelMap.h>
 #include <itkLabelMapToLabelImageFilter.h>
 #include <itkAddImageFilter.h>
+#include <itkConstantBoundaryCondition.h>
+#include <itkConstNeighborhoodIterator.h>
 
 #include <itkMesh.h>
 #include <itkLineCell.h>
@@ -221,7 +223,8 @@ int DoIt(int argc, char *argv[]){
         typename LabelObjectType::ConstIndexIterator lit(labelObject);
 
         typename LabelImageType::RegionType region= bpi->GetLargestPossibleRegion();
-        typedef itk::ConstNeighborhoodIterator<LabelImageType> NeighborhoodIteratorType;
+        typedef itk::ConstantBoundaryCondition<LabelImageType> BoundaryConditionType;//zero by default
+        typedef itk::ConstNeighborhoodIterator<LabelImageType, BoundaryConditionType> NeighborhoodIteratorType;//ConstantBoundaryCondition essential for not-padded images, default is ZeroFluxNeumannBoundaryCondition
         typename NeighborhoodIteratorType::RadiusType radius;
         radius.Fill(1); //26-connectivity
         NeighborhoodIteratorType tit(radius, bpi, region);
@@ -312,6 +315,7 @@ int DoIt(int argc, char *argv[]){
 
 
         mesh->SetCellData(label, label+1);//oddity of ITK-mesh: consecutive line-cells are joined to form a single polyline-cell
+        fprintf(stderr, "\r%5.1f%% (%ld)", ((label+1.0) * 100.0 / labelMap->GetNumberOfLabelObjects()), label+1);
         }
 
     std::cerr << std::endl << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
