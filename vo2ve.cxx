@@ -24,6 +24,14 @@ this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+
+///for fill-holes check BEGIN
+#include <itkBinaryNotImageFilter.h>
+#include <itkBinaryImageToShapeLabelMapFilter.h>
+#include <itkShapeOpeningLabelMapFilter.h>//takes a LabelMap as input wheras LabelShapeOpeningImageFilter takes a labeled image as input, LabelImageToLabelMapFilter converts such an image into a LabelMap
+#include <itkLabelMapMaskImageFilter.h>
+///for fill-holes check END
+
 #include "filter/external/itkCountNeighborsImageFilter/itkCountNeighborsImageFilter.h"
 #include <itkChangeLabelImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
@@ -72,6 +80,70 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+        {
+        ////taken from Modules/Filtering/LabelMap/include/itkBinaryFillholeImageFilter.hxx
+        int m_FullyConnected= 0;
+        InputPixelType m_ForegroundValue = itk::NumericTraits<InputPixelType>::max();
+        InputPixelType backgroundValue = itk::NumericTraits<InputPixelType>::ZeroValue();
+        if ( m_ForegroundValue == backgroundValue )
+            {
+            // current background value is already used for foreground value
+            // choose another one
+            backgroundValue = itk::NumericTraits<InputPixelType>::max();
+            }
+
+        typedef itk::BinaryNotImageFilter< InputImageType > NotType;
+        typename NotType::Pointer notInput = NotType::New();
+        notInput->SetInput(input);
+        notInput->SetForegroundValue( m_ForegroundValue );
+        notInput->SetBackgroundValue( backgroundValue );
+        notInput->SetReleaseDataFlag( true );
+        FilterWatcher watcher0(notInput);
+
+        typedef typename itk::BinaryImageToShapeLabelMapFilter< InputImageType > LabelizerType;
+        typename LabelizerType::Pointer labelizer = LabelizerType::New();
+        labelizer->SetInput( notInput->GetOutput() );
+        labelizer->SetInputForegroundValue( m_ForegroundValue );
+        labelizer->SetOutputBackgroundValue( backgroundValue );
+        labelizer->SetFullyConnected( m_FullyConnected );
+        FilterWatcher watcher1(labelizer);
+
+        typedef typename LabelizerType::OutputImageType                  LabelMapType;
+        typedef typename itk::ShapeOpeningLabelMapFilter< LabelMapType > OpeningType;
+        typename OpeningType::Pointer opening= OpeningType::New();
+        opening->SetInput(labelizer->GetOutput());
+        opening->SetAttribute(LabelMapType::LabelObjectType::NUMBER_OF_PIXELS_ON_BORDER);
+        opening->SetLambda(1);
+        FilterWatcher watcher2(opening);
+
+        // invert the image during the binarization
+        typedef typename itk::LabelMapMaskImageFilter< LabelMapType, OutputImageType > BinarizerType;
+        typename BinarizerType::Pointer binarizer = BinarizerType::New();
+        binarizer->SetInput(opening->GetOutput());
+        binarizer->SetLabel(backgroundValue);
+        binarizer->SetNegated(true);
+        binarizer->SetBackgroundValue(m_ForegroundValue);
+        binarizer->SetFeatureImage(input);//will cause another read if reader->ReleaseDataFlagOn();
+        FilterWatcher watcher3(binarizer);
+        try{
+            binarizer->Update();
+            }
+        catch(itk::ExceptionObject &ex){
+            std::cerr << ex << std::endl;
+            return EXIT_FAILURE;
+            }
+
+        const typename OutputImageType::Pointer& output= binarizer->GetOutput();
+
+        //// ShapeOpeningLabelMapFilter calls std::map::erase(key) which seems not only to delete the contents but also reduces the total count of elements, so GetNumberOfLabelObjects() reflects the actually contained elements even if not labelled consecutively
+
+        static long int noh= labelizer->GetOutput()->GetNumberOfLabelObjects() - opening->GetOutput()->GetNumberOfLabelObjects();
+
+        if(noh)
+            std::cerr << "# of holes removed: " << noh << std::endl << "This generally means that the input does not repesent a simplical 1-complex!!! (Forgot fill_holes-filter before skeletonization?)" << std::endl;
+        else
+            std::cerr << "No holes found. All fine." << std::endl;
+        }
 
     typename InputImageType::SizeType radius;
     radius.Fill(1);//only regard 26 connectivity
