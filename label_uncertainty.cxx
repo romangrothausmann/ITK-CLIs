@@ -1,6 +1,10 @@
-////program for itkMorphologicalWatershedFromMarkersImageFilter
-//01: based on template_2inputs.cxx and watershed_morph_nX_marker_UI8.cxx
+////program to generate a lower, middle and upper bound label image based on an "ideal" segmentation (label image)
+////middle: maximal gradient in reference image
+////lower, upper: maximal curvature in reference image "adjacent" to middle
+//01: based on watershed_morph_nX_marker.cxx and watershed_morph_nX.cxx
 
+////Todo
+// Does it make sense to include itkHMinimaImageFilter before itkRegionalMinimaImageFilter? Might increase extent of minimas over lower bond, wanted or not?
 
 #include <proc/readproc.h>//for look_up_our_self
 #include <unistd.h>//for sysconf
@@ -12,6 +16,8 @@
 
 #include <itkShiftScaleImageFilter.h>
 #include <itkStatisticsImageFilter.h>
+#include <itkMaskImageFilter.h>
+#include <itkRegionalMinimaImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
@@ -40,8 +46,12 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
+    typedef uint8_t   MaskType;
+
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  LabelImageType;
+    typedef itk::Image<MaskType,  Dimension>        MaskImageType;
+
 #ifdef USE_FLOAT
     typedef itk::Image<float, Dimension>            GreyImageType;
     std::cerr << "Using single precision (float)." << std::endl;
@@ -53,6 +63,10 @@ int DoIt(int argc, char *argv[]){
     itk::CStyleCommand::Pointer eventCallbackITK;
     eventCallbackITK = itk::CStyleCommand::New();
     eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType1>);//only works for both readers if InputImageType1 == InputImageType2
+
+    bool ws0_conn= true;//true reduces amount of watersheds
+    bool ws_conn= ws0_conn;
+
 
     ////for mem monitoring: http://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-run-time-in-c
     struct proc_t usage;//description in: /usr/include/proc/readproc.h
@@ -76,7 +90,7 @@ int DoIt(int argc, char *argv[]){
 
         typedef itk::ShiftScaleImageFilter<InputImageType1, GreyImageType> SSType;
         typename SSType::Pointer ss = SSType::New();
-        if(atoi(argv[6]))
+        if(atoi(argv[5]))
             ss->SetScale(-1); //invert by mul. with -1
         else
             ss->SetScale(1); //just convert to GreyImageType
@@ -129,16 +143,31 @@ int DoIt(int argc, char *argv[]){
 
         std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
 
+
+	typedef itk::RegionalMinimaImageFilter<GreyImageType, MaskImageType> RegMinType;
+	typename RegMinType::Pointer rm = RegMinType::New();
+	rm->SetFullyConnected(ws0_conn);
+	rm->SetInput(input);
+	rm->AddObserver(itk::AnyEvent(), eventCallbackITK);
+	rm->Update();
+
+	//// "label" the rm by masking of the label image
+	typedef itk::MaskImageFilter<LabelImageType, MaskImageType, LabelImageType> MaskType;
+	typename MaskType::Pointer mask= MaskType::New();
+	mask->SetInput1(reader2->GetOutput());
+	mask->SetInput2(rm->GetOutput());
+	mask->ReleaseDataFlagOn();
+	mask->InPlaceOn();
+	mask->AddObserver(itk::AnyEvent(), eventCallbackITK);
+	mask->Update();
+
         labelCnt= stat->GetMaximum();
-        labelImg= stat->GetOutput();
+        labelImg= mask->GetOutput();
         labelImg->DisconnectPipeline();//will need its own Delete later on!
         }
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
-    bool ws0_conn= true;//true reduces amount of watersheds
-    bool ws_conn= ws0_conn;
-
-    uint8_t NumberOfExtraWS= atoi(argv[5]);
+    char* interMedOutPrefix= argv[3];
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -147,7 +176,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
     typename MWatershedType::Pointer ws = MWatershedType::New();
-    ws->SetMarkWatershedLine(NumberOfExtraWS); //use borders if higher order WS are wanted
+    ws->MarkWatershedLineOn();
     ws->SetFullyConnected(ws0_conn);
     ws->SetInput(input);
     ws->SetMarkerImage(labelImg);
@@ -156,106 +185,102 @@ int DoIt(int argc, char *argv[]){
     ws->Update();
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-    if(NumberOfExtraWS > 0){
 
-            {//scoped for better consistency
-            // extract the watershed lines and combine with the orginal markers
-            typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-            typename ThreshType::Pointer th = ThreshType::New();
-            th->SetUpperThreshold(0);
-            th->SetOutsideValue(0);
-            // set the inside value to the number of markers + 1
-            th->SetInsideValue(labelCnt + 1);
-            th->SetInput(ws->GetOutput());
-            th->Update();
-            borderImg= th->GetOutput();
-            borderImg->DisconnectPipeline();
-            }
+	{//scoped for better consistency
+	// extract the watershed lines and combine with the orginal markers
+	typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
+	typename ThreshType::Pointer th = ThreshType::New();
+	th->SetUpperThreshold(0);
+	th->SetOutsideValue(0);
+	// set the inside value to the number of markers + 1
+	th->SetInsideValue(labelCnt + 1);
+	th->SetInput(ws->GetOutput());
+	th->Update();
+	borderImg= th->GetOutput();
+	borderImg->DisconnectPipeline();
+	}
 
-        look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-        // to combine the markers again
-        typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-        typename AddType::Pointer adder = AddType::New();
-        adder->InPlaceOn();
-        adder->ReleaseDataFlagOn();
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    // to combine the markers again
+    typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
+    typename AddType::Pointer adder = AddType::New();
+    adder->InPlaceOn();
+    adder->ReleaseDataFlagOn();
 
-        // to create gradient magnitude image
-        typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
-        typename GMType::Pointer gm = GMType::New();
+    // to create gradient magnitude image
+    typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
+    typename GMType::Pointer gm = GMType::New();
 
-        gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-        gm->AddObserver(itk::EndEvent(), eventCallbackITK);
-        //gm->InPlaceOn();//not available
-        //gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
-        gradientImg= input;
-        input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
+    gm->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+    gm->AddObserver(itk::EndEvent(), eventCallbackITK);
+    //gm->InPlaceOn();//not available
+    //gm->ReleaseDataFlagOn();//gm output is used for ws and next gm!
+    gradientImg= input;
+    input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
 
-        ws->SetMarkWatershedLine(atoi(argv[7]));//border in higher stages can make a difference but will not separate lables that initially touch already!
-        ws->SetFullyConnected(ws_conn);
-        //ws->InPlaceOn();//not available
-        //ws->ReleaseDataFlagOn();//no problem but not needed as ch->InPlaceOn()
+    //ws->MarkWatershedLineOff();//border in higher stages can make a difference but will not separate lables that initially touch already!
+    ws->SetFullyConnected(ws_conn);
+    //ws->InPlaceOn();//not available
+    //ws->ReleaseDataFlagOn();//no problem but not needed as ch->InPlaceOn()
 
-        // to delete the background label
-        typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
-        typename ChangeLabType::Pointer ch= ChangeLabType::New();
-        ch->SetChange(labelCnt + 1, 0);
-        ch->InPlaceOn();
-        ch->ReleaseDataFlagOn();//will be handled by adder if adder->InPlaceOn() AND used for adder->SetInput1
-
-        std::cerr << "Starting extra runs..." << std::endl;
-
-        for(char i= 0; i < NumberOfExtraWS; i++){
-	    std::cerr << "Run: " << i+1 << std::endl;
-            //// DisconnectPipeline() on outputs does not make sense here becauses:
-            //// - the filter it belongs to is not scoped to the loop
-            //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
-
-            // Add the marker image to the watershed line image
-            //// labelImg will not be needed again afterwards
-            //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
-            //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
-            adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
-            adder->SetInput2(borderImg);
-            adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
-            markerImg= adder->GetOutput();
-            //markerImg->DisconnectPipeline();
-            //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
-
-            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	    gradientImg->ReleaseDataFlagOn();
-            // compute a gradient
-            gm->SetInput(gradientImg);
-            gm->Update();
-            //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
-            gradientImg= gm->GetOutput();
-            gradientImg->DisconnectPipeline();//segfaults without! Why?
-
-            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-	    markerImg->ReleaseDataFlagOn();
-            // Now apply higher order watershed
-            ws->SetInput(gradientImg);
-            ws->SetMarkerImage(markerImg);
-            ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
-
-            look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-            // delete the background label
-            ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
-            ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
-            labelImg= ch->GetOutput();
-            //labelImg->DisconnectPipeline();
-            }
-        }
-    else
-        labelImg= ws->GetOutput();
+    // to delete the background label
+    typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
+    typename ChangeLabType::Pointer ch= ChangeLabType::New();
+    ch->SetChange(labelCnt + 1, 0);
+    ch->InPlaceOn();
+    ch->ReleaseDataFlagOn();//will be handled by adder if adder->InPlaceOn() AND used for adder->SetInput1
+    ch->AddObserver(itk::AnyEvent(), eventCallbackITK);
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
-
-    writer->SetFileName(argv[3]);
-    writer->SetInput(labelImg);
     writer->SetUseCompression(atoi(argv[4]));
-    writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    writer->AddObserver(itk::EndEvent(), eventCallbackITK);
+    writer->AddObserver(itk::AnyEvent(), eventCallbackITK);
+
+
+    //// DisconnectPipeline() on outputs does not make sense here becauses:
+    //// - the filter it belongs to is not scoped to the loop
+    //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
+
+    // Add the marker image to the watershed line image
+    //// labelImg will not be needed again afterwards
+    //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
+    //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
+    adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
+    adder->SetInput2(borderImg);
+    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
+    markerImg= adder->GetOutput();
+    markerImg->DisconnectPipeline();//will be needed twice
+    //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    gradientImg->ReleaseDataFlagOn();
+    // compute a gradient
+    gm->SetInput(gradientImg);
+    gm->Update();
+    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
+    gradientImg= gm->GetOutput();
+    gradientImg->DisconnectPipeline();//segfaults without! Why?
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    //markerImg->ReleaseDataFlagOn();//will be needed also for "lower" run
+    // Now apply higher order watershed
+    ws->SetInput(gradientImg);
+    ws->SetMarkerImage(markerImg);
+    ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    // delete the background label
+    ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
+    ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
+
+    labelImg= ch->GetOutput(); //store result for "upper" run
+    labelImg->DisconnectPipeline(); //disc. because ch is used again before "upper" run
+
+    //// write "middle" label image
+    std::stringstream sss;
+    sss.str(""); sss << interMedOutPrefix << "_mid" << ".mha";
+    writer->SetFileName(sss.str().c_str());
+    writer->SetInput(labelImg);
     try{
         writer->Update();
         }
@@ -263,6 +288,86 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+    std::cerr << "Wrote: " << sss.str() << std::endl;
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    gradientImg->ReleaseDataFlagOn();
+    // compute a gradient
+    gm->SetInput(gradientImg);
+    gm->Update();
+    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
+    gradientImg= gm->GetOutput();
+    gradientImg->DisconnectPipeline();//segfaults without! Why?
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    markerImg->ReleaseDataFlagOn();//will be recalculated after use in ws
+    // Now apply higher order watershed
+    ws->SetInput(gradientImg);
+    // ws->SetMarkerImage(markerImg); //not changed for "lower" label image
+    ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    // delete the background label
+    ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
+    ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
+
+    //// write "lower" label image
+    sss.str(""); sss << interMedOutPrefix << "_low" << ".mha";
+    writer->SetFileName(sss.str().c_str());
+    writer->SetInput(ch->GetOutput());
+    try{
+        writer->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    std::cerr << "Wrote: " << sss.str() << std::endl;
+
+    adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
+    adder->SetInput2(borderImg);
+    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
+    markerImg= adder->GetOutput();
+    //markerImg->DisconnectPipeline();
+    //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    gradientImg->ReleaseDataFlagOn();
+    // compute a gradient
+    gm->SetInput(gradientImg);
+    gm->Update();
+    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
+    gradientImg= gm->GetOutput();
+    gradientImg->DisconnectPipeline();//segfaults without! Why?
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    markerImg->ReleaseDataFlagOn();
+    // Now apply higher order watershed
+    ws->SetInput(gradientImg);
+    ws->SetMarkerImage(markerImg);
+    ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
+
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    // delete the background label
+    ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
+    ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
+
+
+    //// write "upper" label image
+    sss.str(""); sss << interMedOutPrefix << "_upp" << ".mha";
+    writer->SetFileName(sss.str().c_str());
+    writer->SetInput(ch->GetOutput());
+    try{
+        writer->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    std::cerr << "Wrote: " << sss.str() << std::endl;
 
     return EXIT_SUCCESS;
 
@@ -465,15 +570,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 8 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Marker_Image"
-                  << " Output_Image"
+                  << " Output_Base"
                   << " compress"
-                  << " NumberOfExtraWS invert"
-                  << " borderExtraWS"
+                  << " invert"
                   << std::endl;
 
         return EXIT_FAILURE;
