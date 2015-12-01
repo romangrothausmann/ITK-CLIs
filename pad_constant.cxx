@@ -30,8 +30,9 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    if( argc != 3 + 2*Dimension + 1){
-        fprintf(stderr, "3 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension);
+    const char offset= 5;
+    if(argc != offset + 2*Dimension){
+        fprintf(stderr, "%d + 2*Dimension = %d parameters are needed!\n", offset-1, offset-1 + 2*Dimension);
         return EXIT_FAILURE;
         }
 
@@ -63,17 +64,17 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ConstantPadImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetConstant(static_cast<OutputPixelType>(atof(argv[3])));
+    filter->SetConstant(static_cast<OutputPixelType>(atof(argv[4])));
     
     unsigned int i;
     typename FilterType::SizeType padding_u, padding_l;
 
     for (i= 0; i < Dimension; i++){
-        padding_l[i]= atoi(argv[4+i]);
+        padding_l[i]= atoi(argv[offset+i]);
  	std::cerr << padding_l[i] << std::endl;
 	}
     for (i= 0; i < Dimension; i++){
-        padding_u[i]= atoi(argv[4+Dimension+i]);
+        padding_u[i]= atoi(argv[offset+Dimension+i]);
 	std::cerr << padding_u[i] << std::endl;
 	}
 
@@ -99,7 +100,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->UseCompressionOn();
+    writer->SetUseCompression(atoi(argv[3]));
     try{ 
         writer->Update();
         }
@@ -258,11 +259,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 4 ){
+    if ( argc < 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
+		  << " compress"
 		  << " pad-value padding..."
     		  << std::endl;
 
