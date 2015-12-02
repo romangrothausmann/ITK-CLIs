@@ -15,18 +15,18 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef _itkConstGradientDescentOptimizer_hxx
-#define _itkConstGradientDescentOptimizer_hxx
+#ifndef _itkInverseGradientDescentOptimizer_hxx
+#define _itkInverseGradientDescentOptimizer_hxx
 
-#include "itkConstGradientDescentOptimizer.h"
+#include "itkInverseGradientDescentOptimizer.h"
 
 namespace itk
 {
 /**
  * Constructor
  */
-ConstGradientDescentOptimizer
-::ConstGradientDescentOptimizer() :
+InverseGradientDescentOptimizer
+::InverseGradientDescentOptimizer() :
   m_Maximize(false),
   m_LearningRate(1.0),
   m_Stop(false),
@@ -41,14 +41,14 @@ ConstGradientDescentOptimizer
 }
 
 const std::string
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::GetStopConditionDescription() const
 {
   return m_StopConditionDescription.str();
 }
 
 void
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
@@ -80,7 +80,7 @@ ConstGradientDescentOptimizer
  * Start the optimization
  */
 void
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::StartOptimization(void)
 {
   itkDebugMacro("StartOptimization");
@@ -95,7 +95,7 @@ ConstGradientDescentOptimizer
  * Resume the optimization
  */
 void
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::ResumeOptimization(void)
 {
   itkDebugMacro("ResumeOptimization");
@@ -150,7 +150,7 @@ ConstGradientDescentOptimizer
  * Stop optimization
  */
 void
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::StopOptimization(void)
 {
   itkDebugMacro("StopOptimization");
@@ -163,7 +163,7 @@ ConstGradientDescentOptimizer
  * Advance one Step following the gradient direction
  */
 void
-ConstGradientDescentOptimizer
+InverseGradientDescentOptimizer
 ::AdvanceOneStep(void)
 {
   itkDebugMacro("AdvanceOneStep");

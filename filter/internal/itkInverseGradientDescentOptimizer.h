@@ -15,8 +15,8 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkConstGradientDescentOptimizer_h
-#define itkConstGradientDescentOptimizer_h
+#ifndef itkInverseGradientDescentOptimizer_h
+#define itkInverseGradientDescentOptimizer_h
 
 #include "itkIntTypes.h"
 #include "itkSingleValuedNonLinearOptimizer.h"
@@ -24,10 +24,10 @@
 #include <string>
 namespace itk
 {
-/** \class ConstGradientDescentOptimizer
+/** \class InverseGradientDescentOptimizer
  * \brief Implement a gradient descent optimizer
  *
- * ConstGradientDescentOptimizer implements a simple gradient descent optimizer.
+ * InverseGradientDescentOptimizer implements a simple gradient descent optimizer.
  * At each iteration the current position is updated according to
  *
  * \f[
@@ -44,17 +44,17 @@ namespace itk
  * \f$ \partial f / \partial p \f$,
  * by setting a scaling vector using method SetScale().
  *
- * \sa RegularStepConstGradientDescentOptimizer
+ * \sa RegularStepInverseGradientDescentOptimizer
  *
  * \ingroup Numerics Optimizers
  * \ingroup ITKOptimizers
  */
-class ITKOptimizers_EXPORT ConstGradientDescentOptimizer:
+class ITKOptimizers_EXPORT InverseGradientDescentOptimizer:
   public SingleValuedNonLinearOptimizer
 {
 public:
   /** Standard class typedefs. */
-  typedef ConstGradientDescentOptimizer       Self;
+  typedef InverseGradientDescentOptimizer       Self;
   typedef SingleValuedNonLinearOptimizer Superclass;
   typedef SmartPointer< Self >           Pointer;
   typedef SmartPointer< const Self >     ConstPointer;
@@ -63,7 +63,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(ConstGradientDescentOptimizer, SingleValuedNonLinearOptimizer);
+  itkTypeMacro(InverseGradientDescentOptimizer, SingleValuedNonLinearOptimizer);
 
   /** Codes of stopping conditions */
   typedef enum {
@@ -124,8 +124,8 @@ public:
   itkGetConstReferenceMacro(Gradient, DerivativeType);
 
 protected:
-  ConstGradientDescentOptimizer();
-  virtual ~ConstGradientDescentOptimizer() {}
+  InverseGradientDescentOptimizer();
+  virtual ~InverseGradientDescentOptimizer() {}
   virtual void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
   // made protected so subclass can access
@@ -136,7 +136,7 @@ protected:
   double m_LearningRate;
 
 private:
-  ConstGradientDescentOptimizer(const Self &); //purposely not implemented
+  InverseGradientDescentOptimizer(const Self &); //purposely not implemented
   void operator=(const Self &);           //purposely not implemented
 
   bool               m_Stop;
