@@ -1,5 +1,5 @@
 PROJECT(ITK-CLIs)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11) #2.8.11 for TARGET_INCLUDE_DIRECTORIES
 
 ## bash command to check if CMakeLists.txt contains an entry for all *.cxx: 
 ## for i in *cxx ; do if ! `grep -q ${i%.cxx} CMakeLists.txt`; then echo "$i not found"'!'; fi; done
@@ -68,6 +68,7 @@ INCLUDE_DIRECTORIES(
   # $ENV{HOME}/itk/ITKbinaryThinningImageFilter3D/Source/
   # $ENV{HOME}/itk/itkWindowImageFilter/
   # $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
+  # filter/internal/
   )
 
 SET(Libraries
@@ -365,8 +366,9 @@ SET(CurrentExe "min-path_seg_f32")
 IF(MinimalPathExtraction_FOUND LESS 0)# -1 if not found!
   MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
 ELSE(MinimalPathExtraction_FOUND LESS 0)
-  ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx")
+  ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkConstGradientDescentOptimizer.cxx")
   TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${PROJECT_SOURCE_DIR}/filter/internal/")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
   INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
   MESSAGE(STATUS "${CurrentExe} will be compiled!")

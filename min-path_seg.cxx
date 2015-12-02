@@ -14,6 +14,7 @@
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
 #include <itkMorphologicalDistanceTransformImageFilter.h>
+#include "itkConstGradientDescentOptimizer.h"
 #include <itkIterateNeighborhoodOptimizer.h>
 #include <itkGradientDescentOptimizer.h>
 #include <itkRegularStepGradientDescentOptimizer.h>
@@ -444,6 +445,14 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
     switch(atoi(argv[5])){
+    case -1:{
+	typedef itk::ConstGradientDescentOptimizer OptimizerType;
+	typename OptimizerType::Pointer optimizer = OptimizerType::New();
+	optimizer->SetNumberOfIterations(atoi(argv[6]));
+	optimizer->SetLearningRate(atof(argv[7]));
+        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
+        }break;
     case 0:{
 	typedef itk::MyIterateNeighborhoodOptimizer OptimizerType;
         typename OptimizerType::Pointer optimizer= OptimizerType::New();
