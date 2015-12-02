@@ -207,7 +207,7 @@ InverseGradientDescentOptimizer
   for ( unsigned int j = 0; j < spaceDimension; j++ )
     {
     newPosition[j] = currentPosition[j]
-                     + direction * m_LearningRate * transformedGradient[j] / std::sqrt(gradientLength2);
+                     + direction * m_LearningRate * transformedGradient[j] / gradientLength2;
     }
 
   this->SetCurrentPosition(newPosition);
