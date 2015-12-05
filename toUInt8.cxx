@@ -1,11 +1,12 @@
-////program to use itk to convert between file-formats
-//01: based on template.cxx
+////program to use itk to convert files to 8bit without any processing
+//01: based on file_converter.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
+#include <itkCastImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -45,7 +46,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType;
+    typedef uint8_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -66,12 +67,20 @@ int DoIt(int argc, char *argv[]){
     // 	return EXIT_FAILURE;
     // 	}
 
+    typedef itk::CastImageFilter<InputImageType, OutputImageType> CastFilterType;
+    typename CastFilterType::Pointer  caster=  CastFilterType::New();
+    caster->SetInput(reader->GetOutput());
+    caster->ReleaseDataFlagOn();
+    caster->InPlaceOn();
+    FilterWatcher watcherC(caster);
+
+
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(reader->GetOutput());
+    writer->SetInput(caster->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{ 
         writer->Update();
@@ -152,22 +161,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
   switch (pixelType){
   case itk::ImageIOBase::SCALAR:{
     typedef InputComponentType InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType> InputPixelType;
-    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::VECTOR:{
-    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
