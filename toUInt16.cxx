@@ -1,5 +1,5 @@
-////program to use itk to convert files to 8bit without any processing
-//01: based on file_converter.cxx
+////program to use itk to convert files to uint16 without any processing
+//01: based on toUInt8.cxx
 
 
 #include <complex>
@@ -46,7 +46,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef uint8_t  OutputPixelType;
+    typedef uint16_t  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
