@@ -6,7 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkMaskImageFilter.h>
+#include <itkMaskNegatedImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -57,7 +57,7 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType2::Pointer input2= reader2->GetOutput();
 
 
-    typedef itk::MaskImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
+    typedef itk::MaskNegatedImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput1(reader1->GetOutput());
     filter->SetInput2(reader2->GetOutput());
