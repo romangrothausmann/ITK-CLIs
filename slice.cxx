@@ -28,17 +28,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    reader->UpdateOutputInformation();
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -80,16 +70,6 @@ int DoIt(int argc, char *argv[]){
     filter->SetExtractionRegion(slice);
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
-
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
 
     const typename OutputImageType::Pointer& output= filter->GetOutput();
 
