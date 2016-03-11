@@ -549,6 +549,11 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
+SET(CurrentExe "add")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
 SET(CurrentExe "tile")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})

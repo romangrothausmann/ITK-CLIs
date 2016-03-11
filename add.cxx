@@ -1,12 +1,12 @@
-////program for itkMaskImageFilter
-//01: based on template_2inputs.cxx
+////program for itkAddImageFilter
+//01: based on mask.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkMaskImageFilter.h>
+#include <itkAddImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -57,7 +57,7 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType2::Pointer input2= reader2->GetOutput();
 
 
-    typedef itk::MaskImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
+    typedef itk::AddImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput1(reader1->GetOutput());
     filter->SetInput2(reader2->GetOutput());
@@ -146,18 +146,6 @@ int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOP
   switch (pixelType1){
   case itk::ImageIOBase::SCALAR:{
     typedef InputComponentType1 InputPixelType1;
-    res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGB:{
-    typedef itk::RGBPixel<InputComponentType1> InputPixelType1;
-    res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::RGBA:{
-    typedef itk::RGBAPixel<InputComponentType1> InputPixelType1;
-    res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-  } break;
-  case itk::ImageIOBase::COMPLEX:{
-    typedef std::complex<InputComponentType1> InputPixelType1;
     res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
   } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
