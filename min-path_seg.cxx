@@ -224,7 +224,6 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
     std::cerr << "S: " << startP << std::endl;	
-    std::cerr << "E: " << endP << std::endl;
 	
     const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
     if(!region.IsInside(start)){std::cerr << "Start point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
@@ -246,6 +245,8 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	std::cerr << "W: " << wayP << std::endl;	
 	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 	}
+
+    std::cerr << "E: " << endP << std::endl;
 
     pathFilter->AddPathInfo(info);
     FilterWatcher watcher(pathFilter); //filter reports no progress so far
