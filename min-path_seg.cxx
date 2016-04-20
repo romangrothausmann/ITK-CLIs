@@ -90,11 +90,11 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 #ifdef USE_FLOAT
     typedef float   SpeedPixelType;
     typedef float   DMPixelType;
-    std::cerr << "Using single precision (float)." << std::endl;
+    std::cout << "Using single precision (float)." << std::endl;
 #else
     typedef double   SpeedPixelType;
     typedef double   DMPixelType;
-    std::cerr << "Using double precision (double)." << std::endl;
+    std::cout << "Using double precision (double)." << std::endl;
 #endif
 
     typedef uint8_t  OutputPixelType;
@@ -141,7 +141,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	FilterWatcher watcherR(rescaleFilter);
 
 	if(atof(argv[4]) > 0){
-	    std::cerr << "Sigma > 0, expecting binary image as input, i.e. using ParabolicOpenImageFilter to create speed map." << std::endl;
+	    std::cout << "Sigma > 0, expecting binary image as input, i.e. using ParabolicOpenImageFilter to create speed map." << std::endl;
 
 	    typedef itk::ParabolicOpenImageFilter<SpeedImageType, SpeedImageType> SmoothFilterType;
 	    typename SmoothFilterType::Pointer smoother= SmoothFilterType::New();
@@ -163,7 +163,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    speed->DisconnectPipeline();
 	    }
 	else{
-	    std::cerr << "Sigma <= 0, expecting speed map as input." << std::endl;
+	    std::cout << "Sigma <= 0, expecting speed map as input." << std::endl;
 	    try {
 		rescaleFilter->Update();
 		}
@@ -223,7 +223,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
-    std::cerr << "S: " << startP << std::endl;	
+    std::cout << "S: " << startP << std::endl;	
 	
     const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
     if(!region.IsInside(start)){std::cerr << "Start point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
@@ -242,11 +242,11 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    speed->TransformIndexToPhysicalPoint(way, wayP);//overwrites wayP
 
 	info.AddWayPoint(wayP);
-	std::cerr << "W: " << wayP << std::endl;	
+	std::cout << "W: " << wayP << std::endl;	
 	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 	}
 
-    std::cerr << "E: " << endP << std::endl;
+    std::cout << "E: " << endP << std::endl;
 
     pathFilter->AddPathInfo(info);
     FilterWatcher watcher(pathFilter); //filter reports no progress so far
@@ -367,12 +367,12 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
         // Check path is valid
         if (path->GetVertexList()->Size() == 0){
-            std::cerr << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
+            std::cout << "WARNING: Path " << (i+1) << " contains no points!" << std::endl;
             continue;
             }
 
         printf("Path %3d contains %6d points.\n", i, path->GetVertexList()->Size());
-        std::cerr << path->EndOfInput() << std::endl;
+        std::cout << path->EndOfInput() << std::endl;
 
         // Iterate path and convert to image
         PathIteratorType it(output, path);
@@ -394,8 +394,8 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 		max_i= cit.GetIndex();
 		}
             }
-	std::cerr << "Min radius along path: " << std::sqrt(min_v) << " [" << std::sqrt(min_v)/speed->GetSpacing()[0] << " v] @: " << min_i << std::endl;
-	std::cerr << "Max radius along path: " << std::sqrt(max_v) << " [" << std::sqrt(max_v)/speed->GetSpacing()[0] << " v] @: " << max_i << std::endl;
+	std::cout << "Min radius along path: " << std::sqrt(min_v) << " [" << std::sqrt(min_v)/speed->GetSpacing()[0] << " v] @: " << min_i << std::endl;
+	std::cout << "Max radius along path: " << std::sqrt(max_v) << " [" << std::sqrt(max_v)/speed->GetSpacing()[0] << " v] @: " << max_i << std::endl;
 	}
     dmap->ReleaseData();
 
@@ -452,7 +452,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case -1:{
@@ -460,7 +460,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 0:{
@@ -480,7 +480,7 @@ int DoIt(int argc, char *argv[]){
 	    size[i] = reader->GetOutput()->GetSpacing()[i] * atof(argv[7]);
 	optimizer->SetNeighborhoodSize(size);
 
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
+        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 1:{
@@ -488,7 +488,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 2:{
@@ -498,7 +498,7 @@ int DoIt(int argc, char *argv[]){
 	optimizer->SetRelaxationFactor(.5);
 	optimizer->SetMaximumStepLength(1.0);
 	optimizer->SetMinimumStepLength(atof(argv[7]));
-        std::cerr << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     default:
