@@ -51,6 +51,7 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
+    filter->SetDilateValue(static_cast<InputPixelType>(atof(argv[5])));
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
@@ -212,13 +213,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " radius"
+                  << " fg-value"
                   << std::endl;
 
         return EXIT_FAILURE;
