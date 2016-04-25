@@ -277,6 +277,13 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         }
     const typename DMImageType::Pointer& dmap= dm->GetOutput();
 
+
+    //// write a textfile suitable for e.g. path2blend_ng.py
+    FILE * pFile;
+    sss.str(""); sss << outPrefix << ".txt";
+    pFile = fopen (sss.str().c_str(),"w");
+    fprintf (pFile, "#i\tx\ty\tz\to\ts\n");
+   
     for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
 
 	//// create mesh to save in a VTK-file
@@ -296,6 +303,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    typename SpeedImageType::IndexType index;
 	    index.CopyWithRound(vertexList->GetElement(k));
             mesh->SetPointData(k, std::sqrt(dmap->GetPixel(index)));
+	    fprintf (pFile, "%d\t%f\t%f\t%f\t%d\t%f\n", k, mP[0], mP[1], mP[2], i, std::sqrt(dmap->GetPixel(index)));
             }
 	// mesh->GetPointData()->SetObjectName("MaxInscrSphereRadius");
 	// itk::MetaDataDictionary & metaDic= mesh->GetPointData()->GetMetaDataDictionary();
@@ -345,6 +353,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    }
 
         } //for each output-path i
+    fclose (pFile);
 
     // Allocate output image
     typename DMImageType::Pointer output = DMImageType::New();
