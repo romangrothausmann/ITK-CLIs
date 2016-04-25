@@ -303,7 +303,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    typename SpeedImageType::IndexType index;
 	    index.CopyWithRound(vertexList->GetElement(k));
             mesh->SetPointData(k, std::sqrt(dmap->GetPixel(index)));
-	    fprintf (pFile, "%d\t%f\t%f\t%f\t%d\t%f\n", k, mP[0], mP[1], mP[2], i, std::sqrt(dmap->GetPixel(index)));
+	    fprintf (pFile, "%d\t%.10f\t%.10f\t%.10f\t%d\t%f\n", k, mP[0], mP[1], mP[2], i, std::sqrt(dmap->GetPixel(index)));
             }
 	// mesh->GetPointData()->SetObjectName("MaxInscrSphereRadius");
 	// itk::MetaDataDictionary & metaDic= mesh->GetPointData()->GetMetaDataDictionary();
