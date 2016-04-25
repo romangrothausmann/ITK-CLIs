@@ -277,19 +277,18 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
         }
     const typename DMImageType::Pointer& dmap= dm->GetOutput();
 
-
-    //// create mesh to save in a VTK-file
-    typedef typename itk::Mesh<float, Dimension>  MeshType;
-    typename MeshType::Pointer  mesh = MeshType::New();
-
-    typename MeshType::PointType mP;
     for (unsigned int i=0; i < pathFilter->GetNumberOfOutputs(); i++){
+
+	//// create mesh to save in a VTK-file
+	typedef typename itk::Mesh<float, Dimension>  MeshType;
+	typename MeshType::Pointer  mesh = MeshType::New();
 
         // Get the path, coords are stored as continous index
         typename PathType::Pointer path = pathFilter->GetOutput(i);
         const typename PathType::VertexListType *vertexList = path->GetVertexList();
 
         for(unsigned int k = 0; k < vertexList->Size(); k++){
+	    typename MeshType::PointType mP;
             speed->TransformContinuousIndexToPhysicalPoint(vertexList->GetElement(k), mP);
             mesh->SetPoint(k, mP);
 
@@ -298,54 +297,54 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	    index.CopyWithRound(vertexList->GetElement(k));
             mesh->SetPointData(k, std::sqrt(dmap->GetPixel(index)));
             }
-        }
-    // mesh->GetPointData()->SetObjectName("MaxInscrSphereRadius");
-    // itk::MetaDataDictionary & metaDic= mesh->GetPointData()->GetMetaDataDictionary();
-    // itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
-    // mesh->GetPointData()->SetMetaDataDictionary(metaDic);
+	// mesh->GetPointData()->SetObjectName("MaxInscrSphereRadius");
+	// itk::MetaDataDictionary & metaDic= mesh->GetPointData()->GetMetaDataDictionary();
+	// itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
+	// mesh->GetPointData()->SetMetaDataDictionary(metaDic);
 
-    std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
+	std::cout << "# of mesh points: " << mesh->GetNumberOfPoints() << std::endl;
 
-    //// create connecting lines
-    typedef typename MeshType::CellType CellType;
-    typedef typename itk::LineCell<CellType> LineType;
-    typedef typename CellType::CellAutoPointer  CellAutoPointer;
+	//// create connecting lines
+	typedef typename MeshType::CellType CellType;
+	typedef typename itk::LineCell<CellType> LineType;
+	typedef typename CellType::CellAutoPointer  CellAutoPointer;
 
-    //// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
-    if(mesh->GetNumberOfPoints() > 1){
-        const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
-        typename CellType::CellAutoPointer line;
-        for(size_t cellId=0; cellId < numberOfCells; cellId++){
-            line.TakeOwnership(new LineType);
-            line->SetPointId(0, cellId);
-            line->SetPointId(1, cellId+1);
-            mesh->SetCell(cellId, line);
-            }
-        }
+	//// from: http://www.itk.org/Doxygen/html/Examples_2DataRepresentation_2Mesh_2Mesh3_8cxx-example.html
+	if(mesh->GetNumberOfPoints() > 1){
+	    const unsigned int numberOfCells = mesh->GetNumberOfPoints() - 1;
+	    typename CellType::CellAutoPointer line;
+	    for(size_t cellId=0; cellId < numberOfCells; cellId++){
+		line.TakeOwnership(new LineType);
+		line->SetPointId(0, cellId);
+		line->SetPointId(1, cellId+1);
+		mesh->SetCell(cellId, line);
+		}
+	    }
 
-    std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
+	std::cout << "# of mesh cells: " << mesh->GetNumberOfCells() << std::endl;
 
-    typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
-    typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
+	typedef typename itk::MeshFileWriter<MeshType> MeshWriterType;
+	typename MeshWriterType::Pointer mwriter = MeshWriterType::New();
 
-    FilterWatcher watcherMO(mwriter);
-    sss.str(""); sss << outPrefix << ".vtk"; //vtp not supported as of itk-4.8
-    mwriter->SetFileName(sss.str().c_str());
-    mwriter->SetInput(mesh);
+	FilterWatcher watcherMO(mwriter);
+	sss.str(""); sss << outPrefix << ".vtk"; // include i for more than one path //vtp not supported as of itk-4.8
+	mwriter->SetFileName(sss.str().c_str());
+	mwriter->SetInput(mesh);
 
-    itk::VTKPolyDataMeshIO::Pointer mio= itk::VTKPolyDataMeshIO::New();
-    itk::MetaDataDictionary & metaDic= mio->GetMetaDataDictionary();
-    itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
-    mwriter->SetMeshIO(mio);
+	itk::VTKPolyDataMeshIO::Pointer mio= itk::VTKPolyDataMeshIO::New();
+	itk::MetaDataDictionary & metaDic= mio->GetMetaDataDictionary();
+	itk::EncapsulateMetaData<std::string>(metaDic, "pointScalarDataName", "MaxInscrSphereRadius");
+	mwriter->SetMeshIO(mio);
 
-    try{
-	mwriter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	try{
+	    mwriter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
 
+        } //for each output-path i
 
     // Allocate output image
     typename DMImageType::Pointer output = DMImageType::New();
