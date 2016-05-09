@@ -1,4 +1,4 @@
-////program for
+////program for itkVectorGradientMagnitudeImageFilter
 //01: based on template.cxx
 
 
@@ -6,42 +6,18 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkVectorGradientMagnitudeImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -64,16 +40,13 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::VectorGradientMagnitudeImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    filter->SetUsePrincipleComponents(atoi(argv[4]));
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -83,7 +56,8 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    typedef typename FilterType::OutputImageType OutputImageType;
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -91,8 +65,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -110,9 +83,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -134,10 +104,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
-        typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
     case itk::ImageIOBase::RGB:{
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
@@ -146,14 +112,14 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::COMPLEX:{
+    //     typedef std::complex<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::VECTOR:{
+    //     typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -249,12 +215,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+		  << " SetUsePrincipleComponents"
                   << std::endl;
 
         return EXIT_FAILURE;
