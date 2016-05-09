@@ -94,7 +94,7 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[3]);
     writer->SetInput(output);
-    writer->UseCompressionOn();
+    writer->UseCompressionOff();
     //writer->SetUseCompression(atoi(argv[]));
     try{ 
         writer->Update();
