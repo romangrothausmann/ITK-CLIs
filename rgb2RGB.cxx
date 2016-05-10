@@ -1,5 +1,5 @@
-////program to combine four images to RGBA
-//01: based on template_02.cxx
+////program to combine three images to RGB
+//01: based on rgba2RGBA.cxx
 
 
 //#include <complex>
@@ -43,7 +43,7 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef itk::RGBAPixel<InputComponentType> OutputPixelType;
+    typedef itk::RGBPixel<InputComponentType> OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -55,7 +55,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ComposeImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
 
-    for(char i=0; i < 4; i++){
+    for(char i=0; i < 3; i++){
 	typename InputImageType::Pointer input;
 	    {
 	    typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -94,9 +94,9 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
-    writer->SetFileName(argv[5]);
+    writer->SetFileName(argv[4]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[6]));
+    writer->SetUseCompression(atoi(argv[5]));
     writer->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     writer->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{ 
@@ -180,22 +180,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     typedef InputComponentType InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
-  // case itk::ImageIOBase::RGB:{
-  //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::RGBA:{
-  //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::COMPLEX:{
-  //   typedef std::complex<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::VECTOR:{
-  //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -257,10 +241,10 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc != 6 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
-		  << " R-image G-image B-image A-image"
+		  << " R-image G-image B-image"
 		  << " Output_Image"
 		  << " compress"
     		  << std::endl;
