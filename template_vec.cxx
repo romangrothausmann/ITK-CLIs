@@ -1,5 +1,5 @@
 ////program for
-//01: based on template.cxx
+//01: based on template_vec.cxx
 
 
 #include <complex>
@@ -18,11 +18,11 @@
 //     if(itk::ProgressEvent().CheckEvent(&event))
 //         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
 //     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
+//         if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
+//             std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
+//         else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
+//             std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
+//         }
 //     else if(itk::IterationEvent().CheckEvent(&event))
 //         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
 //     else if(itk::EndEvent().CheckEvent(&event))
@@ -175,12 +175,12 @@ int dispatch_cPP(size_t compPerPixel, itk::ImageIOBase::IOPixelType pixelType, s
     case 3:
         res= dispatch_pT<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
         break;
-    case 4:
-        res= dispatch_pT<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
-        break;
-    case 5:
-        res= dispatch_pT<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
-        break;
+    // case 4:
+    //     res= dispatch_pT<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+    //     break;
+    // case 5:
+    //     res= dispatch_pT<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
+    //     break;
     default:
         std::cerr << "Error: NumberOfComponentsPerPixel (" << compPerPixel << ") not handled!" << std::endl;
         break;
