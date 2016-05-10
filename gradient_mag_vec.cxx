@@ -19,6 +19,14 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
+#ifdef USE_FLOAT
+    typedef float  TRealType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double TRealType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
+
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -40,7 +48,7 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::VectorGradientMagnitudeImageFilter<InputImageType> FilterType;
+    typedef itk::VectorGradientMagnitudeImageFilter<InputImageType, TRealType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
