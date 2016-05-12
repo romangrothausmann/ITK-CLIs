@@ -23,9 +23,11 @@ int DoIt(int argc, char *argv[]){
     std::cerr << "Using double precision (double)." << std::endl;
 #endif
 
-    typedef itk::Vector<TRealType, CompPerPixel> OutputPixelType;
+    typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+    typedef InputPixelType OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<RealPixelType, Dimension>  RealImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -48,11 +50,11 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
     
-    typedef itk::VectorCastImageFilter<InputImageType, OutputImageType> CastFilterType;
+    typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
     typename CastFilterType::Pointer caster= CastFilterType::New();
     caster->SetInput(input);
 
-    typedef itk::VectorGradientAnisotropicDiffusionImageFilter<OutputImageType, OutputImageType> FilterType;
+    typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(caster->GetOutput());
     filter->SetNumberOfIterations(atoi(argv[4]));
@@ -71,14 +73,18 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    const typename RealImageType::Pointer& output= filter->GetOutput();
 
+    typedef itk::VectorCastImageFilter<RealImageType, OutputImageType> CastFilterType2;
+    typename CastFilterType2::Pointer caster2= CastFilterType2::New();
+    caster2->SetInput(output);
+    
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(output);
+    writer->SetInput(caster2->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
