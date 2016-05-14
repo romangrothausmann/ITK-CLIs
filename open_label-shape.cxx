@@ -1,12 +1,12 @@
-////program for itkBinaryShapeKeepNObjectsImageFilter
-//01: based on template.cxx
+////program for itkLabelShapeOpeningImageFilter
+//01: based on keepNobj.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryShapeKeepNObjectsImageFilter.h>
+#include <itkLabelShapeOpeningImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -39,15 +39,13 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-    typedef itk::BinaryShapeKeepNObjectsImageFilter<InputImageType> FilterType;
+    typedef itk::LabelShapeOpeningImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetForegroundValue(atoi(argv[4]));
-    filter->SetBackgroundValue(atoi(argv[5]));
-    filter->SetNumberOfObjects(atof(argv[6]));
-    filter->SetReverseOrdering(atoi(argv[7]));
-    filter->SetFullyConnected(atoi(argv[8]));
-    filter->SetAttribute(argv[9]); // filter->SetAttribute(ShapeOpeningLabelMapFilterType::LabelObjectType::PERIMETER);
+    filter->SetBackgroundValue(atoi(argv[3]));
+    filter->SetLambda(atof(argv[4]));
+    filter->SetReverseOrdering(atoi(argv[5]));
+    filter->SetAttribute(argv[6]); // filter->SetAttribute(ShapeOpeningLabelMapFilterType::LabelObjectType::PERIMETER);
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
@@ -206,13 +204,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 10 ){
+    if ( argc != 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
-                  << " foreground background N reverseOrdering connectivity attribute"
+                  << " background lambda reverseOrdering attribute"
                   << std::endl;
 
         typedef itk::ShapeLabelObject<char, 2> SLOType;
@@ -234,6 +232,14 @@ int main(int argc, char *argv[]){
                     }
                 }
             }
+
+
+        std::cerr << std::endl
+                  << "e.g. remove all labels touching the image border with:"
+                  << std::endl
+                  << argv[0]
+                  << " in.mha out.mha 0 +0 +0 +1 NumberOfPixelsOnBorder"
+                  << std::endl;
 
         return EXIT_FAILURE;
         }
