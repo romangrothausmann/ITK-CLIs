@@ -215,6 +215,26 @@ int main(int argc, char *argv[]){
                   << " foreground background N reverseOrdering connectivity attribute"
                   << std::endl;
 
+        typedef itk::ShapeLabelObject<char, 2> SLOType;
+        SLOType::Pointer slo= SLOType::New();
+
+        int astart, aend;
+        astart= 90;
+        aend=  130;
+
+        printf("\n\nList of known attributes in the range from %d to %d:\n", astart, aend);
+
+        for(int i=astart; i<aend; i++){//sadly no enum; range taken from http://www.itk.org/Doxygen44/html/itkShapeLabelObject_8h_source.html#l00143
+            try {
+                std::cerr << slo->GetNameFromAttribute(i) << ": " << i << std::endl;
+                }
+            catch(itk::ExceptionObject exp){
+                if(strstr(exp.GetDescription(), "Unknown attribute")){
+                    continue;
+                    }
+                }
+            }
+
         return EXIT_FAILURE;
         }
 
