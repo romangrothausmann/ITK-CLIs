@@ -42,10 +42,10 @@ int DoIt(int argc, char *argv[]){
     typedef itk::LabelShapeOpeningImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetBackgroundValue(atoi(argv[3]));
-    filter->SetLambda(atof(argv[4]));
-    filter->SetReverseOrdering(atoi(argv[5]));
-    filter->SetAttribute(argv[6]); // filter->SetAttribute(ShapeOpeningLabelMapFilterType::LabelObjectType::PERIMETER);
+    filter->SetBackgroundValue(atoi(argv[4]));
+    filter->SetLambda(atof(argv[5]));
+    filter->SetReverseOrdering(atoi(argv[6]));
+    filter->SetAttribute(argv[7]); // filter->SetAttribute(ShapeOpeningLabelMapFilterType::LabelObjectType::PERIMETER);
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
