@@ -204,7 +204,13 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     // Setup path points
     typename SpeedImageType::IndexType start, end;
     typename PathFilterType::PointType startP, endP;
+#if ITK_VERSION_MINOR < 9
     typename PathFilterType::PathInfo info;
+#else
+    // https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/blob/master/examples/example.cxx
+    typedef typename PathFilterType::PathInformationType PathInformationType;
+    typename PathInformationType::Pointer info= PathInformationType::New();
+#endif
 
     for(int j= 0; j < Dimension; j++){
         startP[j]= atof(argv[j+offset]+1);//+1 to skip prefix-letter
@@ -221,8 +227,13 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     if(argv[Dimension+offset][0]=='v')
 	speed->TransformIndexToPhysicalPoint(end, endP);//overwrites endP
 
+#if ITK_VERSION_MINOR < 9
     info.SetStartPoint(startP);
     info.SetEndPoint(endP);
+#else
+    info->SetStartPoint(startP);
+    info->SetEndPoint(endP);
+#endif
     std::cout << "S: " << startP << std::endl;	
 	
     const typename SpeedImageType::RegionType region= speed->GetLargestPossibleRegion();
@@ -241,14 +252,22 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	if(argv[i][0]=='v')
 	    speed->TransformIndexToPhysicalPoint(way, wayP);//overwrites wayP
 
+#if ITK_VERSION_MINOR < 9
 	info.AddWayPoint(wayP);
+#else
+	info->AddWayPoint(wayP);
+#endif
 	std::cout << "W: " << wayP << std::endl;	
 	if(!region.IsInside(way)){std::cerr << "Way point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
 	}
 
     std::cout << "E: " << endP << std::endl;
 
+#if ITK_VERSION_MINOR < 9
     pathFilter->AddPathInfo(info);
+#else
+    pathFilter->AddPathInformation(info);
+#endif
     FilterWatcher watcher(pathFilter); //filter reports no progress so far
     try {
         pathFilter->Update();
