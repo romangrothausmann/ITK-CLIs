@@ -84,6 +84,7 @@ LIST(FIND ITK_MODULES_ENABLED LesionSizingToolkit LesionSizingToolkit_FOUND)
 LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/da17ae4d4955bb92d5259c6ac47bfce6c474be18
 LIST(FIND ITK_MODULES_ENABLED ParabolicMorphology ParabolicMorphology_FOUND)#in itk-4.8: https://github.com/InsightSoftwareConsortium/ITK/commit/2b3190575b82e8457c028040c3bfd0f69fa1ef35
 LIST(FIND ITK_MODULES_ENABLED LabelErodeDilate LabelErodeDilate_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/5b158490c01b3e3a68816fdbe321751609746444
+LIST(FIND ITK_MODULES_ENABLED StreamingSinc StreamingSinc_FOUND)
 
 
 SET(CurrentExe "file_converter")
@@ -267,9 +268,14 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 ## according to the docs itkStatisticsImageFilter cannot stream
 ## but StreamingStatisticsImageFilter can: https://github.com/blowekamp/itkStreamingSinc/
 SET(CurrentExe "stat_SDI")
+IF(StreamingSinc_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with Module_StreamingSinc ON)")
+ELSE()
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF()
 
 SET(CurrentExe "label_stack_SBS")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
