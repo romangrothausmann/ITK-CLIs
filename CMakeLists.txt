@@ -519,9 +519,14 @@ TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "mean_GPU")
+IF(NOT ITKGPUSmoothing_LOADED)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ITK_USE_GPU ON)")
+ELSE()
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF()
 
 SET(CurrentExe "count_neighbours")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
