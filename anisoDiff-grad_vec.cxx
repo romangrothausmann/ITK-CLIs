@@ -6,7 +6,9 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkCastImageFilter.h>
 #include <itkVectorCastImageFilter.h>
+#include <itkGradientAnisotropicDiffusionImageFilter.h>
 #include <itkVectorGradientAnisotropicDiffusionImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -97,6 +99,15 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
 #endif
 
     switch (pixelType){
+    case itk::ImageIOBase::SCALAR:{
+        typedef InputComponentType InputPixelType;
+        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+        typedef itk::Image<TRealType, Dimension>  RealImageType;
+        typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
+        typedef itk::GradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
+        } break;
     case itk::ImageIOBase::RGB:{
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
