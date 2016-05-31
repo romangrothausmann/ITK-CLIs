@@ -12,23 +12,8 @@
 
 
 
-template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
+template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension, typename InputImageType, typename RealImageType, typename CastFilterType, typename FilterType, typename CastFilterType2>
 int DoIt(int argc, char *argv[]){
-
-#ifdef USE_FLOAT
-    typedef float  TRealType;
-    std::cerr << "Using single precision (float)." << std::endl;
-#else
-    typedef double TRealType;
-    std::cerr << "Using double precision (double)." << std::endl;
-#endif
-
-    typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
-    typedef InputPixelType OutputPixelType;
-
-    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<RealPixelType, Dimension>  RealImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -49,12 +34,10 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-    
-    typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
+
     typename CastFilterType::Pointer caster= CastFilterType::New();
     caster->SetInput(input);
 
-    typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(caster->GetOutput());
     filter->SetNumberOfIterations(atoi(argv[4]));
@@ -75,11 +58,10 @@ int DoIt(int argc, char *argv[]){
 
     const typename RealImageType::Pointer& output= filter->GetOutput();
 
-    typedef itk::VectorCastImageFilter<RealImageType, OutputImageType> CastFilterType2;
     typename CastFilterType2::Pointer caster2= CastFilterType2::New();
     caster2->SetInput(output);
-    
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
+
+    typedef itk::ImageFileWriter<InputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
@@ -106,18 +88,44 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
+#ifdef USE_FLOAT
+    typedef float  TRealType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double TRealType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
+
     switch (pixelType){
     case itk::ImageIOBase::RGB:{
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+        typedef itk::Image<RealPixelType, Dimension>  RealImageType;
+        typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
+        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
     case itk::ImageIOBase::RGBA:{
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+        typedef itk::Image<RealPixelType, Dimension>  RealImageType;
+        typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
+        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
         typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+        typedef itk::Image<RealPixelType, Dimension>  RealImageType;
+        typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
+        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
