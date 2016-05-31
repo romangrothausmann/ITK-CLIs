@@ -1,5 +1,5 @@
-////program for itkVectorGradientAnisotropicDiffusionImageFilter
-//01: based on template_vec.cxx
+////program for itkVectorCurvatureAnisotropicDiffusionImageFilter
+//01: based on anisoDiff-grad.cxx
 
 
 #include <complex>
@@ -8,8 +8,8 @@
 #include <itkImageFileReader.h>
 #include <itkCastImageFilter.h>
 #include <itkVectorCastImageFilter.h>
-#include <itkGradientAnisotropicDiffusionImageFilter.h>
-#include <itkVectorGradientAnisotropicDiffusionImageFilter.h>
+#include <itkCurvatureAnisotropicDiffusionImageFilter.h>
+#include <itkVectorCurvatureAnisotropicDiffusionImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -104,7 +104,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<TRealType, Dimension>  RealImageType;
         typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::GradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::CurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
         typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -114,7 +114,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<RealPixelType, Dimension>  RealImageType;
         typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
         typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -124,7 +124,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<RealPixelType, Dimension>  RealImageType;
         typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
         typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -134,7 +134,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<RealPixelType, Dimension>  RealImageType;
         typedef itk::VectorCastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::VectorCurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
         typedef itk::VectorCastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
