@@ -99,28 +99,8 @@ int DoIt(int argc, char *argv[]){
     }
 
 
-template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel>
-int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-    int res= EXIT_FAILURE;
-    switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 1>(argc, argv);
-        break;
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 2>(argc, argv);
-        break;
-    case 3:
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 3>(argc, argv);
-        break;
-    default:
-        std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
-        break;
-        }//switch
-    return res;
-    }
-
-template<typename InputComponentType, size_t CompPerPixel>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+template<typename InputComponentType, size_t CompPerPixel, size_t Dimension>
+int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
@@ -129,19 +109,39 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::RGB:{
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::RGBA:{
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
         typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
+        break;
+        }//switch
+    return res;
+    }
+
+template<typename InputComponentType, size_t CompPerPixel>
+int dispatch_D(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+    int res= EXIT_FAILURE;
+    switch (dimensionType){
+    case 1:
+        res= dispatch_pT<InputComponentType, CompPerPixel, 1>(pixelType, argc, argv);
+        break;
+    case 2:
+        res= dispatch_pT<InputComponentType, CompPerPixel, 2>(pixelType, argc, argv);
+        break;
+    case 3:
+        res= dispatch_pT<InputComponentType, CompPerPixel, 3>(pixelType, argc, argv);
+        break;
+    default:
+        std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
         break;
         }//switch
     return res;
@@ -152,19 +152,19 @@ int dispatch_cPP(size_t compPerPixel, itk::ImageIOBase::IOPixelType pixelType, s
     int res= EXIT_FAILURE;
     switch (compPerPixel){
     case 1:
-        res= dispatch_pT<InputComponentType, 1>(pixelType, dimensionType, argc, argv);
+        res= dispatch_D<InputComponentType, 1>(pixelType, dimensionType, argc, argv);
         break;
     case 2:
-        res= dispatch_pT<InputComponentType, 2>(pixelType, dimensionType, argc, argv);
+        res= dispatch_D<InputComponentType, 2>(pixelType, dimensionType, argc, argv);
         break;
     case 3:
-        res= dispatch_pT<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
+        res= dispatch_D<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
         break;
     // case 4:
-    //     res= dispatch_pT<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+    //     res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
     //     break;
     // case 5:
-    //     res= dispatch_pT<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
+    //     res= dispatch_D<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
     //     break;
     default:
         std::cerr << "Error: NumberOfComponentsPerPixel (" << compPerPixel << ") not handled!" << std::endl;
