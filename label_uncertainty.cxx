@@ -186,19 +186,19 @@ int DoIt(int argc, char *argv[]){
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
-	{//scoped for better consistency
-	// extract the watershed lines and combine with the orginal markers
-	typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-	typename ThreshType::Pointer th = ThreshType::New();
-	th->SetUpperThreshold(0);
-	th->SetOutsideValue(0);
-	// set the inside value to the number of markers + 1
-	th->SetInsideValue(labelCnt + 1);
-	th->SetInput(ws->GetOutput());
-	th->Update();
-	borderImg= th->GetOutput();
-	borderImg->DisconnectPipeline();
-	}
+
+    // extract the watershed lines and combine with the orginal markers
+    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
+    typename ThreshType::Pointer th = ThreshType::New();
+    th->SetUpperThreshold(0);
+    th->SetOutsideValue(0);
+    // set the inside value to the number of markers + 1
+    th->SetInsideValue(labelCnt + 1);
+    th->SetInput(ws->GetOutput());
+    th->Update();
+    borderImg= th->GetOutput();
+    borderImg->DisconnectPipeline();
+
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
     // to combine the markers again
