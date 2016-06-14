@@ -204,7 +204,7 @@ int DoIt(int argc, char *argv[]){
     // to combine the markers again
     typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
-    adder->InPlaceOn();
+    // adder->InPlaceOn(); // input will be needed again (e.g. for low)
     adder->ReleaseDataFlagOn();
 
     // to create gradient magnitude image
@@ -242,8 +242,8 @@ int DoIt(int argc, char *argv[]){
     //// - it likely avoids mem freeing expected from ReleaseDataFlagOn()
 
     // Add the marker image to the watershed line image
-    //// labelImg will not be needed again afterwards
-    //// so setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
+    //// labelImg will be needed again for low!
+    //// setting Input1 to labelImg with InPlaceOn() will overwrite labelImg
     //// with InPlaceOn() use Input2 for borderImg to avoid loosing orig borderImg
     adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
     adder->SetInput2(borderImg);
@@ -273,14 +273,15 @@ int DoIt(int argc, char *argv[]){
     ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
     ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
 
-    labelImg= ch->GetOutput(); //store result for "upper" run
-    labelImg->DisconnectPipeline(); //disc. because ch is used again before "upper" run
+    typename LabelImageType::Pointer labelImgM;
+    labelImgM= ch->GetOutput(); //store result for "upper" run
+    labelImgM->DisconnectPipeline(); //disc. because ch is used again before "upper" run
 
     //// write "middle" label image
     std::stringstream sss;
     sss.str(""); sss << interMedOutPrefix << "_mid" << ".mha";
     writer->SetFileName(sss.str().c_str());
-    writer->SetInput(labelImg);
+    writer->SetInput(labelImgM);
     try{
         writer->Update();
         }
@@ -301,10 +302,26 @@ int DoIt(int argc, char *argv[]){
     gradientImg->DisconnectPipeline();//segfaults without! Why?
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+
+    
+    th->SetInput(labelImgM);
+    th->Update();
+    
+    typename LabelImageType::Pointer borderImgM;
+    borderImgM= th->GetOutput();
+    borderImgM->DisconnectPipeline();
+
+    //// calc of low needs markerImg composed of loc. min (labelImg) and extended border (ws on gm: borderImgM)
+    adder->SetInput1(labelImg);// set already, just for clarity
+    adder->SetInput2(borderImgM);
+    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
+    markerImg= adder->GetOutput();
+    markerImg->DisconnectPipeline();//will be needed twice
+
     markerImg->ReleaseDataFlagOn();//will be recalculated after use in ws
     // Now apply higher order watershed
     ws->SetInput(gradientImg);
-    // ws->SetMarkerImage(markerImg); //not changed for "lower" label image
+    ws->SetMarkerImage(markerImg); //changed for "lower" label image as well (extended border)!
     ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
@@ -326,9 +343,10 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "Wrote: " << sss.str() << std::endl;
 
-    adder->SetInput1(labelImg);//if InPlaceOn(), input1 will be changed! and used as output!
+    //// calc of upp needs markerImg composed of extended labels (ws on gm: labelImgM) and min. border (borderImg)
+    adder->SetInput1(labelImgM);//if InPlaceOn(), input1 will be changed! and used as output!
     adder->SetInput2(borderImg);
-    adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
+    adder->Update();//frees mem of labelImgM if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
     markerImg= adder->GetOutput();
     //markerImg->DisconnectPipeline();
     //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
