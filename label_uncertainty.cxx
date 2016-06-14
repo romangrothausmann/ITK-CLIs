@@ -352,19 +352,10 @@ int DoIt(int argc, char *argv[]){
     //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
-    gradientImg->ReleaseDataFlagOn();
-    // compute a gradient
-    gm->SetInput(gradientImg);
-    gm->Update();
-    //gradientImg->Delete();//free mem of orig input / last gradientImg <- bad! causes double free! use ReleaseDataFlag on reader instead and rely on smart ponter logic for last gm-output? http://public.kitware.com/pipermail/insight-users/2009-October/033004.html
-    gradientImg= gm->GetOutput();
-    gradientImg->DisconnectPipeline();//segfaults without! Why?
-
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
     markerImg->ReleaseDataFlagOn();
     // Now apply higher order watershed
-    ws->SetInput(gradientImg);
-    ws->SetMarkerImage(markerImg);
+    ws->SetInput(gradientImg); // set already, just for clarity
+    ws->SetMarkerImage(markerImg); // set already, just for clarity
     ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
