@@ -218,7 +218,7 @@ int DoIt(int argc, char *argv[]){
     gradientImg= input;
     input->ReleaseDataFlagOn();//free input as soon as gradientImg has been used as input by gm
 
-    //ws->MarkWatershedLineOff();//border in higher stages can make a difference but will not separate lables that initially touch already!
+    ws->SetMarkWatershedLine(atoi(argv[6]));//border in higher stages can make a difference but will not separate lables that initially touch already!
     ws->SetFullyConnected(ws_conn);
     //ws->InPlaceOn();//not available
     //ws->ReleaseDataFlagOn();//no problem but not needed as ch->InPlaceOn()
@@ -579,7 +579,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -587,6 +587,7 @@ int main(int argc, char *argv[]){
                   << " Output_Base"
                   << " compress"
                   << " invert"
+                  << " useBorderedWS"
                   << std::endl;
 
         return EXIT_FAILURE;
