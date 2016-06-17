@@ -304,7 +304,7 @@ int DoIt(int argc, char *argv[]){
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
 
     
-    th->SetInput(labelImgM);
+    th->SetInput(labelImgM); // here labelImgM (not ws->GetOutput) because th sets 0 to labelCnt + 1
     th->Update();
     
     typename LabelImageType::Pointer borderImgM;
@@ -312,6 +312,7 @@ int DoIt(int argc, char *argv[]){
     borderImgM->DisconnectPipeline();
 
     //// calc of low needs markerImg composed of loc. min (labelImg) and extended border (ws on gm: borderImgM)
+    borderImgM->ReleaseDataFlagOn(); // not needed again afterwards
     adder->SetInput1(labelImg);// set already, just for clarity
     adder->SetInput2(borderImgM);
     adder->Update();//frees mem of labelImg if ch->ReleaseDataFlagOn(); even if adder->InPlaceOn();?
