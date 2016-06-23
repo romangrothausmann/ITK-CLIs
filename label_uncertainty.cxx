@@ -6,7 +6,7 @@
 ////Todo
 // Does it make sense to include itkHMinimaImageFilter before itkRegionalMinimaImageFilter? Might increase extent of minimas over lower bond, wanted or not?
 
-#include <proc/readproc.h>//for look_up_our_self
+#include <proc/readproc.h>//for look_up_our_self, /usr/include/proc/readproc.h (reads /proc/[pid]/stat | /proc/[pid]/statm ? which does not include VmPeak as /proc/[pid]/status)
 #include <unistd.h>//for sysconf
 
 #include <itkImageFileReader.h>
@@ -70,7 +70,7 @@ int DoIt(int argc, char *argv[]){
 
     ////for mem monitoring: http://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-run-time-in-c
     struct proc_t usage;//description in: /usr/include/proc/readproc.h
-    double page_size_mb = sysconf(_SC_PAGE_SIZE) / 1024. / 1024.; // in case x86-64 is configured to use 2MB pages
+    // not needed for vm_* (see readproc.h): double page_size_mb = sysconf(_SC_PAGE_SIZE) / 1024. / 1024.; // in case x86-64 is configured to use 2MB pages
 
 
     typename GreyImageType::Pointer input;
@@ -107,7 +107,7 @@ int DoIt(int argc, char *argv[]){
         input= ss->GetOutput();
         input->DisconnectPipeline();//will need its own Delete later on!
         }
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
 
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
@@ -165,7 +165,7 @@ int DoIt(int argc, char *argv[]){
         labelImg= mask->GetOutput();
         labelImg->DisconnectPipeline();//will need its own Delete later on!
         }
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
 
     char* interMedOutPrefix= argv[3];
 
@@ -184,7 +184,7 @@ int DoIt(int argc, char *argv[]){
     ws->AddObserver(itk::EndEvent(), eventCallbackITK);
     ws->Update();
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
 
 
     // extract the watershed lines and combine with the orginal markers
@@ -200,7 +200,7 @@ int DoIt(int argc, char *argv[]){
     borderImg->DisconnectPipeline();
 
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     // to combine the markers again
     typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
     typename AddType::Pointer adder = AddType::New();
@@ -252,7 +252,7 @@ int DoIt(int argc, char *argv[]){
     markerImg->DisconnectPipeline();//will be needed twice
     //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     gradientImg->ReleaseDataFlagOn();
     // compute a gradient
     gm->SetInput(gradientImg);
@@ -261,14 +261,14 @@ int DoIt(int argc, char *argv[]){
     gradientImg= gm->GetOutput();
     gradientImg->DisconnectPipeline();//segfaults without! Why?
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     //markerImg->ReleaseDataFlagOn();//will be needed also for "lower" run
     // Now apply higher order watershed
     ws->SetInput(gradientImg);
     ws->SetMarkerImage(markerImg);
     ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     // delete the background label
     ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
     ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
@@ -292,7 +292,7 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "Wrote: " << sss.str() << std::endl;
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     gradientImg->ReleaseDataFlagOn();
     // compute a gradient
     gm->SetInput(gradientImg);
@@ -301,7 +301,7 @@ int DoIt(int argc, char *argv[]){
     gradientImg= gm->GetOutput();
     gradientImg->DisconnectPipeline();//segfaults without! Why?
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
 
     
     th->SetInput(labelImgM); // here labelImgM (not ws->GetOutput) because th sets 0 to labelCnt + 1
@@ -325,7 +325,7 @@ int DoIt(int argc, char *argv[]){
     ws->SetMarkerImage(markerImg); //changed for "lower" label image as well (extended border)!
     ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     // delete the background label
     ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
     ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
@@ -352,14 +352,14 @@ int DoIt(int argc, char *argv[]){
     //markerImg->DisconnectPipeline();
     //labelImg->Delete();//free mem of labelImg originating from initial markers; do not use if adder->InPlaceOn()
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     markerImg->ReleaseDataFlagOn();
     // Now apply higher order watershed
     ws->SetInput(gradientImg); // set already, just for clarity
     ws->SetMarkerImage(markerImg); // set already, just for clarity
     ws->Update();//frees mem of markerImg if adder->ReleaseDataFlagOn();
 
-    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
+    look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vm_size/1024./1024., usage.vm_rss);
     // delete the background label
     ch->SetInput(ws->GetOutput());//with ch->InPlaceOn() ws output will be overwritten!
     ch->Update();//frees mem of ws output if ws->ReleaseDataFlagOn();
