@@ -1,4 +1,4 @@
-////program for
+////program for itkImageToHistogramFilter
 //01: based on template_vec.cxx
 
 
@@ -6,43 +6,16 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkImageToHistogramFilter.h>
 #include <itkImageFileWriter.h>
 
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-//         if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-//             std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-//         else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-//             std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-//         }
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
-
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -64,16 +37,29 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::Statistics::ImageToHistogramFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+
+    typename FilterType::HistogramSizeType size(CompPerPixel);
+    size.Fill(itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned
+    filter->SetHistogramSize(size);
+
+    typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
+    lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
+    typename FilterType::HistogramMeasurementVectorType upperBound(CompPerPixel);
+    upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
+
+    filter->SetAutoMinimumMaximum(false); // essential!!!
+    filter->SetHistogramBinMinimum(lowerBound);
+    filter->SetHistogramBinMaximum(upperBound);
+    // filter->SetMarginalScale(10.0); // concerns clipping: http://public.kitware.com/pipermail/insight-users/2007-November/024197.html
+
+    if(CompPerPixel > 1)
+        std::cerr << "Generating " << CompPerPixel << "D histogram (although only printing the trace), this may take a while!" << std::flush << std::endl;
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -82,23 +68,25 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    typename FilterType::HistogramType* histogram = filter->GetOutput();
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
 
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
+    std::cerr << "Histogram size = " << histogram->Size()
+              << " Total frequency = " << histogram->GetTotalFrequency()
+              << " Dimension sizes = " << histogram->GetSize() << std::endl;
 
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
+    std::cerr << "50th percentile along the first dimension = " << histogram->Quantile(0, 0.5) << std::flush << std::endl;
+
+    std::cout << "Bin";
+    for(unsigned int j = 0; j < CompPerPixel; ++j)
+        printf("\tFreq:%d", j);
+    std::cout << std::flush << std::endl;
+
+    for(size_t i = 0; i < histogram->GetSize()[0]; ++i){
+        std::cout << +i + itk::NumericTraits<InputComponentType>::min();
+        for(unsigned char j = 0; j < CompPerPixel; ++j)
+            std::cout << "\t" << +histogram->GetFrequency(i, j);
+        std::cout << std::endl;
         }
 
     return EXIT_SUCCESS;
@@ -228,14 +216,15 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, size_t compPerP
         typedef long InputComponentType;
         res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::FLOAT:{        // float32
-        typedef float InputComponentType;
-        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::DOUBLE:{       // float64
-        typedef double InputComponentType;
-        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-        } break;
+    //// floats neeed special treatment due to the use of num-traits min/max
+    // case itk::ImageIOBase::FLOAT:{        // float32
+    //     typedef float InputComponentType;
+    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::DOUBLE:{       // float64
+    //     typedef double InputComponentType;
+    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -278,12 +267,10 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 2 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
-                  << " Output_Image"
-                  << " compress"
                   << std::endl;
 
         return EXIT_FAILURE;
