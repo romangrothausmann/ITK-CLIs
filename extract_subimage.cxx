@@ -10,13 +10,18 @@
 #include <itkExtractImageFilter.h>
 #include <itkImageFileWriter.h>
 
+#ifdef USE_SDI
+#include <itkPipelineMonitorImageFilter.h>
+#endif
+
 
 
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    if( argc != 3 + 2*Dimension){
-	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension - 1);
+    const char offset= 4;
+    if( argc != offset + 2*Dimension){
+	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", offset + 2*Dimension - 1);
 	return EXIT_FAILURE;
 	}
 	
@@ -32,9 +37,6 @@ int DoIt(int argc, char *argv[]){
  
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
     reader->UpdateOutputInformation();
 
     std::cerr << "input region index: " << reader->GetOutput()->GetLargestPossibleRegion().GetIndex()
@@ -46,9 +48,9 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::SizeType desiredSize;
 
     for (i= 0; i < Dimension; i++)
-        desiredStart[i]= atoi(argv[3+i]);
+        desiredStart[i]= atoi(argv[offset+i]);
     for (i= 0; i < Dimension; i++)
-        desiredSize[i]=  atoi(argv[3+Dimension+i]);
+        desiredSize[i]=  atoi(argv[offset+Dimension+i]);
 
     typename InputImageType::RegionType desiredRegion(desiredStart, desiredSize);
     std::cerr << "desired region index: " << desiredRegion.GetIndex()
@@ -60,6 +62,10 @@ int DoIt(int argc, char *argv[]){
     	return EXIT_FAILURE;
 	}
 	
+#ifndef USE_SDI
+    FilterWatcher watcherI(reader);
+    watcherI.QuietOn();
+    watcherI.ReportTimeOn();
     try{ 
         reader->Update();
         }
@@ -67,6 +73,7 @@ int DoIt(int argc, char *argv[]){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
+#endif
 
 
     typedef itk::ExtractImageFilter<InputImageType, OutputImageType> FilterType;
@@ -77,6 +84,7 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
+#ifndef USE_SDI
     FilterWatcher watcher1(filter);
     try{
         filter->Update();
@@ -86,14 +94,25 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+#else
+    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
+#endif
+
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
+#ifndef USE_SDI
     writer->SetInput(filter->GetOutput());
-    writer->UseCompressionOff();
-    //writer->SetUseCompression(atoi(argv[3]));
+    writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->SetInput(monitorFilter->GetOutput());
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -101,6 +120,12 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+#ifdef USE_SDI
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){ // reports a warning if expected and actual # chunks differ
+        // std::cerr << monitorFilter;
+        }
+#endif
 
     return EXIT_SUCCESS;
 
@@ -279,11 +304,16 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 4 ){
+    if ( argc < 5 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
+#ifndef USE_SDI
+ 		  << " compress"
+#else
+		  << " stream-chunks"
+#endif
 		  << " index... size..."
     		  << std::endl;
 
