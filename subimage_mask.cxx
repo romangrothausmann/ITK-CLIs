@@ -1,13 +1,12 @@
-////program to use itk to extract a subimage
-/// http://www.itk.org/Wiki/ITK/Examples/ImageProcessing/ExtractImageFilter
-//02: old version now based on template_vec.cxx
+////program to mask an image within a ROI, i.e. past the ROI into a black image (different to itkRegionOfInterestImageFilter)
+//01: based on subimage_extract.cxx
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkExtractImageFilter.h>
+#include <itkPasteImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #ifdef USE_SDI
@@ -61,6 +60,12 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "desired region is not inside the largest possible input region! Forgot index -1?" << std::endl;
         return EXIT_FAILURE;
         }
+    reader->GetOutput()->SetRequestedRegion(desiredRegion);
+
+    typename InputImageType::Pointer black= InputImageType::New();
+    black->SetRegions(reader->GetOutput()->GetLargestPossibleRegion());
+    black->Allocate();
+    black->FillBuffer(itk::NumericTraits<InputPixelType>::Zero);
 
 #ifndef USE_SDI
     FilterWatcher watcherI(reader);
@@ -76,13 +81,14 @@ int DoIt(int argc, char *argv[]){
 #endif
 
 
-    typedef itk::ExtractImageFilter<InputImageType, OutputImageType> FilterType;
-    typename FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(reader->GetOutput());
-    filter->SetExtractionRegion(desiredRegion);
-    filter->SetDirectionCollapseToIdentity(); // This is required.
+    typedef itk::PasteImageFilter<InputImageType, InputImageType, OutputImageType> FilterType;
+    typename FilterType::Pointer filter= FilterType::New();
+    filter->SetSourceImage(reader->GetOutput());
+    filter->SetDestinationImage(black);
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
+    filter->SetSourceRegion(desiredRegion);
+    filter->SetDestinationIndex(desiredRegion.GetIndex());
 
 #ifndef USE_SDI
     FilterWatcher watcher1(filter);

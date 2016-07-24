@@ -126,6 +126,17 @@ SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+SET(CurrentExe "subimage_mask")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "subimage_mask_SDI")
+ADD_EXECUTABLE(${CurrentExe}  "subimage_mask.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 IF(ITKReview_FOUND LESS 0)
   MESSAGE(STATUS "Programs dependent on ITKReview will not be compiled (requires ITK with ITKReview ON)")
 ELSE(ITKReview_FOUND LESS 0)
