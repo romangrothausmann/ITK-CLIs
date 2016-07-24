@@ -21,27 +21,27 @@ int DoIt(int argc, char *argv[]){
 
     const char offset= 4;
     if( argc != offset + 2*Dimension){
-	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", offset + 2*Dimension - 1);
-	return EXIT_FAILURE;
-	}
-	
+        fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", offset + 2*Dimension - 1);
+        return EXIT_FAILURE;
+        }
+
 
     typedef InputPixelType  OutputPixelType;
-    
+
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
- 
+
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
     reader->UpdateOutputInformation();
 
     std::cerr << "input region index: " << reader->GetOutput()->GetLargestPossibleRegion().GetIndex()
-	      << "  size: " <<  reader->GetOutput()->GetLargestPossibleRegion().GetSize()
-	      << std::endl;
+              << "  size: " <<  reader->GetOutput()->GetLargestPossibleRegion().GetSize()
+              << std::endl;
 
     unsigned int i;
     typename InputImageType::IndexType desiredStart;
@@ -54,25 +54,25 @@ int DoIt(int argc, char *argv[]){
 
     typename InputImageType::RegionType desiredRegion(desiredStart, desiredSize);
     std::cerr << "desired region index: " << desiredRegion.GetIndex()
-	      << "  size: " << desiredRegion.GetSize()
-	      << std::endl;
+              << "  size: " << desiredRegion.GetSize()
+              << std::endl;
 
     if(!reader->GetOutput()->GetLargestPossibleRegion().IsInside(desiredRegion)){
-	std::cerr << "desired region is not inside the largest possible input region! Forgot index -1?" << std::endl;
-    	return EXIT_FAILURE;
-	}
-	
+        std::cerr << "desired region is not inside the largest possible input region! Forgot index -1?" << std::endl;
+        return EXIT_FAILURE;
+        }
+
 #ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
-    try{ 
+    try{
         reader->Update();
         }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
 #endif
 
 
@@ -305,17 +305,17 @@ void GetImageType (std::string fileName,
 
 int main(int argc, char *argv[]){
     if ( argc < 5 ){
-	std::cerr << "Missing Parameters: "
-		  << argv[0]
-		  << " Input_Image"
-		  << " Output_Image"
+        std::cerr << "Missing Parameters: "
+                  << argv[0]
+                  << " Input_Image"
+                  << " Output_Image"
 #ifndef USE_SDI
- 		  << " compress"
+                  << " compress"
 #else
-		  << " stream-chunks"
+                  << " stream-chunks"
 #endif
-		  << " index... size..."
-    		  << std::endl;
+                  << " index... size..."
+                  << std::endl;
 
         return EXIT_FAILURE;
         }
