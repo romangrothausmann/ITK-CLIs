@@ -10,6 +10,10 @@
 #include <itkBinShrinkImageFilter.h>
 #include <itkImageFileWriter.h>
 
+#ifdef USE_SDI
+#include <itkPipelineMonitorImageFilter.h>
+#endif
+
 
 
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
@@ -26,6 +30,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+#ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -36,6 +41,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#endif
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -47,6 +53,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetShrinkFactors(atoi(argv[4]));
     filter->ReleaseDataFlagOn();
 
+#ifndef USE_SDI
     FilterWatcher watcher1(filter);
     try{
         filter->Update();
@@ -55,6 +62,11 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#else
+    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
+    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
+    monitorFilter->SetInput(filter->GetOutput());
+#endif
 
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
@@ -62,8 +74,14 @@ int DoIt(int argc, char *argv[]){
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
+#ifndef USE_SDI
     writer->SetInput(filter->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->SetInput(monitorFilter->GetOutput());
+    writer->UseCompressionOff(); //writer->SetUseCompression(atoi(argv[3]));//writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -71,6 +89,12 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+#ifdef USE_SDI
+    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){ // reports a warning if expected and actual # chunks differ
+        // std::cerr << monitorFilter;
+        }
+#endif
 
     return EXIT_SUCCESS;
 
@@ -146,9 +170,9 @@ int dispatch_cPP(size_t compPerPixel, itk::ImageIOBase::IOPixelType pixelType, s
     case 3:
         res= dispatch_D<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
         break;
-    // case 4:
-    //     res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
-    //     break;
+    case 4:
+        res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+        break;
     // case 5:
     //     res= dispatch_D<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
     //     break;
@@ -254,12 +278,34 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
+#ifndef USE_SDI
                   << " compress"
+#else
+                  << " stream-chunks"
+#endif
                   << " bin"
                   << std::endl;
 
         return EXIT_FAILURE;
         }
+
+    if(atoi(argv[3]) < 0){
+        std::cerr << "3rd parameter must not be negative" << std::endl;
+        return EXIT_FAILURE;
+        }
+
+#ifndef USE_SDI
+    if(atoi(argv[3]) > 1){
+        std::cerr << "compress must be 0 or 1 (to avoid confusion with stream-chunks of SDI version" << std::endl;
+        return EXIT_FAILURE;
+        }
+#else
+    if(atoi(argv[3]) < 2){
+        std::cerr << "stream-chunks must be > 1 (or use non-SDI version)" << std::endl;
+        return EXIT_FAILURE;
+        }
+#endif
+
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
