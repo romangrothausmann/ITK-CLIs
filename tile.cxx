@@ -41,12 +41,13 @@ int DoIt(int argc, char *argv[]){
 	}
     filter->SetLayout(layout);
 
-    typename InputImageType::Pointer inputImageTile;
     unsigned int j= 0;
+    std::vector<itk::ProcessObject::Pointer> savedPointers; // to store smart-pointers outside their creation scope
     for (int i= offset + Dimension; i < argc; i++){
 	typedef itk::ImageFileReader<InputImageType> ReaderType;
 	typename ReaderType::Pointer reader = ReaderType::New();
 	reader->SetFileName(argv[i]);
+	savedPointers.push_back(reader.GetPointer());
 	filter->SetInput(j++, reader->GetOutput());
 	}
  
