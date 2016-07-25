@@ -161,22 +161,22 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     typedef InputComponentType InputPixelType;
     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
   } break;
-  // case itk::ImageIOBase::RGB:{
-  //   typedef itk::RGBPixel<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::RGBA:{
-  //   typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::COMPLEX:{
-  //   typedef std::complex<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
-  // case itk::ImageIOBase::VECTOR:{
-  //   typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-  //   res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-  // } break;
+  case itk::ImageIOBase::RGB:{
+    typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::RGBA:{
+    typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::COMPLEX:{
+    typedef std::complex<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
+  case itk::ImageIOBase::VECTOR:{
+    typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+    res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+  } break;
   case itk::ImageIOBase::UNKNOWNPIXELTYPE:
   default:
     std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
