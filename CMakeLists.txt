@@ -82,6 +82,10 @@ LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)
 LIST(FIND ITK_MODULES_ENABLED ParabolicMorphology ParabolicMorphology_FOUND)#in itk-4.8: https://github.com/InsightSoftwareConsortium/ITK/commit/2b3190575b82e8457c028040c3bfd0f69fa1ef35
 LIST(FIND ITK_MODULES_ENABLED LabelErodeDilate LabelErodeDilate_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/5b158490c01b3e3a68816fdbe321751609746444
 LIST(FIND ITK_MODULES_ENABLED StreamingSinc StreamingSinc_FOUND)
+LIST(FIND ITK_MODULES_ENABLED SCIFIO SCIFIO_FOUND)
+if(NOT SCIFIO_LOADED) # https://github.com/michaelmeuli/bactelize/blob/master/CMakeLists.txt
+  message(FATAL_ERROR "SCIFIO module is required but not available.")
+endif() 
 
 
 SET(CurrentExe "file_converter")

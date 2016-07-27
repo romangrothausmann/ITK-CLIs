@@ -1,6 +1,7 @@
 ////program for binning images by averaging
 //01: based on template_02.cxx
 //02: based on template_vec.cxx
+// SCIFIO:  https://github.com/scifio/scifio-imageio/blob/master/test/itkSCIFIOImageIOTest.cxx
 
 
 #include <complex>
@@ -9,6 +10,7 @@
 #include <itkImageFileReader.h>
 #include <itkBinShrinkImageFilter.h>
 #include <itkImageFileWriter.h>
+#include <itkSCIFIOImageIO.h>
 
 #ifdef USE_SDI
 #include <itkPipelineMonitorImageFilter.h>
@@ -24,12 +26,15 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    itk::SCIFIOImageIO::Pointer io= itk::SCIFIOImageIO::New();
+    io->DebugOn();
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+    reader->SetImageIO(io);
 #ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
@@ -68,12 +73,15 @@ int DoIt(int argc, char *argv[]){
     monitorFilter->SetInput(filter->GetOutput());
 #endif
 
+    itk::SCIFIOImageIO::Pointer ioOut= itk::SCIFIOImageIO::New();
+    ioOut->DebugOn();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
+    writer->SetImageIO(ioOut);
 #ifndef USE_SDI
     writer->SetInput(filter->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
