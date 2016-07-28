@@ -153,9 +153,9 @@ int dispatch_cPP(size_t compPerPixel, itk::ImageIOBase::IOPixelType pixelType, s
     case 3:
         res= dispatch_D<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
         break;
-    // case 4:
-    //     res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
-    //     break;
+    case 4:
+        res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+        break;
     // case 5:
     //     res= dispatch_D<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
     //     break;
