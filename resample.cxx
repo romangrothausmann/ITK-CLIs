@@ -71,13 +71,15 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename InputImageType::SpacingType outputSpacing;
     std::vector<itk::ProcessObject::Pointer> savedPointers; // to store smart-pointers outside their creation scope
     savedPointers.push_back(caster.GetPointer());
-    typedef itk::ImageSource<InternalImageType> ISType;
 
     for (unsigned int i= 0; i < Dimension; i++){
         outputSpacing[i]= atof(argv[5+i]);
 	
 	typename GaussianFilterType::Pointer smoother = GaussianFilterType::New();
-	smoother->SetInput(dynamic_cast<ISType*>(savedPointers[i].GetPointer())->GetOutput()); // similar to: https://cmake.org/pipermail/insight-users/2007-May/022374.html
+	if(i==0)
+	    smoother->SetInput(dynamic_cast<CastFilterType*>(savedPointers[i].GetPointer())->GetOutput()); // similar to: https://cmake.org/pipermail/insight-users/2007-May/022374.html
+	else
+	    smoother->SetInput(dynamic_cast<GaussianFilterType*>(savedPointers[i].GetPointer())->GetOutput());
 	smoother->SetSigma(outputSpacing[i]);
 	smoother->SetDirection(i);
 	smoother->ReleaseDataFlagOn();
@@ -98,7 +100,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typedef itk::ResampleImageFilter<InternalImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(dynamic_cast<ISType*>(savedPointers[savedPointers.size()].GetPointer())->GetOutput());
+    filter->SetInput(dynamic_cast<GaussianFilterType*>(savedPointers[savedPointers.size()].GetPointer())->GetOutput());
     filter->SetTransform(transform);
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
