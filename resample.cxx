@@ -76,7 +76,10 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         outputSpacing[i]= atof(argv[5+i]);
 	
 	typename GaussianFilterType::Pointer smoother = GaussianFilterType::New();
-	smoother->SetInput(savedPointers[i]->GetOutput()); // similar to: https://cmake.org/pipermail/insight-users/2007-May/022374.html
+	if(i==0)
+	    smoother->SetInput(static_cast<typename CastFilterType::Pointer>(savedPointers[i])->GetOutput()); // similar to: https://cmake.org/pipermail/insight-users/2007-May/022374.html
+	else
+	    smoother->SetInput(static_cast<typename GaussianFilterType::Pointer>(savedPointers[i])->GetOutput());
 	smoother->SetSigma(outputSpacing[i]);
 	smoother->SetDirection(i);
 	smoother->ReleaseDataFlagOn();
@@ -97,7 +100,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typedef itk::ResampleImageFilter<InternalImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(savedPointers[savedPointers.size()]->GetOutput());
+    filter->SetInput(static_cast<typename CastFilterType::Pointer>(savedPointers[savedPointers.size()])->GetOutput());
     filter->SetTransform(transform);
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
