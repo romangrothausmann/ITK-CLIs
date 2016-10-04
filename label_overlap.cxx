@@ -1,48 +1,19 @@
-////program for
-//01: based on template.cxx
+////program for itkLabelOverlapMeasuresImageFilter
+//01: based on template.cxx and itkLabelOverlapMeasuresImageFilterTest.cxx (https://github.com/midas-journal/midas-journal-707/blob/master/Source/itkLabelOverlapMeasuresImageFilterTest.cxx)
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
+#include <itkLabelOverlapMeasuresImageFilter.h>
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
-
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -60,20 +31,29 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename InputImageType::Pointer& input= reader->GetOutput();
+    typename ReaderType::Pointer reader2 = ReaderType::New();
+
+    reader2->SetFileName(argv[2]);
+    reader2->ReleaseDataFlagOn();
+    FilterWatcher watcherI2(reader2);
+    watcherI2.QuietOn();
+    watcherI2.ReportTimeOn();
+    try{
+        reader2->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
 
 
-
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::LabelOverlapMeasuresImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetSourceImage(reader->GetOutput());
+    filter->SetTargetImage(reader2->GetOutput());
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -83,23 +63,41 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    std::cout << "Label" << "\t"
+	      << "Total" << "\t"
+	      << "Union" << "\t" // Jaccard
+	      << "Mean" << "\t" // Dice
+	      << "Similarity" << "\t"
+	      << "False-" << "\t"
+	      << "False+" << "\t"
+	      << std::endl;
 
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
+    std::cout << 0 << "\t" // label 0 for total (not bg)
+	      << filter->GetTotalOverlap() << "\t"
+	      << filter->GetUnionOverlap() << "\t"
+	      << filter->GetMeanOverlap() << "\t"
+	      << filter->GetVolumeSimilarity() << "\t"
+	      << filter->GetFalseNegativeError() << "\t"
+	      << filter->GetFalsePositiveError() << "\t"
+	      << std::endl;
 
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    typename FilterType::MapType labelMap = filter->GetLabelSetMeasures();
+    typename FilterType::MapType::const_iterator it;
+    for(it= labelMap.begin(); it != labelMap.end(); ++it){
+	if((*it).first == 0)
+	    continue;
+
+	int label= (*it).first;
+
+	std::cout << label << "\t"
+		  << filter->GetTargetOverlap(label) << "\t"
+		  << filter->GetUnionOverlap(label) << "\t"
+		  << filter->GetMeanOverlap(label) << "\t"
+		  << filter->GetVolumeSimilarity(label) << "\t"
+		  << filter->GetFalseNegativeError(label) << "\t"
+		  << filter->GetFalsePositiveError(label) << "\t"
+		  << std::endl;
+	}
 
     return EXIT_SUCCESS;
 
@@ -110,9 +108,9 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
+    // case 1:
+    //     res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
+    //     break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -136,22 +134,6 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
@@ -202,14 +184,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef long InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::FLOAT:{        // float32
-        typedef float InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::DOUBLE:{       // float64
-        typedef double InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -249,12 +223,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc != 3 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Input_Image"
-                  << " Output_Image"
-                  << " compress"
+                  << " Source_Image"
+                  << " Target_Image"
                   << std::endl;
 
         return EXIT_FAILURE;
