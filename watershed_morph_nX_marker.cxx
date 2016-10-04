@@ -137,6 +137,8 @@ int DoIt(int argc, char *argv[]){
 
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= ws0_conn;
+    if(argc == 9)
+	ws_conn= atoi(argv[8]);
 
     uint8_t NumberOfExtraWS= atoi(argv[5]);
 
@@ -465,7 +467,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 8 ){
+    if ( argc < 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -474,6 +476,7 @@ int main(int argc, char *argv[]){
                   << " compress"
                   << " NumberOfExtraWS invert"
                   << " borderExtraWS"
+                  << " [connExtraWS]"
                   << std::endl;
 
         return EXIT_FAILURE;
