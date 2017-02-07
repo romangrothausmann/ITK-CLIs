@@ -69,6 +69,12 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     case 3:
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 3>(argc, argv);
         break;
+    case 4:
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 4>(argc, argv);
+        break;
+    case 5:
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, 5>(argc, argv);
+        break;
     default:
         std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
         break;
