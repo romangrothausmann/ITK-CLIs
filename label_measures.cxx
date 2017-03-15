@@ -1,4 +1,4 @@
-////program for
+////program for various label image measures: extents, stats, V, S, lol
 //01: based on template.cxx
 
 
@@ -6,49 +6,34 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkImageFileWriter.h>
 
+#include <itkStatisticsImageFilter.h>
 
+#include <itkLabelImageToShapeLabelMapFilter.h>
+#include <itkShapeLabelObject.h>
+#include <itkLabelMap.h>
 
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
+#include <itkLabelOverlapMeasuresImageFilter.h>
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
+    reader->UpdateOutputInformation();
+
+    std::cout << "input region index: " << reader->GetOutput()->GetLargestPossibleRegion().GetIndex()
+              << "  size: " <<  reader->GetOutput()->GetLargestPossibleRegion().GetSize()
+              << std::endl;
+
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -63,19 +48,78 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
+    typedef itk::StatisticsImageFilter<InputImageType> FilterType;
+    typename FilterType::Pointer stat= FilterType::New();
+    stat->SetInput(input);
+    FilterWatcher watcher1(stat);
 
-    typedef itk::<InputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    try{ 
+        stat->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
 
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
+
+    std::cout << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
+
+    typedef itk::LabelImageToShapeLabelMapFilter<InputImageType> FilterType2;//default output is a LabelMap instanciated with InputImageType::PixelType
+    typename FilterType2::Pointer filter2= FilterType2::New();
+    filter2->SetInput(input);
+    filter2->ReleaseDataFlagOn();
+    bool cp= atoi(argv[3]);
+    filter2->SetComputePerimeter(cp);
+
+    FilterWatcher watcher2(filter2);
     try{
-        filter->Update();
+        filter2->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    typedef typename FilterType2::OutputImageType LabelMapType;
+    typedef typename FilterType2::OutputImageType::LabelObjectType LabelObjectType;
+    typedef typename FilterType2::OutputImageType::LabelType LabelType;
+    typename LabelMapType::Pointer labelMap = filter2->GetOutput();
+    std::cout << "#index";
+    std::cout << "\tvoxel\tVphy";
+    if (cp)
+        std::cout << "\tAphy";
+    std::cout << std::endl;
+
+    const LabelObjectType* labelObject;
+    for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
+
+        labelObject= labelMap->GetNthLabelObject(label);//GetNthLabelObject essential in case of not consecutive labels! (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
+        std::cout
+            << +labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
+        std::cout
+            //<< labelObject->GetFeretDiameter() << "\t"
+            //<< labelObject->GetElongation() << "\t"
+            //<< labelObject->GetRoundness() << "\t"
+            //<< labelObject->GetFlatness() << "\t"
+            //<< labelObject->GetEquivalentSphericalRadius() << "\t"
+            //<< labelObject->GetEquivalentSphericalPerimeter() << "\t"
+            << +labelObject->GetNumberOfPixels() << "\t"
+            << +labelObject->GetPhysicalSize();
+        if (cp)
+            std::cout << "\t" << +labelObject->GetPerimeter();//takes physical voxel size into account!!!
+        std::cout << std::endl;
+        }
+
+
+    typename ReaderType::Pointer reader2 = ReaderType::New();
+
+    reader2->SetFileName(argv[2]);
+    reader2->ReleaseDataFlagOn();
+    FilterWatcher watcherI2(reader2);
+    watcherI2.QuietOn();
+    watcherI2.ReportTimeOn();
+    try{
+        reader2->Update();
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
@@ -83,23 +127,57 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    typedef itk::LabelOverlapMeasuresImageFilter<InputImageType> FilterType3;
+    typename FilterType3::Pointer filter3= FilterType3::New();
+    filter3->SetSourceImage(reader->GetOutput());
+    filter3->SetTargetImage(reader2->GetOutput());
+    filter3->ReleaseDataFlagOn();
 
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    FilterWatcher watcher3(filter3);
     try{
-        writer->Update();
+        filter3->Update();
         }
     catch(itk::ExceptionObject &ex){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+
+
+    std::cout << "Label" << "\t"
+	      << "Total" << "\t"
+	      << "Union" << "\t" // Jaccard
+	      << "Mean" << "\t" // Dice
+	      << "Similarity" << "\t"
+	      << "False-" << "\t"
+	      << "False+" << "\t"
+	      << std::endl;
+
+    std::cout << 0 << "\t" // label 0 for total (not bg)
+	      << filter3->GetTotalOverlap() << "\t"
+	      << filter3->GetUnionOverlap() << "\t"
+	      << filter3->GetMeanOverlap() << "\t"
+	      << filter3->GetVolumeSimilarity() << "\t"
+	      << filter3->GetFalseNegativeError() << "\t"
+	      << filter3->GetFalsePositiveError() << "\t"
+	      << std::endl;
+
+    typename FilterType3::MapType labelMap3 = filter3->GetLabelSetMeasures();
+    typename FilterType3::MapType::const_iterator it;
+    for(it= labelMap3.begin(); it != labelMap3.end(); ++it){
+	if((*it).first == 0)
+	    continue;
+
+	int label= (*it).first;
+
+	std::cout << label << "\t"
+		  << filter3->GetTargetOverlap(label) << "\t"
+		  << filter3->GetUnionOverlap(label) << "\t"
+		  << filter3->GetMeanOverlap(label) << "\t"
+		  << filter3->GetVolumeSimilarity(label) << "\t"
+		  << filter3->GetFalseNegativeError(label) << "\t"
+		  << filter3->GetFalsePositiveError(label) << "\t"
+		  << std::endl;
+	}
 
     return EXIT_SUCCESS;
 
@@ -110,9 +188,9 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
+    // case 1:
+    //     res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
+    //     break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -138,22 +216,22 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
         typedef InputComponentType InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::RGB:{
+    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::RGBA:{
+    //     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::COMPLEX:{
+    //     typedef std::complex<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::VECTOR:{
+    //     typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -174,42 +252,42 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef unsigned char InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::CHAR:{         // int8_t
-        typedef char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::USHORT:{       // uint16_t
-        typedef unsigned short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::SHORT:{        // int16_t
-        typedef short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UINT:{         // uint32_t
-        typedef unsigned int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::INT:{          // int32_t
-        typedef int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::ULONG:{        // uint64_t
-        typedef unsigned long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::LONG:{         // int64_t
-        typedef long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::FLOAT:{        // float32
-        typedef float InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::DOUBLE:{       // float64
-        typedef double InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::CHAR:{         // int8_t
+    //     typedef char InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::USHORT:{       // uint16_t
+    //     typedef unsigned short InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::SHORT:{        // int16_t
+    //     typedef short InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::UINT:{         // uint32_t
+    //     typedef unsigned int InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::INT:{          // int32_t
+    //     typedef int InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::ULONG:{        // uint64_t
+    //     typedef unsigned long InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::LONG:{         // int64_t
+    //     typedef long InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::FLOAT:{        // float32
+    //     typedef float InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::DOUBLE:{       // float64
+    //     typedef double InputComponentType;
+    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -253,8 +331,8 @@ int main(int argc, char *argv[]){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
-                  << " Output_Image"
-                  << " compress"
+                  << " Comp_Image"
+		  << " <bool: calculate perimeter>"
                   << std::endl;
 
         return EXIT_FAILURE;
