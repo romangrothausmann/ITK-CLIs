@@ -6,6 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkChangeInformationImageFilter.h>
 
 #include <itkStatisticsImageFilter.h>
 
@@ -45,8 +46,37 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename InputImageType::Pointer& input= reader->GetOutput();
+    typename ReaderType::Pointer reader2 = ReaderType::New();
 
+    reader2->SetFileName(argv[2]);
+    reader2->ReleaseDataFlagOn();
+    FilterWatcher watcherI2(reader2);
+    watcherI2.QuietOn();
+    watcherI2.ReportTimeOn();
+    try{
+        reader2->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    typedef itk::ChangeInformationImageFilter<InputImageType> FilterType0;
+    typename FilterType0::Pointer filter0= FilterType0::New();
+    filter0->SetInput(reader->GetOutput());
+    filter0->SetReferenceImage(reader2->GetOutput());
+    filter0->UseReferenceImageOn();
+    filter0->ChangeAll();
+    FilterWatcher watcher0(filter0);
+    try{ 
+        filter0->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
+
+    const typename InputImageType::Pointer& input= filter0->GetOutput();
 
     typedef itk::StatisticsImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer stat= FilterType::New();
@@ -111,25 +141,9 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    typename ReaderType::Pointer reader2 = ReaderType::New();
-
-    reader2->SetFileName(argv[2]);
-    reader2->ReleaseDataFlagOn();
-    FilterWatcher watcherI2(reader2);
-    watcherI2.QuietOn();
-    watcherI2.ReportTimeOn();
-    try{
-        reader2->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
-
     typedef itk::LabelOverlapMeasuresImageFilter<InputImageType> FilterType3;
     typename FilterType3::Pointer filter3= FilterType3::New();
-    filter3->SetSourceImage(reader->GetOutput());
+    filter3->SetSourceImage(input);
     filter3->SetTargetImage(reader2->GetOutput());
     filter3->ReleaseDataFlagOn();
 
