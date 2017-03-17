@@ -3,6 +3,7 @@
 
 
 #include <complex>
+#include <iomanip>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
@@ -114,10 +115,13 @@ int DoIt(int argc, char *argv[]){
     typedef typename FilterType2::OutputImageType::LabelObjectType LabelObjectType;
     typedef typename FilterType2::OutputImageType::LabelType LabelType;
     typename LabelMapType::Pointer labelMap = filter2->GetOutput();
-    std::cout << "#index";
-    std::cout << "\tvoxel\tVphy";
+    std::cout << std::setw(10)
+	      << "Label" << "\t" << std::setw(10)
+	      << "Voxel" << "\t" << std::setw(10)
+	      << "Vphy";
     if (cp)
-        std::cout << "\tAphy";
+	std::cout << "\t" << std::setw(10) << "Aphy";
+    
     std::cout << std::endl;
 
     const LabelObjectType* labelObject;
@@ -125,18 +129,19 @@ int DoIt(int argc, char *argv[]){
 
         labelObject= labelMap->GetNthLabelObject(label);//GetNthLabelObject essential in case of not consecutive labels! (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
         std::cout
-            << +labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
+	    << std::setprecision(2) << std::right << std::setw(10)
+            << +labelObject->GetLabel() << "\t" << std::setw(10); //essential in case of not consecutive labels!
         std::cout
-            //<< labelObject->GetFeretDiameter() << "\t"
-            //<< labelObject->GetElongation() << "\t"
-            //<< labelObject->GetRoundness() << "\t"
-            //<< labelObject->GetFlatness() << "\t"
-            //<< labelObject->GetEquivalentSphericalRadius() << "\t"
-            //<< labelObject->GetEquivalentSphericalPerimeter() << "\t"
-            << +labelObject->GetNumberOfPixels() << "\t"
+            //<< labelObject->GetFeretDiameter() << "\t" << std::setw(10)
+            //<< labelObject->GetElongation() << "\t" << std::setw(10)
+            //<< labelObject->GetRoundness() << "\t" << std::setw(10)
+            //<< labelObject->GetFlatness() << "\t" << std::setw(10)
+            //<< labelObject->GetEquivalentSphericalRadius() << "\t" << std::setw(10)
+            //<< labelObject->GetEquivalentSphericalPerimeter() << "\t" << std::setw(10)
+            << +labelObject->GetNumberOfPixels() << "\t" << std::setw(10)
             << +labelObject->GetPhysicalSize();
         if (cp)
-            std::cout << "\t" << +labelObject->GetPerimeter();//takes physical voxel size into account!!!
+            std::cout << "\t" << std::setw(10) << +labelObject->GetPerimeter(); //takes physical voxel size into account!!!
         std::cout << std::endl;
         }
 
@@ -157,22 +162,24 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    std::cout << "Label" << "\t"
-	      << "Total" << "\t"
-	      << "Union" << "\t" // Jaccard
-	      << "Mean" << "\t" // Dice
-	      << "Similarity" << "\t"
-	      << "False-" << "\t"
-	      << "False+" << "\t"
+    std::cout << std::setw(10)
+	      << "Label" << "\t" << std::setw(10)
+	      << "Total" << "\t" << std::setw(10)
+	      << "Union" << "\t" << std::setw(10) // Jaccard
+	      << "Mean" << "\t" << std::setw(10) // Dice
+	      << "Simi" << "\t" << std::setw(10)
+	      << "False-" << "\t" << std::setw(10)
+	      << "False+" << "\t" << std::setw(10)
 	      << std::endl;
 
-    std::cout << 0 << "\t" // label 0 for total (not bg)
-	      << filter3->GetTotalOverlap() << "\t"
-	      << filter3->GetUnionOverlap() << "\t"
-	      << filter3->GetMeanOverlap() << "\t"
-	      << filter3->GetVolumeSimilarity() << "\t"
-	      << filter3->GetFalseNegativeError() << "\t"
-	      << filter3->GetFalsePositiveError() << "\t"
+    std::cout << "all" << "\t" << std::setw(10) // label 0 for total (not bg)
+	      << std::fixed << std::setprecision(5) << std::right
+	      << filter3->GetTotalOverlap() << "\t" << std::setw(10)
+	      << filter3->GetUnionOverlap() << "\t" << std::setw(10)
+	      << filter3->GetMeanOverlap() << "\t" << std::setw(10)
+	      << filter3->GetVolumeSimilarity() << "\t" << std::setw(10)
+	      << filter3->GetFalseNegativeError() << "\t" << std::setw(10)
+	      << filter3->GetFalsePositiveError() << "\t" << std::setw(10)
 	      << std::endl;
 
     typename FilterType3::MapType labelMap3 = filter3->GetLabelSetMeasures();
@@ -183,13 +190,14 @@ int DoIt(int argc, char *argv[]){
 
 	int label= (*it).first;
 
-	std::cout << label << "\t"
-		  << filter3->GetTargetOverlap(label) << "\t"
-		  << filter3->GetUnionOverlap(label) << "\t"
-		  << filter3->GetMeanOverlap(label) << "\t"
-		  << filter3->GetVolumeSimilarity(label) << "\t"
-		  << filter3->GetFalseNegativeError(label) << "\t"
-		  << filter3->GetFalsePositiveError(label) << "\t"
+	std::cout << label << "\t" << std::setw(10)
+		  << std::fixed << std::setprecision(5) << std::right
+		  << filter3->GetTargetOverlap(label) << "\t" << std::setw(10)
+		  << filter3->GetUnionOverlap(label) << "\t" << std::setw(10)
+		  << filter3->GetMeanOverlap(label) << "\t" << std::setw(10)
+		  << filter3->GetVolumeSimilarity(label) << "\t" << std::setw(10)
+		  << filter3->GetFalseNegativeError(label) << "\t" << std::setw(10)
+		  << filter3->GetFalsePositiveError(label) << "\t" << std::setw(10)
 		  << std::endl;
 	}
 
