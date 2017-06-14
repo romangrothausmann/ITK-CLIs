@@ -56,7 +56,7 @@ SET(Required_Packages
 
 FIND_PACKAGE (ITK REQUIRED)
 IF ( ITK_FOUND )
-      INCLUDE( ${USE_ITK_FILE} )
+      INCLUDE( ${ITK_USE_FILE} ) # https://stackoverflow.com/questions/33583101/cmake-3-4-0-including-multiple-files#33585398
 ENDIF( ITK_FOUND )
 
 
