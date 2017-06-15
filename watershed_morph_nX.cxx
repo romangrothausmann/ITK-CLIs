@@ -13,6 +13,7 @@
 #include <itkHMinimaImageFilter.h>
 #include <itkRegionalMinimaImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
+#include <itkCastImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
@@ -91,8 +92,8 @@ int DoIt(int argc, char *argv[]){
     uint8_t NumberOfExtraWS= atoi(argv[6]);
     char* interMedOutPrefix= NULL;
 
-    if(argc == 8)
-        interMedOutPrefix= argv[7];
+    if(argc == 9)
+        interMedOutPrefix= argv[8];
 
     typename LabelImageType::Pointer markerImg;
     typename LabelImageType::Pointer borderImg;
@@ -136,17 +137,28 @@ int DoIt(int argc, char *argv[]){
         rm->AddObserver(itk::AnyEvent(), eventCallbackITK);
         rm->Update();
 
-        // connected component labelling
-        typedef itk::ConnectedComponentImageFilter<MaskImageType, LabelImageType> CCType;
-        typename CCType::Pointer labeller = CCType::New();
-        labeller->SetFullyConnected(ws0_conn);
-        labeller->SetInput(rm->GetOutput());
-        labeller->AddObserver(itk::AnyEvent(), eventCallbackITK);
-        labeller->Update();
-        labelImg= labeller->GetOutput();
-        labelImg->DisconnectPipeline();
-        labelCnt= labeller->GetObjectCount();
-        }
+	if(atoi(argv[7])){
+	    // connected component labelling
+	    typedef itk::ConnectedComponentImageFilter<MaskImageType, LabelImageType> CCType;
+	    typename CCType::Pointer labeller = CCType::New();
+	    labeller->SetFullyConnected(ws0_conn);
+	    labeller->SetInput(rm->GetOutput());
+	    labeller->AddObserver(itk::AnyEvent(), eventCallbackITK);
+	    labeller->Update();
+	    labelImg= labeller->GetOutput();
+	    labelImg->DisconnectPipeline();
+	    labelCnt= labeller->GetObjectCount();
+	    }
+	else{
+	    typedef itk::CastImageFilter<MaskImageType, LabelImageType> CType;
+	    typename CType::Pointer caster = CType::New();
+	    caster->SetInput(rm->GetOutput());
+	    caster->Update();
+	    labelImg= caster->GetOutput();
+	    labelImg->DisconnectPipeline();
+	    labelCnt= 1;
+	    }
+	}
 
     if(interMedOutPrefix){
         lwriter->SetFileName(std::string(interMedOutPrefix) + "_limg.mha");
@@ -392,13 +404,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 7 ){
+    if ( argc < 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " invert level WS-extra-runs"
+                  << " label-disconnected-minima"
                   << " interMedOutPrefix"
                   << std::endl;
 
