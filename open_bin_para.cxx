@@ -52,7 +52,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(thr->GetOutput());
     filter->SetRadius(atof(argv[4]));
     filter->SetUseImageSpacing(atoi(argv[5]));
-    filter->SafeBorderOff();//apparently opposite meaning
+    filter->SafeBorderOn(); //meaning changed?
     filter->CircularOn();
     filter->ReleaseDataFlagOn();
 
