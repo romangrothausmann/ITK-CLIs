@@ -7,6 +7,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageSeriesReader.h>
+#include <itkChangeInformationImageFilter.h>
 #include <itkImageFileWriter.h>
 
 #ifdef USE_SDI
@@ -18,7 +19,7 @@
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    const char offset= 2;
+    const char offset= 3;
     typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
@@ -51,6 +52,13 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 #else
+    try{
+        reader->UpdateOutputInformation();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
     reader->UseStreamingOn(); //optional, default: On
 #endif
 
@@ -61,16 +69,46 @@ int DoIt(int argc, char *argv[]){
     // monitorFilter->DebugOn();
 #endif
 
+    const typename InputImageType::Pointer& input= reader->GetOutput();
+
+    std::cerr << "input spacing: " << input->GetSpacing() << std::endl;
+
+    typename InputImageType::SpacingType outputSpacing= input->GetSpacing();
+    outputSpacing[Dimension-1]= atof(argv[2]);
+
+    std::cerr << "output spacing: " << outputSpacing << std::endl;
+
+
+    typedef itk::ChangeInformationImageFilter<InputImageType> FilterType;
+    typename FilterType::Pointer filter= FilterType::New();
+#ifndef USE_SDI
+    filter->SetInput(input);
+#else
+    filter->SetInput(monitorFilter->GetOutput());
+#endif
+    filter->ReleaseDataFlagOn();
+    filter->SetOutputSpacing(outputSpacing);
+    filter->ChangeSpacingOn();
+
+    FilterWatcher watcher1(filter);
+    try{
+        filter->UpdateOutputInformation();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[1]);
+    writer->SetInput(filter->GetOutput());
 #ifndef USE_SDI
-    writer->SetInput(reader->GetOutput());
     writer->UseCompressionOn(); //writing compressed is sole purpose of non-SDI version
 #else
-    writer->SetInput(monitorFilter->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
     writer->SetNumberOfStreamDivisions(names.size());
 #endif
@@ -265,10 +303,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 3 ){
+    if ( argc < 4 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Output_Image"
+                  << " spacing-of-last-dim"
                   << " Input_Images"
                   << std::endl;
 
@@ -282,7 +321,7 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[2], pixelType, componentType, compPerPixel, dimensionType);
+        GetImageType(argv[3], pixelType, componentType, compPerPixel, dimensionType);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
