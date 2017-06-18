@@ -1,5 +1,7 @@
 ////program for iterative itkMorphologicalWatershedFromMarkersImageFilter
-//01: based on template_02.cxx
+////using local min and local max for wsm on first derivative
+////similar to wsm on gradient img except that all max are regardes as bg markers
+//01: based on watershed_morph_nX.cxx
 
 #include <string>
 #include <sstream>
@@ -83,6 +85,7 @@ int DoIt(int argc, char *argv[]){
         }
 
     typename GreyImageType::Pointer input;
+    typename GreyImageType::Pointer iinput;
 
     bool ws0_conn= true;//true reduces amount of watersheds
     bool ws_conn= false;
@@ -95,7 +98,7 @@ int DoIt(int argc, char *argv[]){
         interMedOutPrefix= argv[7];
 
     typename LabelImageType::Pointer markerImg;
-    typename LabelImageType::Pointer borderImg;
+    typename MaskImageType::Pointer borderImg;
     typename GreyImageType::Pointer gradientImg;
     typename LabelImageType::Pointer labelImg;
     typename LabelImageType::PixelType labelCnt;
@@ -111,16 +114,29 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
     typename SSType::Pointer ss = SSType::New();
-    if(atoi(argv[4]))
-        ss->SetScale(-1); //invert by mul. with -1
-    else
-        ss->SetScale(1); //just convert to GreyImageType
-    //ss->SetScale(atof(argv[4]));//abs(scaling) > 1 does not help gm to be more pronounced!
+    ss->SetScale(-1); //invert by mul. with -1
     ss->SetInput(reader->GetOutput());
     ss->Update();
-    input= ss->GetOutput();
+
+    typedef itk::CastImageFilter<InputImageType, GreyImageType> CType;
+    typename CType::Pointer cast = CType::New();
+    cast->SetInput(reader->GetOutput());
+    cast->Update();
+
+    if(atoi(argv[4])){
+        input= ss->GetOutput();
+        iinput= cast->GetOutput();
+        }
+    else{
+        iinput= ss->GetOutput();
+        input= cast->GetOutput();
+        }
+
 
         {//scoped for better consistency
+
+        typename LabelImageType::Pointer lminImg;
+
         typedef itk::HMinimaImageFilter<GreyImageType, GreyImageType> HMType; //seems for hmin in-type==out-type!!!
         typename HMType::Pointer hm= HMType::New();
         hm->SetHeight(MinRelFacetSize);
@@ -146,6 +162,20 @@ int DoIt(int argc, char *argv[]){
         labelImg= labeller->GetOutput();
         labelImg->DisconnectPipeline();
         labelCnt= labeller->GetObjectCount();
+
+        // lmax as bg markers
+        hm->SetHeight(MinRelFacetSize);
+        hm->SetFullyConnected(ws0_conn);
+        hm->SetInput(iinput);
+        hm->Update();
+
+        rm->SetFullyConnected(ws0_conn);
+        rm->SetInput(hm->GetOutput());
+        rm->SetForegroundValue(labelCnt + 1);
+        rm->Update();
+
+        borderImg= rm->GetOutput();
+        borderImg->DisconnectPipeline();
         }
 
     if(interMedOutPrefix){
@@ -156,92 +186,64 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::MorphologicalWatershedFromMarkersImageFilter<GreyImageType, LabelImageType> MWatershedType;
     typename MWatershedType::Pointer ws = MWatershedType::New();
-    ws->SetMarkWatershedLine(NumberOfExtraWS); //use borders if higher order WS are wanted
-    ws->SetFullyConnected(ws0_conn);
     ws->SetInput(input);
-    ws->SetMarkerImage(labelImg);
     ws->AddObserver(itk::AnyEvent(), eventCallbackITK);
-    ws->Update();
 
-    if(NumberOfExtraWS > 0){
-	if(interMedOutPrefix){
-	    lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws0.mha");
-	    lwriter->SetInput(ws->GetOutput());
-	    lwriter->Update();
-	    }
+    // to combine the markers again
+    typedef itk::AddImageFilter<MaskImageType, LabelImageType, LabelImageType> AddType;
+    typename AddType::Pointer adder = AddType::New();
 
-	    {//scoped for better consistency
-	    // extract the watershed lines and combine with the orginal markers
-	    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThreshType;
-	    typename ThreshType::Pointer th = ThreshType::New();
-	    th->SetUpperThreshold(0);
-	    th->SetOutsideValue(0);
-	    // set the inside value to the number of markers + 1
-	    th->SetInsideValue(labelCnt + 1);
-	    th->SetInput(ws->GetOutput());
-	    th->Update();
-	    borderImg= th->GetOutput();
-	    borderImg->DisconnectPipeline();
-	    }
+    // to create gradient magnitude image
+    typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
+    typename GMType::Pointer gm = GMType::New();
 
-	// to combine the markers again
-	typedef itk::AddImageFilter<LabelImageType, LabelImageType, LabelImageType> AddType;
-	typename AddType::Pointer adder = AddType::New();
+    gm->AddObserver(itk::AnyEvent(), eventCallbackITK);
+    gradientImg= input;
 
-	// to create gradient magnitude image
-	typedef itk::GradientMagnitudeImageFilter<GreyImageType, GreyImageType> GMType;
-	typename GMType::Pointer gm = GMType::New();
+    ws->SetMarkWatershedLine(false); //no use for a border in higher stages
+    ws->SetFullyConnected(ws_conn);
 
-	gm->AddObserver(itk::AnyEvent(), eventCallbackITK);
-	gradientImg= input;
-
-	ws->SetMarkWatershedLine(false); //no use for a border in higher stages
-	ws->SetFullyConnected(ws_conn);
-
-	// to delete the background label
-	typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
-	typename ChangeLabType::Pointer ch= ChangeLabType::New();
-	ch->SetChange(labelCnt + 1, 0);
+    // to delete the background label
+    typedef itk::ChangeLabelImageFilter<LabelImageType, LabelImageType> ChangeLabType;
+    typename ChangeLabType::Pointer ch= ChangeLabType::New();
+    ch->SetChange(labelCnt + 1, 0);
 
 
-	for(char i= 0; i < NumberOfExtraWS; i++){
+    for(char i= 0; i < NumberOfExtraWS; i++){
 
-	    // Add the marker image to the watershed line image
-	    adder->SetInput1(borderImg);
-	    adder->SetInput2(labelImg);
-	    adder->Update();
-	    markerImg= adder->GetOutput();
-	    markerImg->DisconnectPipeline();
+        // Add the marker image to the watershed line image
+        adder->SetInput1(borderImg);
+        adder->SetInput2(labelImg);
+        adder->Update();
+        markerImg= adder->GetOutput();
+        markerImg->DisconnectPipeline();
 
-	    // compute a gradient
-	    gm->SetInput(gradientImg);
-	    gm->Update();
-	    gradientImg= gm->GetOutput();
-	    gradientImg->DisconnectPipeline();
+        // compute a gradient
+        gm->SetInput(gradientImg);
+        gm->Update();
+        gradientImg= gm->GetOutput();
+        gradientImg->DisconnectPipeline();
 
-	    // Now apply higher order watershed
-	    ws->SetInput(gradientImg);
-	    ws->SetMarkerImage(markerImg);
-	    ws->Update();
+        // Now apply higher order watershed
+        ws->SetInput(gradientImg);
+        ws->SetMarkerImage(markerImg);
+        ws->Update();
 
-	    // delete the background label
-	    ch->SetInput(ws->GetOutput());
-	    ch->Update();
-	    labelImg= ch->GetOutput();
-	    labelImg->DisconnectPipeline();
+        // delete the background label
+        ch->SetInput(ws->GetOutput());
+        ch->Update();
+        labelImg= ch->GetOutput();
+        labelImg->DisconnectPipeline();
 
-	    if(interMedOutPrefix){
-		std::stringstream sss;
-		sss << interMedOutPrefix << "_ws" << i+1 << ".mha";
-		lwriter->SetFileName(sss.str().c_str());
-		//lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws" + std::to_string(i+1) + ".mha");//c++11: std::to_string
-		lwriter->SetInput(labelImg);
-		lwriter->Update();
-		}
-	    }
+        if(interMedOutPrefix){
+            std::stringstream sss;
+            sss << interMedOutPrefix << "_ws" << i+1 << ".mha";
+            lwriter->SetFileName(sss.str().c_str());
+            //lwriter->SetFileName(std::string(interMedOutPrefix) + "_ws" + std::to_string(i+1) + ".mha");//c++11: std::to_string
+            lwriter->SetInput(labelImg);
+            lwriter->Update();
+            }
         }
-    else
-        labelImg= ws->GetOutput();
 
     typedef itk::ImageFileWriter<LabelImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -398,7 +400,7 @@ int main(int argc, char *argv[]){
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
-                  << " invert level WS-extra-runs"
+                  << " invert level WS-order(>=1)"
                   << " interMedOutPrefix"
                   << std::endl;
 

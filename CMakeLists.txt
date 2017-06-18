@@ -179,6 +179,11 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+SET(CurrentExe "watershed_morph_min-max_nX")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 ENDIF(ITKReview_FOUND LESS 0)
 
 SET(CurrentExe "gradient_mag")
