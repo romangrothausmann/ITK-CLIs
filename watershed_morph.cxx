@@ -49,37 +49,56 @@ int DoIt(int argc, char *argv[]){
         }
 
 
-    typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
-    typename SSType::Pointer ss = SSType::New();
-    if(atoi(argv[7]))
-        ss->SetScale(-1); //invert by mul. with -1
-    else
-        ss->SetScale(+1); //just convert to GreyImageType
-    ss->SetInput(reader->GetOutput());
-    ss->ReleaseDataFlagOn();
-    FilterWatcher watcherS(ss);
+    typename OutputImageType::Pointer output;
 
-    const typename GreyImageType::Pointer& input= ss->GetOutput();
+    if(atoi(argv[7])){ // GreyImageType for inversion, slower WS?
+	typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
+	typename SSType::Pointer ss = SSType::New();
+	ss->SetScale(-1); //invert by mul. with -1
+	ss->SetInput(reader->GetOutput());
+	ss->ReleaseDataFlagOn();
+	FilterWatcher watcherS(ss);
 
-    typedef itk::MorphologicalWatershedImageFilter<GreyImageType, OutputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->SetLevel(atoi(argv[4]));
-    filter->SetFullyConnected(atoi(argv[5]));
-    filter->SetMarkWatershedLine(atoi(argv[6]));
+	typedef itk::MorphologicalWatershedImageFilter<GreyImageType, OutputImageType> FilterType;
+	typename FilterType::Pointer filter= FilterType::New();
+	filter->SetInput(ss->GetOutput());
+	filter->ReleaseDataFlagOn();
+	filter->SetLevel(atoi(argv[4]));
+	filter->SetFullyConnected(atoi(argv[5]));
+	filter->SetMarkWatershedLine(atoi(argv[6]));
 
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	FilterWatcher watcher1(filter);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	
+	output= filter->GetOutput();
+	}
+    else{ // avoid GreyImageType if not necessary, faster WS?
+	typedef itk::MorphologicalWatershedImageFilter<InputImageType, OutputImageType> FilterType;
+	typename FilterType::Pointer filter= FilterType::New();
+	filter->SetInput(reader->GetOutput());
+	filter->ReleaseDataFlagOn();
+	filter->SetLevel(atoi(argv[4]));
+	filter->SetFullyConnected(atoi(argv[5]));
+	filter->SetMarkWatershedLine(atoi(argv[6]));
 
+	FilterWatcher watcher1(filter);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+	output= filter->GetOutput();
+	}
+
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -98,7 +117,7 @@ int DoIt(int argc, char *argv[]){
 
     return EXIT_SUCCESS;
 
-      }
+    }
 
 
 template<typename InputComponentType, typename InputPixelType>
