@@ -8,6 +8,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkShiftScaleImageFilter.h>
 #include <itkMorphologicalWatershedImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -16,9 +17,18 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
+#ifdef USE_FLOAT
+    typedef float  TRealType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double TRealType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
+
     typedef uint32_t  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<TRealType, Dimension>        GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
@@ -38,11 +48,20 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
+    typename SSType::Pointer ss = SSType::New();
+    if(atoi(argv[7]))
+        ss->SetScale(-1); //invert by mul. with -1
+    else
+        ss->SetScale(+1); //just convert to GreyImageType
+    ss->SetInput(reader->GetOutput());
+    ss->ReleaseDataFlagOn();
+    FilterWatcher watcherS(ss);
 
+    const typename GreyImageType::Pointer& input= ss->GetOutput();
 
-    typedef itk::MorphologicalWatershedImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::MorphologicalWatershedImageFilter<GreyImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->ReleaseDataFlagOn();
@@ -209,13 +228,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc != 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " level connectivity lines"
+                  << " invert"
                   << std::endl;
 
         return EXIT_FAILURE;

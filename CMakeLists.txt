@@ -142,8 +142,9 @@ IF(ITKReview_FOUND LESS 0)
 ELSE(ITKReview_FOUND LESS 0)
   MESSAGE(STATUS "Programs dependent on ITKReview will be compiled!")
 
-SET(CurrentExe "watershed_morph")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+SET(CurrentExe "watershed_morph_f32")
+ADD_EXECUTABLE(${CurrentExe}  "watershed_morph.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
