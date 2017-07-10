@@ -1,4 +1,5 @@
 ////program for labelling connected components
+/// similar (same? except for the output type (LabelMap)?) to BinaryImageToLabelMapFilter
 //01: based on template_02.cxx
 
 

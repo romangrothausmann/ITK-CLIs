@@ -1,4 +1,6 @@
 ////program for itkLabelShapeOpeningImageFilter
+/// for binary images: using ConnectedComponentImageFilter and than LabelShapeOpeningImageFilter is similar (same?) as BinaryShapeOpeningImageFilter
+/// BinaryShapeOpeningImageFilter uses a LabelMap instad of a normal image: BinaryImageToLabelMapFilter -> ShapeOpeningLabelMapFilter
 //01: based on keepNobj.cxx
 
 
