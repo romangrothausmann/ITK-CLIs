@@ -1,11 +1,22 @@
 ////program for itkBinaryOpenParaImageFilter
-//01: based on template.cxx
+///not using another template level (DoIt2) to avoid long compilation times and large binaries.
+//01: based on open_bin_para.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkBinaryThresholdImageFilter.h>
+
+#if FILTER == 'O' // https://stackoverflow.com/questions/2335888/how-to-compare-string-in-c-conditional-preprocessor-directives#23763798
 #include <itkBinaryOpenParaImageFilter.h>
+#elif FILTER == 'C'
+#include <itkBinaryCloseParaImageFilter.h>
+#elif FILTER == 'E'
+#include <itkBinaryErodeParaImageFilter.h>
+#elif FILTER == 'D'
+#include <itkBinaryDilateParaImageFilter.h>
+#endif
+
 #include <itkImageFileWriter.h>
 
 
@@ -47,12 +58,22 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherThr(thr);
 
 
+#if FILTER == 'O'
     typedef itk::BinaryOpenParaImageFilter<OutputImageType> FilterType;
+#elif FILTER == 'C'
+    typedef itk::BinaryCloseParaImageFilter<OutputImageType> FilterType;
+#elif FILTER == 'E'
+    typedef itk::BinaryErodeParaImageFilter<OutputImageType> FilterType;
+#elif FILTER == 'D'
+    typedef itk::BinaryDilateParaImageFilter<OutputImageType> FilterType;
+#endif
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(thr->GetOutput());
     filter->SetRadius(atof(argv[4]));
     filter->SetUseImageSpacing(atoi(argv[5]));
+#if FILTER == 'O' || FILTER == 'C' // https://stackoverflow.com/questions/3390603/can-boolean-operators-be-used-with-the-preprocessor
     filter->SafeBorderOn(); //meaning changed?
+#endif
     filter->CircularOn();
     filter->ReleaseDataFlagOn();
 
