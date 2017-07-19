@@ -83,6 +83,7 @@ int DoIt(int argc, char *argv[]){
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
         labelObject= labelMap->GetNthLabelObject(label);//GetNthLabelObject essential in case of not consecutive labels! (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
+	// check for new measures (e.g. OBB): https://itk.org/Doxygen/html/classitk_1_1ShapeLabelObject.html
         std::cout
             << +labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
         for (unsigned int i= 0; i < Dimension; i++)
@@ -99,7 +100,7 @@ int DoIt(int argc, char *argv[]){
         std::cout
             //<< labelObject->GetFeretDiameter() << "\t"
             //<< labelObject->GetElongation() << "\t"
-            //<< labelObject->GetRoundness() << "\t"
+            //<< labelObject->GetRoundness() << "\t" // Lehmann2008 Sec. 8.2: Roundness here is calc. like Sphericity: Psi= Ss(V)/S
             //<< labelObject->GetFlatness() << "\t"
             //<< labelObject->GetEquivalentSphericalRadius() << "\t"
             //<< labelObject->GetEquivalentSphericalPerimeter() << "\t"
