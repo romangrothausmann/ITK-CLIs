@@ -6,8 +6,7 @@
 
 #include "itkFilterWatcher.h" 
 #include <itkImageFileReader.h>
-#include <itkSmoothingRecursiveGaussianImageFilter.h>//works on each component independently, e.g. for RGB, ND kernel by default
-//#include <itkRecursiveGaussianImageFilter.h>//can stream, needs slightly less memory, ONLY one dimension (SetDirection)!!!
+#include <itkDiscreteGaussianImageFilter.h>
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -59,12 +58,12 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::RecursiveGaussianImageFilter<InputImageType, ProcessImageType> FilterType;
+    typedef itk::DiscreteGaussianImageFilter<InputImageType, ProcessImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetSigma(atof(argv[4]));
+    filter->SetVariance(atof(argv[4]));
     //filter->InPlaceOn();//no effect if InputImageType != ProcessImageType !
-    //filter->ReleaseDataFlagOn();
+    filter->ReleaseDataFlagOn();
 
 
     FilterWatcher watcher1(filter);
