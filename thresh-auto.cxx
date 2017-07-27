@@ -1,5 +1,5 @@
-////program for
-//01: based on template.cxx
+////program for calculating auto thresholds
+//01: based on template.cxx and Modules/Filtering/Thresholding/include/itkHistogramThresholdImageFilter.hxx
 
 
 #include <complex>
@@ -9,27 +9,28 @@
 #include <itkImageFileWriter.h>
 
 
+template<typename CalcType>
+CalcType::OutputType calcIt(THistogram hist){
+    
+    typename CalcType::Pointer calculator= CalcType::New();
+    calculator->SetInput(input);
+    
+    FilterWatcher watcherC(calculator);
+    watcherI.QuietOn();
+    watcherI.ReportTimeOn();
+    try{
+        calculator->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
 
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
+    CalcType::OutputType thr= calculator->GetOutput();
+    std::cout << calculator->GetNameOfClass() << ": " << thr << std::endl;
 
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
-
-
+    return(thr);
+}
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
@@ -38,10 +39,6 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
@@ -63,17 +60,17 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-
-    typedef itk::<InputImageType> FilterType;
+    typedef itk::ImageToHistogramFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
+    typename FilterType::HistogramSizeType hsize(input->GetNumberOfComponentsPerPixel());
+    hsize.Fill(this->GetNumberOfHistogramBins());
+    filter->SetHistogramSize(hsize);
+    filter->SetAutoMinimumMaximum(this->GetAutoMinimumMaximum());
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
     try{
         filter->Update();
         }
@@ -82,6 +79,25 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    switch (argv[3]){
+    case "Huang"|"all":{
+        typedef CalcType itk::HuangThresholdCalculator<FilterType::HistogramType>;
+        thr= calcIt<CalcType>(filter->GetOutput());
+        } break;
+    case "Intermodes"|"all":{
+        typedef CalcType itk::IntermodesThresholdCalculator<FilterType::HistogramType>;
+        thr= calcIt<CalcType>(filter->GetOutput());
+        } break;
+
+	
+    default:
+        std::cerr << "Threshold type not handled!" << std::endl;
+        break;
+        }//switch
+
+
+    if(argv[2] == '-' || strcmp(argv[3], "all"))
+	return EXIT_SUCCESS;
 
     const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
 
