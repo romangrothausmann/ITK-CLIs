@@ -274,34 +274,34 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
         typedef unsigned char InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
         } break;
-    // case itk::ImageIOBase::CHAR:{         // int8_t
-    //     typedef char InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::USHORT:{       // uint16_t
-    //     typedef unsigned short InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::SHORT:{        // int16_t
-    //     typedef short InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::UINT:{         // uint32_t
-    //     typedef unsigned int InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::INT:{          // int32_t
-    //     typedef int InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::ULONG:{        // uint64_t
-    //     typedef unsigned long InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::LONG:{         // int64_t
-    //     typedef long InputComponentType;
-    //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::CHAR:{         // int8_t
+        typedef char InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::USHORT:{       // uint16_t
+        typedef unsigned short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::SHORT:{        // int16_t
+        typedef short InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::UINT:{         // uint32_t
+        typedef unsigned int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::INT:{          // int32_t
+        typedef int InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::ULONG:{        // uint64_t
+        typedef unsigned long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType;
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        } break;
     // case itk::ImageIOBase::FLOAT:{        // float32
     //     typedef float InputComponentType;
     //     res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
