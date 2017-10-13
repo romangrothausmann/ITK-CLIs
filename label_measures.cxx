@@ -12,6 +12,7 @@
 #include <itkStatisticsImageFilter.h>
 
 #include <itkLabelImageToShapeLabelMapFilter.h>
+#include <itkNumericTraits.h>
 #include <itkShapeLabelObject.h>
 #include <itkLabelMap.h>
 
@@ -101,6 +102,7 @@ int DoIt(int argc, char *argv[]){
     filter2->ReleaseDataFlagOn();
     bool cp= atoi(argv[3]);
     filter2->SetComputePerimeter(cp);
+    filter2->SetBackgroundValue(itk::NumericTraits<typename FilterType2::OutputImagePixelType>::max());
 
     FilterWatcher watcher2(filter2);
     try{
