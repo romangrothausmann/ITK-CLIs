@@ -6,7 +6,8 @@
 #include <complex>
 
 #include "itkFilterWatcher.h"
-#include <itkImageFileReader.h>
+#include <itkImageSeriesReader.h>
+#include <itkChangeInformationImageFilter.h>
 #include <itkExtractImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -19,9 +20,19 @@
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    const char offset= 4;
-    if( argc != offset + 2*Dimension){
-        fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", offset + 2*Dimension - 1);
+    std::string line;
+    std::stringstream di(argv[3]);
+    std::vector<std::string> index;
+    while(std::getline(di,line,','))
+        index.push_back(line);
+    
+    std::stringstream ds(argv[4]);
+    std::vector<std::string> size;
+    while(std::getline(ds,line,','))
+        size.push_back(line);
+    
+    if(index.size() != Dimension || size.size() != Dimension){
+        fprintf(stderr, "%d parameters are needed for index and size!\n", Dimension);
         return EXIT_FAILURE;
         }
 
@@ -32,10 +43,20 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
-    typedef itk::ImageFileReader<InputImageType> ReaderType;
+    std::vector<std::string> names;
+    const char offset= 5;
+    for(unsigned int i = offset; i < argc; ++i)
+        names.push_back(argv[i]);
+
+    // List the files
+    for(unsigned int i = 0; i < names.size(); ++i)
+        std::cerr << "File: " << names[i] << std::endl;
+
+    typedef itk::ImageSeriesReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
-    reader->SetFileName(argv[1]);
+    ////reading compressed MHA/MHD is supported for streaming!
+    reader->SetFileNames(names);
     reader->ReleaseDataFlagOn();
     reader->UpdateOutputInformation();
 
@@ -48,9 +69,9 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::SizeType desiredSize;
 
     for (i= 0; i < Dimension; i++)
-        desiredStart[i]= atoi(argv[offset+i]);
+	desiredStart[i]= atoi(index[i].c_str());
     for (i= 0; i < Dimension; i++)
-        desiredSize[i]=  atoi(argv[offset+Dimension+i]);
+	desiredSize[i]=  atoi(size[i].c_str());
 
     typename InputImageType::RegionType desiredRegion(desiredStart, desiredSize);
     std::cerr << "desired region index: " << desiredRegion.GetIndex()
@@ -75,10 +96,36 @@ int DoIt(int argc, char *argv[]){
         }
 #endif
 
+    const typename InputImageType::Pointer& input= reader->GetOutput();
+
+    std::cerr << "input spacing: " << input->GetSpacing() << std::endl;
+
+    typename InputImageType::SpacingType outputSpacing= input->GetSpacing();
+    outputSpacing[Dimension-1]= atof(argv[2]);
+
+    std::cerr << "output spacing: " << outputSpacing << std::endl;
+
+
+    typedef itk::ChangeInformationImageFilter<InputImageType> CIFType;
+    typename CIFType::Pointer cif= CIFType::New();
+    cif->SetInput(input);
+    cif->ReleaseDataFlagOn();
+    cif->SetOutputSpacing(outputSpacing);
+    cif->ChangeSpacingOn();
+
+    FilterWatcher watcher(cif);
+    try{
+        cif->UpdateOutputInformation();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
 
     typedef itk::ExtractImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(reader->GetOutput());
+    filter->SetInput(cif->GetOutput());
     filter->SetExtractionRegion(desiredRegion);
     filter->SetDirectionCollapseToIdentity(); // This is required.
     filter->ReleaseDataFlagOn();
@@ -104,14 +151,14 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(argv[1]);
 #ifndef USE_SDI
     writer->SetInput(filter->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
+//    writer->UseCompressionOn(); //writing compressed is sole purpose of non-SDI version
 #else
     writer->SetInput(monitorFilter->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+    writer->SetNumberOfStreamDivisions(names.size());
 #endif
     try{
         writer->Update();
@@ -122,7 +169,7 @@ int DoIt(int argc, char *argv[]){
         }
 
 #ifdef USE_SDI
-    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){ // reports a warning if expected and actual # chunks differ
+    if (!monitorFilter->VerifyAllInputCanStream(names.size())){ // reports a warning if expected and actual # chunks differ
         // std::cerr << monitorFilter;
         }
 #endif
@@ -304,17 +351,15 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 5 ){
+    if ( argc < 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Input_Image"
                   << " Output_Image"
-#ifndef USE_SDI
-                  << " compress"
-#else
-                  << " stream-chunks"
-#endif
+                  << " spacing-of-last-dim"
                   << " index... size..."
+                  << " Input_Images"
+                  << std::endl
+                  << " index and size delimited by ','"
                   << std::endl;
 
         return EXIT_FAILURE;
@@ -327,7 +372,7 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[1], pixelType, componentType, compPerPixel, dimensionType);
+        GetImageType(argv[5], pixelType, componentType, compPerPixel, dimensionType);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
@@ -335,7 +380,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    return dispatch_cT(componentType, compPerPixel, pixelType, dimensionType, argc, argv);
+    return dispatch_cT(componentType, compPerPixel, pixelType, dimensionType + 1, argc, argv);
     }
 
 

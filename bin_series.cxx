@@ -117,10 +117,11 @@ int DoIt(int argc, char *argv[]){
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[1]);
-    writer->SetInput(filter->GetOutput());
 #ifndef USE_SDI
+    writer->SetInput(filter->GetOutput());
 //    writer->UseCompressionOn(); //writing compressed is sole purpose of non-SDI version
 #else
+    writer->SetInput(monitorFilter->GetOutput());
     writer->UseCompressionOff(); //writing compressed is not supported for streaming!
     writer->SetNumberOfStreamDivisions(names.size());
 #endif
@@ -133,7 +134,7 @@ int DoIt(int argc, char *argv[]){
         }
 
 #ifdef USE_SDI
-    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){ // reports a warning if expected and actual # chunks differ
+    if (!monitorFilter->VerifyAllInputCanStream(names.size())){ // reports a warning if expected and actual # chunks differ
         // std::cerr << monitorFilter;
         }
 #endif
