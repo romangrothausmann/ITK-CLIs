@@ -1,6 +1,7 @@
 ////program for itkResampleImageFilter
 //01: based on resample.cxx
-//    itkResampleImageFilter seems to need the whole input no matter what interpolator is used: see ll 538 Modules/Filtering/ImageGrid/include/itkResampleImageFilter.hxx
+//    itkResampleImageFilter seems to need the whole input no matter what interpolator is used: see GenerateInputRequestedRegion() in Modules/Filtering/ImageGrid/include/itkResampleImageFilter.hxx
+//       "So we do the easy thing and request the entire input image."
 
 
 #include <complex>

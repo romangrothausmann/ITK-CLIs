@@ -380,7 +380,8 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-## itkResampleImageFilter seems to need the whole input no matter what interpolator is used: see ll 538 Modules/Filtering/ImageGrid/include/itkResampleImageFilter.hxx
+## itkResampleImageFilter seems to need the whole input no matter what interpolator is used: see GenerateInputRequestedRegion() in Modules/Filtering/ImageGrid/include/itkResampleImageFilter.hxx
+##       "So we do the easy thing and request the entire input image."
 # SET(CurrentExe "resample_SDI")
 # ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 # TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
