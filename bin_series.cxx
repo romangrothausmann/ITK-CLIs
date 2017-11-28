@@ -6,7 +6,8 @@
 #include <complex>
 
 #include "itkFilterWatcher.h"
-#include <itkImageFileReader.h>
+#include <itkImageSeriesReader.h>
+#include <itkChangeInformationImageFilter.h>
 #include <itkBinShrinkImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -24,11 +25,21 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    std::vector<std::string> names;
 
-    typedef itk::ImageFileReader<InputImageType> ReaderType;
+    const char offset= 4;
+    for(unsigned int i = offset; i < argc; ++i)
+        names.push_back(argv[i]);
+
+    // List the files
+    for(unsigned int i = 0; i < names.size(); ++i)
+        std::cerr << "File: " << names[i] << std::endl;
+
+    typedef itk::ImageSeriesReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
-    reader->SetFileName(argv[1]);
+    ////reading compressed MHA/MHD is supported for streaming!
+    reader->SetFileNames(names);
     reader->ReleaseDataFlagOn();
 #ifndef USE_SDI
     FilterWatcher watcherI(reader);
@@ -41,16 +52,48 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#else
+    try{
+        reader->UpdateOutputInformation();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+    reader->UseStreamingOn(); //optional, default: On
 #endif
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    std::cerr << "input spacing: " << input->GetSpacing() << std::endl;
+
+    typename InputImageType::SpacingType outputSpacing= input->GetSpacing();
+    outputSpacing[Dimension-1]= atof(argv[2]);
+
+    std::cerr << "output spacing: " << outputSpacing << std::endl;
+
+
+    typedef itk::ChangeInformationImageFilter<InputImageType> CIFType;
+    typename CIFType::Pointer cif= CIFType::New();
+    cif->SetInput(input);
+    cif->ReleaseDataFlagOn();
+    cif->SetOutputSpacing(outputSpacing);
+    cif->ChangeSpacingOn();
+
+    FilterWatcher watcher(cif);
+    try{
+        cif->UpdateOutputInformation();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
 
 
     typedef itk::BinShrinkImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->SetShrinkFactors(atoi(argv[4]));
+    filter->SetInput(cif->GetOutput());
+    filter->SetShrinkFactors(atoi(argv[3]));
     filter->ReleaseDataFlagOn();
 
 #ifndef USE_SDI
@@ -73,14 +116,13 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-#ifndef USE_SDI
+    writer->SetFileName(argv[1]);
     writer->SetInput(filter->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
+#ifndef USE_SDI
+//    writer->UseCompressionOn(); //writing compressed is sole purpose of non-SDI version
 #else
-    writer->SetInput(monitorFilter->GetOutput());
-    writer->UseCompressionOff(); //writer->SetUseCompression(atoi(argv[3]));//writing compressed is not supported for streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(names.size());
 #endif
     try{
         writer->Update();
@@ -273,38 +315,17 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Input_Image"
                   << " Output_Image"
-#ifndef USE_SDI
-                  << " compress"
-#else
-                  << " stream-chunks"
-#endif
+                  << " spacing-of-last-dim"
                   << " bin"
+                  << " Input_Images"
                   << std::endl;
 
         return EXIT_FAILURE;
         }
-
-    if(atoi(argv[3]) < 0){
-        std::cerr << "3rd parameter must not be negative" << std::endl;
-        return EXIT_FAILURE;
-        }
-
-#ifndef USE_SDI
-    if(atoi(argv[3]) > 1){
-        std::cerr << "compress must be 0 or 1 (to avoid confusion with stream-chunks of SDI version" << std::endl;
-        return EXIT_FAILURE;
-        }
-#else
-    if(atoi(argv[3]) < 2){
-        std::cerr << "stream-chunks must be > 1 (or use non-SDI version)" << std::endl;
-        return EXIT_FAILURE;
-        }
-#endif
 
 
     itk::ImageIOBase::IOPixelType pixelType;
@@ -314,7 +335,7 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[1], pixelType, componentType, compPerPixel, dimensionType);
+        GetImageType(argv[4], pixelType, componentType, compPerPixel, dimensionType);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
@@ -322,7 +343,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    return dispatch_cT(componentType, compPerPixel, pixelType, dimensionType, argc, argv);
+    return dispatch_cT(componentType, compPerPixel, pixelType, dimensionType + 1, argc, argv);
     }
 
 
