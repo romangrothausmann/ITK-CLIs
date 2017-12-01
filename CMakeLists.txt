@@ -198,8 +198,14 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 ENDIF(ITKReview_FOUND LESS 0)
 
-SET(CurrentExe "gradient_mag")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+SET(CurrentExe "gradient_mag_f32")
+ADD_EXECUTABLE(${CurrentExe}  "gradient_mag.cxx")
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "gradient_mag_f64")
+ADD_EXECUTABLE(${CurrentExe}  "gradient_mag.cxx")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 

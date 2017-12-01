@@ -30,7 +30,14 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType;
+#ifdef USE_FLOAT
+    typedef float  TRealType;
+    std::cerr << "Using single precision (float)." << std::endl;
+#else
+    typedef double TRealType;
+    std::cerr << "Using double precision (double)." << std::endl;
+#endif
+    typedef TRealType  OutputPixelType;
     
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
