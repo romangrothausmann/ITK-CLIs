@@ -25,7 +25,13 @@ int DoIt(int argc, char *argv[]){
     std::cerr << "Using double precision (double)." << std::endl;
 #endif
 
+#ifdef USE_UI32
     typedef uint32_t  OutputPixelType;
+    std::cerr << "Using uInt32." << std::endl;
+#else
+    typedef uint64_t  OutputPixelType;
+    std::cerr << "Using uInt64." << std::endl;
+#endif
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<TRealType, Dimension>        GreyImageType;
