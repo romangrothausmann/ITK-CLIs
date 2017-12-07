@@ -7,6 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkRGBPixel.h>
+#include <itkVectorToRGBImageAdaptor.h>
 #include <itkVectorCastImageFilter.h>
 #include <itkRGBToLuminanceImageFilter.h>
 #include <itkImageFileWriter.h>
@@ -17,7 +18,7 @@ template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef InputComponentType OutputPixelType;
-    typedef itk::RGBPixel<InputComponentType>  RGBPixelType;
+    typedef itk::RGBPixel<unsigned char> RGBPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<RGBPixelType, Dimension> RGBImageType;
@@ -41,15 +42,20 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-    typedef itk::VectorCastImageFilter<InputImageType, RGBImageType> CastType;
+    typedef itk::VectorToRGBImageAdaptor<InputImageType> AdaptorOutputType;
+    typename AdaptorOutputType::Pointer adaptOutput = AdaptorOutputType::New();
+    adaptOutput->SetImage(input);
+    typedef itk::VectorCastImageFilter<AdaptorOutputType, RGBImageType> CastType;
     typename CastType::Pointer caster = CastType::New();
-    caster->SetInput(input);
+    caster->SetInput(adaptOutput);
     caster->ReleaseDataFlagOn();
+    FilterWatcher watcherC(caster);
 
     typedef itk::RGBToLuminanceImageFilter<RGBImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(caster->GetOutput());
     filter->ReleaseDataFlagOn();
+    FilterWatcher watcherF(filter);
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -99,10 +105,10 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::RGB:{
+    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::VECTOR:{
         typedef itk::VariableLengthVector<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
