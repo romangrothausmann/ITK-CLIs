@@ -1,4 +1,4 @@
-////program for itkRGBToVectorImageAdaptor
+////program for itkRGBToLuminanceImageFilter
 //01: based on template.cxx
 
 
@@ -6,7 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkRGBToVectorImageAdaptor.h>
+#include <itkRGBToLuminanceImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -14,7 +14,10 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
+    typedef InputComponentType OutputPixelType;
+    
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -34,17 +37,17 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-    typedef itk::RGBToVectorImageAdaptor<InputImageType> FilterType;
+    typedef itk::RGBToLuminanceImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetImage(input);
+    filter->SetInput(input);
     filter->ReleaseDataFlagOn();
 
-    typedef itk::ImageFileWriter<FilterType>  WriterType;
+    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(filter);
+    writer->SetInput(filter->GetOutput());
     writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
