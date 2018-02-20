@@ -7,7 +7,6 @@
 #include <itkLabelImageToShapeLabelMapFilter.h>
 #include <itkShapeLabelObject.h>
 #include <itkLabelMap.h>
-#include <itkImageFileWriter.h>
 
 
 
