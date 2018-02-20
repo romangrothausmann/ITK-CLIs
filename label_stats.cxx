@@ -62,6 +62,9 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     bool cp= atoi(argv[3]);
     filter->SetComputePerimeter(cp);
+    filter->SetComputeFeretDiameter(0);
+    filter->SetComputeHistogram(0);
+    // filter->SetNumberOfBins();
 
     FilterWatcher watcher1(filter);
     try{
@@ -98,13 +101,23 @@ int DoIt(int argc, char *argv[]){
     std::cout << "\tvoxel\tVphy";
     if (cp)
         std::cout << "\tAphy";
+
+    std::cout << "\tmin\tmax\tmean\tstd\tvar\tsum";
+    
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tgrav_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tmin_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tmax_" << i+1;
+
     std::cout << std::endl;
 
     const LabelObjectType* labelObject;
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
         labelObject= labelMap->GetNthLabelObject(label);//GetNthLabelObject essential in case of not consecutive labels! (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
-    	// check for new measures (e.g. OBB): https://itk.org/Doxygen/html/classitk_1_1ShapeLabelObject.html
+    	// check for new measures (e.g. OBB): https://itk.org/Doxygen/html/classitk_1_1StatisticsLabelObject.html
         std::cout
             << +labelObject->GetLabel() << "\t";//essential in case of not consecutive labels!
         for (unsigned int i= 0; i < Dimension; i++)
@@ -129,6 +142,28 @@ int DoIt(int argc, char *argv[]){
             << +labelObject->GetPhysicalSize();
         if (cp)
             std::cout << "\t" << +labelObject->GetPerimeter();//takes physical voxel size into account!!!
+	
+	std::cout
+	    << "\t" << +labelObject->GetMinimum()
+	    << "\t" << +labelObject->GetMaximum()
+	    << "\t" << +labelObject->GetMean()
+	    << "\t" << +labelObject->GetStandardDeviation()
+	    << "\t" << +labelObject->GetVariance()
+	    // << "\t" << +labelObject->GetKurtosis()
+	    // << "\t" << +labelObject->GetSkewness()
+	    // << "\t" << +labelObject->GetWeightedElongation()
+	    // << "\t" << +labelObject->GetWeightedFlatness()
+	    // << "\t" << +labelObject->GetHistogram()
+	    // << "\t" << +labelObject->GetMedian() // needs histogram
+	    << "\t" << +labelObject->GetSum();
+
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << "\t" << +labelObject->GetCenterOfGravity()[i];
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << "\t" << +labelObject->GetMinimumIndex()[i];
+        for (unsigned int i= 0; i < Dimension; i++)
+            std::cout << "\t" << +labelObject->GetMaximumIndex()[i];
+	
         std::cout << std::endl;
         }
 
