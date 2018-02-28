@@ -66,6 +66,7 @@ INCLUDE_DIRECTORIES(
   # $ENV{HOME}/itk/itkWindowImageFilter/
   # $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
   # filter/internal/
+  ${CMAKE_CURRENT_SOURCE_DIR}/tclap/include/
   )
 
 SET(Libraries
@@ -726,6 +727,11 @@ TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "label_measures")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "segmentLung")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)

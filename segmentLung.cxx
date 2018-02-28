@@ -1,22 +1,84 @@
-/////program to watershed an image
-//01: based on template.cxx and old watershed_morph.cxx
-
-////ToDo:
-// - set OutputPixelType depending on amount of found WS
-// -- or issue warning if amount of found WS do not fit into pixel value range
-
-
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkShiftScaleImageFilter.h>
 #include <itkMorphologicalWatershedImageFilter.h>
 #include <itkImageFileWriter.h>
+#include <itkAreaClosingImageFilter.h>
+
+#include "tclap/CmdLine.h"
+
+bool WriteDebug = false;
+
+template <class TImage>
+void writeIm(typename TImage::Pointer Im, std::string filename)
+{
+  typedef typename itk::ImageFileWriter<TImage> WriterType;
+  typename WriterType::Pointer writer = WriterType::New();
+  writer->SetInput(Im);
+  writer->SetFileName(filename.c_str());
+  writer->Update();
+}
 
 
+template <class ImType>
+void writeImDbg(typename ImType::Pointer Im, std::string filename)
+{
+  if (WriteDebug)
+    {
+    writeIm<ImType>(Im, filename);
+    }
+}
+
+
+typedef class CmdLineType
+{
+public:
+  std::string InputImFile, OutputImFile;
+  int DarkVol;
+  bool Compression;
+} CmdLineType;
+
+void ParseCmdLine(int argc, char* argv[],
+                  CmdLineType &CmdLineObj
+                  )
+{
+  using namespace TCLAP;
+  try
+    {
+    // Define the command line object.
+    CmdLine cmd("Lung segmentation prototype ", ' ', "0.9");
+
+
+    ValueArg<std::string> inArg("i","input","input image",true,"result","string");
+    cmd.add( inArg );
+
+    ValueArg<std::string> outArg("o","output","output image", true,"","string");
+    cmd.add( outArg );
+
+    ValueArg<int> darkArg("","darkvol","Volume used for attribute closing (voxels)",true, 3000, "integer");
+    cmd.add( darkArg);
+
+    SwitchArg compArg("c", "compress", "write compressed images", false);
+    cmd.add( compArg );
+
+   // Parse the args.
+    cmd.parse( argc, argv );
+
+    // Get the value parsed by each arg.
+    CmdLineObj.InputImFile = inArg.getValue();
+    CmdLineObj.OutputImFile = outArg.getValue();
+    CmdLineObj.DarkVol = darkArg.getValue();
+    CmdLineObj.Compression = compArg.getValue();
+
+    }
+  catch (ArgException &e)  // catch any exceptions
+    {
+    std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+    }
+}
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int argc, char *argv[]){
-
+int DoIt(CmdLineType &CmdLineObj){
 #ifdef USE_FLOAT
     typedef float  TRealType;
     std::cerr << "Using single precision (float)." << std::endl;
@@ -32,16 +94,14 @@ int DoIt(int argc, char *argv[]){
     typedef uint64_t  OutputPixelType;
     std::cerr << "Using uInt64." << std::endl;
 #endif
-
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<TRealType, Dimension>        GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
-
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
-    reader->SetFileName(argv[1]);
+    reader->SetFileName(CmdLineObj.InputImFile);
     reader->ReleaseDataFlagOn();
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
@@ -54,65 +114,21 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    // Try some preprocessing - attribute filter
+    typedef typename itk::AreaClosingImageFilter<InputImageType, InputImageType> ACType;
+    typename ACType::Pointer areaclose = ACType::New();
+    areaclose->SetInput(reader->GetOutput());
+    areaclose->SetLambda(CmdLineObj.DarkVol);
+    areaclose->UseImageSpacingOff();
 
-    typename OutputImageType::Pointer output;
-
-    if(atoi(argv[7])){ // GreyImageType for inversion, slower WS?
-	typedef itk::ShiftScaleImageFilter<InputImageType, GreyImageType> SSType;
-	typename SSType::Pointer ss = SSType::New();
-	ss->SetScale(-1); //invert by mul. with -1
-	ss->SetInput(reader->GetOutput());
-	ss->ReleaseDataFlagOn();
-	FilterWatcher watcherS(ss);
-
-	typedef itk::MorphologicalWatershedImageFilter<GreyImageType, OutputImageType> FilterType;
-	typename FilterType::Pointer filter= FilterType::New();
-	filter->SetInput(ss->GetOutput());
-	filter->ReleaseDataFlagOn();
-	filter->SetLevel(atoi(argv[4]));
-	filter->SetFullyConnected(atoi(argv[5]));
-	filter->SetMarkWatershedLine(atoi(argv[6]));
-
-	FilterWatcher watcher1(filter);
-	try{
-	    filter->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	
-	output= filter->GetOutput();
-	}
-    else{ // avoid GreyImageType if not necessary, faster WS?
-	typedef itk::MorphologicalWatershedImageFilter<InputImageType, OutputImageType> FilterType;
-	typename FilterType::Pointer filter= FilterType::New();
-	filter->SetInput(reader->GetOutput());
-	filter->ReleaseDataFlagOn();
-	filter->SetLevel(atoi(argv[4]));
-	filter->SetFullyConnected(atoi(argv[5]));
-	filter->SetMarkWatershedLine(atoi(argv[6]));
-
-	FilterWatcher watcher1(filter);
-	try{
-	    filter->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-
-	output= filter->GetOutput();
-	}
-
-
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
+    typedef itk::ImageFileWriter<InputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
+    
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[3]));
+    writer->SetFileName(CmdLineObj.OutputImFile);
+    writer->SetInput(areaclose->GetOutput());
+    writer->SetUseCompression(CmdLineObj.Compression);
     try{
         writer->Update();
         }
@@ -122,22 +138,23 @@ int DoIt(int argc, char *argv[]){
         }
 
     return EXIT_SUCCESS;
+ 
 
-    }
+}
 
 
 template<typename InputComponentType, typename InputPixelType>
-int dispatch_D(size_t dimensionType, int argc, char *argv[]){
+int dispatch_D(size_t dimensionType, CmdLineType &CmdLineObj){
     int res= 0;
     switch (dimensionType){
     // case 1:
     //     res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
     //     break;
     case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+        res= DoIt<InputComponentType, InputPixelType, 2>(CmdLineObj);
         break;
     case 3:
-        res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
+        res= DoIt<InputComponentType, InputPixelType, 3>(CmdLineObj);
         break;
     default:
         std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
@@ -147,7 +164,7 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     }
 
 template<typename InputComponentType>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, CmdLineType &CmdLineObj){
     int res= 0;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
@@ -156,7 +173,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     switch (pixelType){
     case itk::ImageIOBase::SCALAR:{
         typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
@@ -166,7 +183,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     return res;
     }
 
-int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, CmdLineType &CmdLineObj){
     int res= 0;
 
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
@@ -176,43 +193,43 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     switch (componentType){
     case itk::ImageIOBase::UCHAR:{        // uint8_t
         typedef unsigned char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::CHAR:{         // int8_t
         typedef char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::USHORT:{       // uint16_t
         typedef unsigned short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::SHORT:{        // int16_t
         typedef short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::UINT:{         // uint32_t
         typedef unsigned int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::INT:{          // int32_t
         typedef int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::ULONG:{        // uint64_t
         typedef unsigned long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::LONG:{         // int64_t
         typedef long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::FLOAT:{        // float32
         typedef float InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::DOUBLE:{       // float64
         typedef double InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, CmdLineObj);
         } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
@@ -222,11 +239,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     return res;
     }
 
-
-////from http://itk-users.7.n7.nabble.com/Pad-image-with-0-but-keep-its-type-what-ever-it-is-td27442.html
-//namespace itk{
-  // Description:
-  // Get the PixelType and ComponentType from fileName
 
 void GetImageType (std::string fileName,
     itk::ImageIOBase::IOPixelType &pixelType,
@@ -251,24 +263,16 @@ void GetImageType (std::string fileName,
     }
 
 
-
 int main(int argc, char *argv[]){
-    if ( argc != 8 ){
-        std::cerr << "Missing Parameters: "
-                  << argv[0]
-                  << " Input_Image"
-                  << " Output_Image"
-                  << " compress"
-                  << " level connectivity lines"
-                  << " invert"
-                  << std::endl;
 
-        return EXIT_FAILURE;
-        }
+  // tclap processing - see if you like it.
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
     size_t dimensionType;
+
+    CmdLineType CmdLineObj;
+    ParseCmdLine(argc, argv, CmdLineObj);
 
 
     try {
@@ -280,11 +284,6 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
+    return dispatch_cT(componentType, pixelType, dimensionType,CmdLineObj);
     }
-
-
-
-
-
 
