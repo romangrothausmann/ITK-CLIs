@@ -3,8 +3,8 @@
 #include <itkShiftScaleImageFilter.h>
 #include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkImageFileWriter.h>
-#include "itkFlatStructuringElement.h"
-#include "itkGrayscaleErodeImageFilter.h"
+#include <itkFlatStructuringElement.h>
+#include <itkGrayscaleErodeImageFilter.h>
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeOpeningLabelMapFilter.h>
 #include <itkOtsuThresholdImageFilter.h>
@@ -26,285 +26,273 @@ bool Compression = false;
 std::string DebugDir("./");
 
 template <class TImage>
-void writeIm(typename TImage::Pointer Im, std::string filename)
-{
-  typedef typename itk::ImageFileWriter<TImage> WriterType;
-  typename WriterType::Pointer writer = WriterType::New();
-  FilterWatcher watcherO(writer);
-  writer->SetInput(Im);
-  writer->SetUseCompression(Compression);
-  writer->SetFileName(filename.c_str());
-  writer->Update();
-}
+void writeIm(typename TImage::Pointer Im, std::string filename){
+    typedef typename itk::ImageFileWriter<TImage> WriterType;
+    typename WriterType::Pointer writer = WriterType::New();
+    FilterWatcher watcherO(writer);
+    writer->SetInput(Im);
+    writer->SetUseCompression(Compression);
+    writer->SetFileName(filename.c_str());
+    writer->Update();
+    }
 
 
 template <class ImType>
-void writeImDbg(typename ImType::Pointer Im, std::string filename)
-{
-  if (WriteDebug)
-    {
-    writeIm<ImType>(Im, DebugDir + filename);
-    }
-}
-
-
-typedef class CmdLineType
-{
-public:
-  std::string InputImFile, OutputImFile;
-  int DarkVol, markererode, markervolume, MorphGradRad;
-  float SmoothGradSigma;
-  bool Compression;
-} CmdLineType;
-
-void ParseCmdLine(int argc, char* argv[],
-                  CmdLineType &CmdLineObj
-                  )
-{
-  using namespace TCLAP;
-  try
-    {
-    // Define the command line object.
-    CmdLine cmd("Lung segmentation prototype ", ' ', "0.9");
-
-
-    ValueArg<std::string> inArg("i","input","input image",true,"result","string");
-    cmd.add( inArg );
-
-    ValueArg<std::string> outArg("o","output","output image", true,"","string");
-    cmd.add( outArg );
-
-    // ValueArg<int> darkArg("","darkvol","Volume used for attribute closing (voxels)",true, 3000, "integer");
-    // cmd.add( darkArg);
-
-    ValueArg<int> markererodeArg("","markererode","Radius of erosion of thresholded image used to produce markers (voxels)",true, 30, "integer");
-    cmd.add( markererodeArg);
-
-    ValueArg<int> markervolArg("","markervol","Minimum volume of a bright marker",false, 100000, "integer");
-    cmd.add( markervolArg);
-
-    ValueArg<int> morphgradArg("","morphgradrad","Radius of SE for morphologicad gradient",false, 1, "integer");
-    cmd.add( morphgradArg );
-
-    ValueArg<float> gradsmoothArg("","gradsigma","Smoothing kernel (voxels)",false, 1, "float");
-    cmd.add( gradsmoothArg);
-
-    SwitchArg compArg("c", "compress", "write compressed images", false);
-    cmd.add( compArg );
-
-    SwitchArg dbgArg("d", "debug", "write debug images", false);
-    cmd.add( dbgArg );
-
-    ValueArg<std::string> dfArg("","debugfolder","location for debug images", false,"/tmp/","string");
-    cmd.add( dfArg );
-
-
-   // Parse the args.
-    cmd.parse( argc, argv );
-
-    // Get the value parsed by each arg.
-    CmdLineObj.InputImFile = inArg.getValue();
-    CmdLineObj.OutputImFile = outArg.getValue();
-    //CmdLineObj.DarkVol = darkArg.getValue();
-    CmdLineObj.Compression = compArg.getValue();
-    CmdLineObj.markererode = markererodeArg.getValue();
-    CmdLineObj.markervolume = markervolArg.getValue();
-    CmdLineObj.MorphGradRad = morphgradArg.getValue();
-    CmdLineObj.SmoothGradSigma = gradsmoothArg.getValue();
-    Compression = CmdLineObj.Compression;
-    WriteDebug = dbgArg.getValue();
-    DebugDir = dfArg.getValue();
-    }
-  catch (ArgException &e)  // catch any exceptions
-    {
-    std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
-    }
-}
-
-template <class InImType, class OutputImType> 
-typename OutputImType::Pointer findBrightMarkers(typename InImType::Pointer input, 
-						 int erad,
-						 int volumeopening,
-						 int &MaxLabel)
-{
-  // basic marker finding. Threshold, erode binary and keep larger
-  // blobs
-  typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
-  typedef typename itk::OtsuThresholdImageFilter<InImType, BinaryType> OtsuType;
-  typename OtsuType::Pointer Otsu = OtsuType::New();
-  Otsu->SetInput(input);
-  Otsu->SetInsideValue(0);
-  Otsu->SetOutsideValue(1);
-
-  typedef typename itk::ParabolicErodeImageFilter<BinaryType, BinaryType> EType;
-  typename EType::Pointer eroder = EType::New();
-  eroder->SetInput(Otsu->GetOutput());
-  eroder->SetUseImageSpacing(false);
-  eroder->SetScale(erad);
-
-  typedef typename itk::BinaryImageToShapeLabelMapFilter<BinaryType> LabellerType;
-  typename LabellerType::Pointer labeller = LabellerType::New();
-  labeller->SetInput(eroder->GetOutput());
-  labeller->SetInputForegroundValue(1);
-  typedef typename itk::ShapeOpeningLabelMapFilter<typename LabellerType::OutputImageType> ShapeFilterType;
-  typename ShapeFilterType::Pointer shapefilter = ShapeFilterType::New();
-  shapefilter->SetLambda(volumeopening);
-  shapefilter->SetAttribute("NumberOfPixels");
-  shapefilter->SetInput(labeller->GetOutput());
-  
-  typedef typename itk::LabelMapToLabelImageFilter<typename LabellerType::OutputImageType, OutputImType> ConvType;
-
-  typename ConvType::Pointer tolabIm = ConvType::New();
-  tolabIm->SetInput(shapefilter->GetOutput());
-  
-  typename OutputImType::Pointer result = tolabIm->GetOutput();
-  result->Update();
-  result->DisconnectPipeline();
-  MaxLabel = labeller->GetOutput()->GetNumberOfLabelObjects();
-  return(result);
-}
-
-template <class InImType, class OutputImType> 
-typename OutputImType::Pointer findDarkMarkersWS(typename InImType::Pointer input,
-						 typename OutputImType::Pointer markers,
-						 int BorderLabel)
-{
-  // Tesselate the bright regions by doing a watershed on the inverted
-  // input.
-  // Invert by subtracting input from the max, so no funny business
-  // with unsigned types.
-
-  typedef typename itk::StatisticsImageFilter<InImType> StatsType;
-  typename StatsType::Pointer stats = StatsType::New();
-  stats->SetInput(input);
-  stats->Update();
-
-  typedef typename itk::ShiftScaleImageFilter<InImType, InImType> ShiftType;
-  typename ShiftType::Pointer shifter = ShiftType::New();
-  shifter->SetInput(input);
-  shifter->SetShift(- stats->GetMaximum() );
-  shifter->SetScale(-1);
-
-  typedef typename itk::MorphologicalWatershedFromMarkersImageFilter<InImType, OutputImType> WSType;
-  typename WSType::Pointer ws = WSType::New();
-  FilterWatcher watcherws1(ws);
-  ws->SetInput(shifter->GetOutput());
-  ws->SetMarkerImage(markers);
-  ws->SetMarkWatershedLine(true);
-
-  typedef typename itk::BinaryThresholdImageFilter<OutputImType, OutputImType> SelectType;
-  typename SelectType::Pointer select = SelectType::New();
-  select->SetInput(ws->GetOutput());
-  select->SetLowerThreshold(0);
-  select->SetUpperThreshold(0);
-  select->SetInsideValue(BorderLabel);
-  select->SetOutsideValue(0);
-  // Sometimes a foreground marker will be incorrectly broken in
-  // two, leading to an undesired boundary splitting them after the
-  // first stage watershed. This will make it difficult to join
-  // regions in the interactive phase. Can try removing pixels from
-  // the dark markers, if they are too bright. The importance of this
-  // step will depend on a combination of the erosion size and topology.
-  // Take mean and SD of markers, discard borders that are bright by
-  // this metric.
-
-  // compute label stats of the marker image - should be a binary, but
-  // I can't be bothered thresholding again. We'll just use the stats
-  // of the biggest marker. TODO combine mean, count and SD - look up
-  // the formula
-  typedef typename itk::LabelStatisticsImageFilter<InImType, OutputImType> LabStatsType;
-
-  typename LabStatsType::Pointer markstats = LabStatsType::New();
-  markstats->SetInput(input);
-  markstats->SetLabelInput(markers);
-  markstats->Update();
-  
-  typedef typename LabStatsType::ValidLabelValuesContainerType ValidLabelValuesType;
-  int msize = 0;
-  typename LabStatsType::RealType MMean(0), MSigma(0);
-
-  for (typename ValidLabelValuesType::const_iterator vIt=markstats->GetValidLabelValues().begin();
-      vIt != markstats->GetValidLabelValues().end();
-      ++vIt)
-    {
-    if ( markstats->HasLabel(*vIt) )
-      {
-      typename OutputImType::PixelType labelValue = *vIt;
-      if ( markstats->GetCount(labelValue) > msize) 
-	{
-	msize = markstats->GetCount(labelValue);
-	MMean = markstats->GetMean(labelValue);
-	MSigma = markstats->GetSigma(labelValue);
+void writeImDbg(typename ImType::Pointer Im, std::string filename){
+    if (WriteDebug){
+	writeIm<ImType>(Im, DebugDir + filename);
 	}
-      }
     }
 
-  std::cout << "Stats " << msize << " " << MMean << " " << MSigma << std::endl;
 
-  // create a mask to remove bright border pixels
-  typedef typename itk::Image<unsigned char, InImType::ImageDimension > MaskImType;
-  typedef typename itk::BinaryThresholdImageFilter<InImType, MaskImType> ThreshType;
-  typename ThreshType::Pointer thresh = ThreshType::New();
-  thresh->SetInput(input);
-  thresh->SetUpperThreshold(MMean - MSigma);
-  thresh->SetInsideValue(1);
-  thresh->SetOutsideValue(0);
+typedef class CmdLineType{
+public:
+    std::string InputImFile, OutputImFile;
+    int DarkVol, markererode, markervolume, MorphGradRad;
+    float SmoothGradSigma;
+    bool Compression;
+    } CmdLineType;
 
-  typedef typename itk::MaskImageFilter<OutputImType, MaskImType, OutputImType> MaskerType;
-  typename MaskerType::Pointer masker = MaskerType::New();
-  masker->SetInput(select->GetOutput());
-  masker->SetInput2(thresh->GetOutput());
+void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
+    using namespace TCLAP;
+    try {
+	// Define the command line object.
+	CmdLine cmd("Lung segmentation prototype ", ' ', "0.9");
 
-  typename OutputImType::Pointer result = masker->GetOutput();
-  result->Update();
-  result->DisconnectPipeline();
-  return(result);
-}
+
+	ValueArg<std::string> inArg("i","input","input image",true,"result","string");
+	cmd.add( inArg );
+
+	ValueArg<std::string> outArg("o","output","output image", true,"","string");
+	cmd.add( outArg );
+
+	// ValueArg<int> darkArg("","darkvol","Volume used for attribute closing (voxels)",true, 3000, "integer");
+	// cmd.add( darkArg);
+
+	ValueArg<int> markererodeArg("","markererode","Radius of erosion of thresholded image used to produce markers (voxels)",true, 30, "integer");
+	cmd.add( markererodeArg);
+
+	ValueArg<int> markervolArg("","markervol","Minimum volume of a bright marker",false, 100000, "integer");
+	cmd.add( markervolArg);
+
+	ValueArg<int> morphgradArg("","morphgradrad","Radius of SE for morphologicad gradient",false, 1, "integer");
+	cmd.add( morphgradArg );
+
+	ValueArg<float> gradsmoothArg("","gradsigma","Smoothing kernel (voxels)",false, 1, "float");
+	cmd.add( gradsmoothArg);
+
+	SwitchArg compArg("c", "compress", "write compressed images", false);
+	cmd.add( compArg );
+
+	SwitchArg dbgArg("d", "debug", "write debug images", false);
+	cmd.add( dbgArg );
+
+	ValueArg<std::string> dfArg("","debugfolder","location for debug images", false,"/tmp/","string");
+	cmd.add( dfArg );
+
+
+	// Parse the args.
+	cmd.parse( argc, argv );
+
+	// Get the value parsed by each arg.
+	CmdLineObj.InputImFile = inArg.getValue();
+	CmdLineObj.OutputImFile = outArg.getValue();
+	//CmdLineObj.DarkVol = darkArg.getValue();
+	CmdLineObj.Compression = compArg.getValue();
+	CmdLineObj.markererode = markererodeArg.getValue();
+	CmdLineObj.markervolume = markervolArg.getValue();
+	CmdLineObj.MorphGradRad = morphgradArg.getValue();
+	CmdLineObj.SmoothGradSigma = gradsmoothArg.getValue();
+	Compression = CmdLineObj.Compression;
+	WriteDebug = dbgArg.getValue();
+	DebugDir = dfArg.getValue();
+	}
+    catch (ArgException &e)  // catch any exceptions
+	{
+	std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+	}
+    }
+
+template <class InImType, class OutputImType> 
+typename OutputImType::Pointer findBrightMarkers(
+    typename InImType::Pointer input, 
+    int erad,
+    int volumeopening,
+    int &MaxLabel){
+    // basic marker finding. Threshold, erode binary and keep larger
+    // blobs
+    typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
+    typedef typename itk::OtsuThresholdImageFilter<InImType, BinaryType> OtsuType;
+    typename OtsuType::Pointer Otsu = OtsuType::New();
+    Otsu->SetInput(input);
+    Otsu->SetInsideValue(0);
+    Otsu->SetOutsideValue(1);
+
+    typedef typename itk::ParabolicErodeImageFilter<BinaryType, BinaryType> EType;
+    typename EType::Pointer eroder = EType::New();
+    eroder->SetInput(Otsu->GetOutput());
+    eroder->SetUseImageSpacing(false);
+    eroder->SetScale(erad);
+
+    typedef typename itk::BinaryImageToShapeLabelMapFilter<BinaryType> LabellerType;
+    typename LabellerType::Pointer labeller = LabellerType::New();
+    labeller->SetInput(eroder->GetOutput());
+    labeller->SetInputForegroundValue(1);
+    typedef typename itk::ShapeOpeningLabelMapFilter<typename LabellerType::OutputImageType> ShapeFilterType;
+    typename ShapeFilterType::Pointer shapefilter = ShapeFilterType::New();
+    shapefilter->SetLambda(volumeopening);
+    shapefilter->SetAttribute("NumberOfPixels");
+    shapefilter->SetInput(labeller->GetOutput());
+  
+    typedef typename itk::LabelMapToLabelImageFilter<typename LabellerType::OutputImageType, OutputImType> ConvType;
+
+    typename ConvType::Pointer tolabIm = ConvType::New();
+    tolabIm->SetInput(shapefilter->GetOutput());
+  
+    typename OutputImType::Pointer result = tolabIm->GetOutput();
+    result->Update();
+    result->DisconnectPipeline();
+    MaxLabel = labeller->GetOutput()->GetNumberOfLabelObjects();
+    return(result);
+    }
+
+template <class InImType, class OutputImType> 
+typename OutputImType::Pointer findDarkMarkersWS(
+    typename InImType::Pointer input,
+    typename OutputImType::Pointer markers,
+    int BorderLabel){
+    // Tesselate the bright regions by doing a watershed on the inverted
+    // input.
+    // Invert by subtracting input from the max, so no funny business
+    // with unsigned types.
+
+    typedef typename itk::StatisticsImageFilter<InImType> StatsType;
+    typename StatsType::Pointer stats = StatsType::New();
+    stats->SetInput(input);
+    stats->Update();
+
+    typedef typename itk::ShiftScaleImageFilter<InImType, InImType> ShiftType;
+    typename ShiftType::Pointer shifter = ShiftType::New();
+    shifter->SetInput(input);
+    shifter->SetShift(- stats->GetMaximum() );
+    shifter->SetScale(-1);
+
+    typedef typename itk::MorphologicalWatershedFromMarkersImageFilter<InImType, OutputImType> WSType;
+    typename WSType::Pointer ws = WSType::New();
+    FilterWatcher watcherws1(ws);
+    ws->SetInput(shifter->GetOutput());
+    ws->SetMarkerImage(markers);
+    ws->SetMarkWatershedLine(true);
+
+    typedef typename itk::BinaryThresholdImageFilter<OutputImType, OutputImType> SelectType;
+    typename SelectType::Pointer select = SelectType::New();
+    select->SetInput(ws->GetOutput());
+    select->SetLowerThreshold(0);
+    select->SetUpperThreshold(0);
+    select->SetInsideValue(BorderLabel);
+    select->SetOutsideValue(0);
+    // Sometimes a foreground marker will be incorrectly broken in
+    // two, leading to an undesired boundary splitting them after the
+    // first stage watershed. This will make it difficult to join
+    // regions in the interactive phase. Can try removing pixels from
+    // the dark markers, if they are too bright. The importance of this
+    // step will depend on a combination of the erosion size and topology.
+    // Take mean and SD of markers, discard borders that are bright by
+    // this metric.
+
+    // compute label stats of the marker image - should be a binary, but
+    // I can't be bothered thresholding again. We'll just use the stats
+    // of the biggest marker. TODO combine mean, count and SD - look up
+    // the formula
+    typedef typename itk::LabelStatisticsImageFilter<InImType, OutputImType> LabStatsType;
+
+    typename LabStatsType::Pointer markstats = LabStatsType::New();
+    markstats->SetInput(input);
+    markstats->SetLabelInput(markers);
+    markstats->Update();
+  
+    typedef typename LabStatsType::ValidLabelValuesContainerType ValidLabelValuesType;
+    int msize = 0;
+    typename LabStatsType::RealType MMean(0), MSigma(0);
+
+    for (typename ValidLabelValuesType::const_iterator vIt=markstats->GetValidLabelValues().begin();
+	 vIt != markstats->GetValidLabelValues().end();
+	 ++vIt){
+	if ( markstats->HasLabel(*vIt) ){
+	    typename OutputImType::PixelType labelValue = *vIt;
+	    if ( markstats->GetCount(labelValue) > msize){
+		msize = markstats->GetCount(labelValue);
+		MMean = markstats->GetMean(labelValue);
+		MSigma = markstats->GetSigma(labelValue);
+		}
+	    }
+	}
+
+    std::cout << "Stats " << msize << " " << MMean << " " << MSigma << std::endl;
+
+    // create a mask to remove bright border pixels
+    typedef typename itk::Image<unsigned char, InImType::ImageDimension > MaskImType;
+    typedef typename itk::BinaryThresholdImageFilter<InImType, MaskImType> ThreshType;
+    typename ThreshType::Pointer thresh = ThreshType::New();
+    thresh->SetInput(input);
+    thresh->SetUpperThreshold(MMean - MSigma);
+    thresh->SetInsideValue(1);
+    thresh->SetOutsideValue(0);
+
+    typedef typename itk::MaskImageFilter<OutputImType, MaskImType, OutputImType> MaskerType;
+    typename MaskerType::Pointer masker = MaskerType::New();
+    masker->SetInput(select->GetOutput());
+    masker->SetInput2(thresh->GetOutput());
+
+    typename OutputImType::Pointer result = masker->GetOutput();
+    result->Update();
+    result->DisconnectPipeline();
+    return(result);
+    }
 
 template <class InImType> 
-typename InImType::Pointer computeGrad(typename InImType::Pointer input,
-					   int radius,
-					   float smooth)
-{
-  // Compute a smoothed morphological gradient - original - erosion
-  // optionally smooth it. This gradient will put the peaks on the
-  // outside of a thin dark line, which I think is desirable for this
-  // application.
-  typedef typename itk::FlatStructuringElement< InImType::ImageDimension > SRType;
-  typename SRType::RadiusType rad;
-  rad.Fill(radius);
-  SRType kernel;
+typename InImType::Pointer computeGrad(
+    typename InImType::Pointer input,
+    int radius,
+    float smooth){
+    // Compute a smoothed morphological gradient - original - erosion
+    // optionally smooth it. This gradient will put the peaks on the
+    // outside of a thin dark line, which I think is desirable for this
+    // application.
+    typedef typename itk::FlatStructuringElement< InImType::ImageDimension > SRType;
+    typename SRType::RadiusType rad;
+    rad.Fill(radius);
+    SRType kernel;
 
-  kernel = SRType::Box(rad);
+    kernel = SRType::Box(rad);
 
-  typedef typename itk::GrayscaleErodeImageFilter<InImType, InImType, SRType> ErodeType;
-  typename ErodeType::Pointer erode = ErodeType::New();
-  erode->SetInput(input);
-  erode->SetKernel(kernel);
+    typedef typename itk::GrayscaleErodeImageFilter<InImType, InImType, SRType> ErodeType;
+    typename ErodeType::Pointer erode = ErodeType::New();
+    erode->SetInput(input);
+    erode->SetKernel(kernel);
 
-  typedef typename itk::SubtractImageFilter<InImType, InImType, InImType> SubType;
-  typename SubType::Pointer sub = SubType::New();
-  sub->SetInput(input);
-  sub->SetInput2(erode->GetOutput());
-  typename InImType::Pointer result = sub->GetOutput();
-  typedef typename itk::SmoothingRecursiveGaussianImageFilter<InImType, InImType> SmoothType;
-  typename SmoothType::Pointer smoother = SmoothType::New();
+    typedef typename itk::SubtractImageFilter<InImType, InImType, InImType> SubType;
+    typename SubType::Pointer sub = SubType::New();
+    sub->SetInput(input);
+    sub->SetInput2(erode->GetOutput());
+    typename InImType::Pointer result = sub->GetOutput();
+    typedef typename itk::SmoothingRecursiveGaussianImageFilter<InImType, InImType> SmoothType;
+    typename SmoothType::Pointer smoother = SmoothType::New();
   
-  typename InImType::SpacingType sp = input->GetSpacing();
+    typename InImType::SpacingType sp = input->GetSpacing();
 
-  if (smooth > 0)
-    {
-    // Lazy - assume isotropic
-    float sigma = sp[0] * smooth;
-    smoother->SetInput(sub->GetOutput());
-    smoother->SetSigma(sigma);
-    result = smoother->GetOutput();
+    if (smooth > 0){
+	// Lazy - assume isotropic
+	float sigma = sp[0] * smooth;
+	smoother->SetInput(sub->GetOutput());
+	smoother->SetSigma(sigma);
+	result = smoother->GetOutput();
+	}
+
+    result->Update();
+    result->DisconnectPipeline();
+    return(result);
     }
-
-  result->Update();
-  result->DisconnectPipeline();
-  return(result);
-}
 #define USE_FLOAT
 #define USE_UI32
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
