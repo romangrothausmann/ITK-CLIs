@@ -79,6 +79,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::FastMarchingImageFilter<OutputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(rescaler2->GetOutput());
+    filter->SetStoppingValue(atof(argv[5]));
     filter->ReleaseDataFlagOn();
 
     typedef typename FilterType::NodeContainer  NodeContainer;
@@ -344,13 +345,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Source_Image"
                   << " Speed_Image"
                   << " Output_Image"
                   << " compress"
+                  << " stop-value"
                   << std::endl;
 
         return EXIT_FAILURE;
