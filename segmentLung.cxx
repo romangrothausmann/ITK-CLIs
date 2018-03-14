@@ -5,6 +5,8 @@
 #include <itkImageFileWriter.h>
 #include <itkFlatStructuringElement.h>
 #include <itkGrayscaleErodeImageFilter.h>
+#include <itkGrayscaleDilateImageFilter.h>
+#include <itkBlackTopHatImageFilter.h>
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeOpeningLabelMapFilter.h>
 #include <itkOtsuThresholdImageFilter.h>
@@ -18,7 +20,8 @@
 #include <itkSubtractImageFilter.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
 #include <itkChangeLabelImageFilter.h>
-
+#include <itkAddImageFilter.h>
+#include <itkConnectedComponentImageFilter.h>
 #include "tclap/CmdLine.h"
 
 bool WriteDebug = false;
@@ -48,7 +51,7 @@ void writeImDbg(typename ImType::Pointer Im, std::string filename){
 typedef class CmdLineType{
 public:
     std::string InputImFile, OutputImFile;
-    int DarkVol, markererode, markervolume, MorphGradRad;
+  int DarkVol, markererode, markervolume, MorphGradRad, darkmarkerdilate;
     float SmoothGradSigma;
     bool Compression;
     } CmdLineType;
@@ -71,6 +74,9 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 
 	ValueArg<int> markererodeArg("","markererode","Radius of erosion of thresholded image used to produce markers (voxels)",true, 30, "integer");
 	cmd.add( markererodeArg);
+
+	ValueArg<int> darkmarkerdilateArg("","darkmarkerdilate","Radius of dilation of image used to produce bloodcell markers (voxels)",true, 20, "integer");
+	cmd.add( darkmarkerdilateArg );
 
 	ValueArg<int> markervolArg("","markervol","Minimum volume of a bright marker",false, 100000, "integer");
 	cmd.add( markervolArg);
@@ -103,6 +109,7 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 	CmdLineObj.markervolume = markervolArg.getValue();
 	CmdLineObj.MorphGradRad = morphgradArg.getValue();
 	CmdLineObj.SmoothGradSigma = gradsmoothArg.getValue();
+	CmdLineObj.darkmarkerdilate = darkmarkerdilateArg.getValue();
 	Compression = CmdLineObj.Compression;
 	WriteDebug = dbgArg.getValue();
 	DebugDir = dfArg.getValue();
@@ -250,6 +257,68 @@ typename OutputImType::Pointer findDarkMarkersWS(
     return(result);
     }
 
+
+template <class InImType, class OutputImType> 
+typename OutputImType::Pointer findDarkMarkers(
+    typename InImType::Pointer input,
+    int radius,
+    int offset){
+
+  typename InImType::Pointer bthI = 0;
+  {
+    // Now for traditional dark markers 
+  typedef typename itk::FlatStructuringElement< InImType::ImageDimension > SRType;
+  typename SRType::RadiusType rad, bthrad;
+  rad.Fill(radius);
+  SRType kernel, bthkernel;
+  
+  kernel = SRType::Box(rad);
+  
+  typedef typename itk::GrayscaleDilateImageFilter<InImType, InImType, SRType> DilateType;
+  typename DilateType::Pointer dilate = DilateType::New();
+  dilate->SetInput(input);
+  dilate->SetKernel(kernel);
+
+  // black tophat filter - there is some sort of edge artifact -
+  // uneven brightness
+  typedef typename itk::BlackTopHatImageFilter<InImType, InImType, SRType> BTHType;
+  typename BTHType::Pointer bth = BTHType::New();
+  bthrad.Fill(radius*10);
+  bthkernel = SRType::Box(bthrad);
+  bth->SetInput(dilate->GetOutput());
+  bth->SetKernel(bthkernel);
+  bthI = bth->GetOutput();
+  bthI->Update();
+  bthI->DisconnectPipeline();
+  }
+  typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
+  typedef typename itk::OtsuThresholdImageFilter<InImType, OutputImType> OtsuType;
+  typename OtsuType::Pointer Otsu = OtsuType::New();
+  Otsu->SetInput(bthI);
+  Otsu->SetInsideValue(0);
+  Otsu->SetOutsideValue(offset);
+
+  // not sure if we need to worry about markerssofar - could use it to
+  // delete some. Instead we'll take the max later
+  typedef typename itk::ConnectedComponentImageFilter<OutputImType, OutputImType> LabellerType;
+  typename LabellerType::Pointer labeller = LabellerType::New();
+  labeller->SetInput(Otsu->GetOutput());
+  labeller->SetBackgroundValue(0);
+
+  typedef typename itk::AddImageFilter<OutputImType, OutputImType, OutputImType> AdderType;
+  typename AdderType::Pointer adder = AdderType::New();
+  adder->SetInput(Otsu->GetOutput());
+  adder->SetInput2(labeller->GetOutput());
+  
+  
+  typename OutputImType::Pointer result = adder->GetOutput();
+  result->Update();
+  result->DisconnectPipeline();
+  writeImDbg<OutputImType>(result, "mk.mha");
+  return(result);
+
+}
+
 template <class InImType> 
 typename InImType::Pointer computeGrad(
     typename InImType::Pointer input,
@@ -332,7 +401,7 @@ int DoIt(CmdLineType &CmdLineObj){
         return EXIT_FAILURE;
         }
 
-
+    
     std::cout << "Bright markers" << std::endl;
     // Markers will be large areas
     int ForegroundLabels = 0;
@@ -342,18 +411,34 @@ int DoIt(CmdLineType &CmdLineObj){
     std::cout << "Dark markers" << std::endl;
     typename OutputImageType::Pointer darkmarkers = findDarkMarkersWS<InputImageType, OutputImageType>(reader->GetOutput(), brightmarkers, ForegroundLabels+1);
 
+    std::cout << "Dark markers blood cells" << std::endl;
+
+    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkers<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.darkmarkerdilate, ForegroundLabels+2);
 
     typedef typename itk::MaximumImageFilter<OutputImageType, OutputImageType, OutputImageType> MaxType;
+    typename MaxType::Pointer combdark = MaxType::New();
+    combdark->SetInput(darkmarkers);
+    combdark->SetInput2(darkmarkersBC);
 
     typename MaxType::Pointer comb = MaxType::New();
     comb->SetInput(brightmarkers);
-    comb->SetInput2(darkmarkers);
-    
-        
+    comb->SetInput2(combdark->GetOutput());
+       
+    typename OutputImageType::Pointer finalmarkers = comb->GetOutput();
+    finalmarkers->Update();
+    finalmarkers->DisconnectPipeline();
+    // dispose intermediate steps
+    brightmarkers = 0;
+    darkmarkers = 0;
+    darkmarkersBC = 0;
+    comb = 0;
+    combdark = 0;
+
     std::cout << "Gradient" << std::endl;
     typename InputImageType::Pointer grad = computeGrad<InputImageType>(reader->GetOutput(), CmdLineObj.MorphGradRad, CmdLineObj.SmoothGradSigma);
 
-    writeImDbg<OutputImageType>(comb->GetOutput(), "markers.mha");
+    reader = 0;
+    writeImDbg<OutputImageType>(finalmarkers, "markers.mha");
 
     std::cout << "Watershed" << std::endl;
 
@@ -361,7 +446,7 @@ int DoIt(CmdLineType &CmdLineObj){
     typename WSType::Pointer ws = WSType::New();
     FilterWatcher watcherWS2(ws);
     ws->SetInput(grad);
-    ws->SetMarkerImage(comb->GetOutput());
+    ws->SetMarkerImage(finalmarkers);
     ws->SetMarkWatershedLine(false);
 
 
