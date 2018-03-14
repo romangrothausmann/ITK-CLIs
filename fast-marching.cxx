@@ -9,6 +9,7 @@
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkFastMarchingImageFilter.h>
+#include <itkMaskImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -79,7 +80,6 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(rescaler2->GetOutput());
     filter->SetStoppingValue(atof(argv[5]));
-    filter->SetBinaryMask(input2.GetPointer());
     filter->ReleaseDataFlagOn();
 
     typedef typename FilterType::NodeContainer  NodeContainer;
@@ -112,7 +112,15 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    ////remove infinity values within mask, there can still be inf in the output (as filter->GetLargeValue() is protected)!
+    typedef itk::MaskImageFilter<OutputImageType, InputImageType2, OutputImageType> MFilterType;
+    typename MFilterType::Pointer mask = MFilterType::New();
+    mask->SetInput(filter->GetOutput());
+    mask->SetMaskImage(input2);
+    mask->InPlaceOn();
+    FilterWatcher watcherM(mask);
+
+    const typename OutputImageType::Pointer& output= mask->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
