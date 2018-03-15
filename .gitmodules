@@ -1,0 +1,3 @@
+[submodule "filter/external/itkCountNeighborsImageFilter"]
+	path = filter/external/itkCountNeighborsImageFilter
+	url = https://github.com/romangrothausmann/midas-journal-801
