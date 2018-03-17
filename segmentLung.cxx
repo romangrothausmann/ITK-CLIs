@@ -22,6 +22,7 @@
 #include <itkChangeLabelImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
+#include <itkAttributeOpeningLabelMapFilter.h>
 #include "tclap/CmdLine.h"
 
 bool WriteDebug = false;
@@ -51,7 +52,7 @@ void writeImDbg(typename ImType::Pointer Im, std::string filename){
 typedef class CmdLineType{
 public:
     std::string InputImFile, OutputImFile;
-  int DarkVol, markererode, markervolume, MorphGradRad, darkmarkerdilate;
+  int DarkVol, markererode, markervolume, darkmarkervolume, MorphGradRad, darkmarkerdilate;
     float SmoothGradSigma;
     bool Compression;
     } CmdLineType;
@@ -81,6 +82,9 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 	ValueArg<int> markervolArg("","markervol","Minimum volume of a bright marker",false, 100000, "integer");
 	cmd.add( markervolArg);
 
+	ValueArg<int> darkmarkervolArg("","darkmarkervol","Maximum volume of a dark marker",false, 1000, "integer");
+	cmd.add( darkmarkervolArg);
+
 	ValueArg<int> morphgradArg("","morphgradrad","Radius of SE for morphologicad gradient",false, 1, "integer");
 	cmd.add( morphgradArg );
 
@@ -107,6 +111,7 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 	CmdLineObj.Compression = compArg.getValue();
 	CmdLineObj.markererode = markererodeArg.getValue();
 	CmdLineObj.markervolume = markervolArg.getValue();
+	CmdLineObj.darkmarkervolume = darkmarkervolArg.getValue();
 	CmdLineObj.MorphGradRad = morphgradArg.getValue();
 	CmdLineObj.SmoothGradSigma = gradsmoothArg.getValue();
 	CmdLineObj.darkmarkerdilate = darkmarkerdilateArg.getValue();
@@ -262,7 +267,8 @@ template <class InImType, class OutputImType>
 typename OutputImType::Pointer findDarkMarkers(
     typename InImType::Pointer input,
     int radius,
-    int offset){
+    int offset,
+    float volumeopening){
 
   typename InImType::Pointer bthI = 0;
   {
@@ -292,12 +298,50 @@ typename OutputImType::Pointer findDarkMarkers(
   bthI->DisconnectPipeline();
   }
   typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
-  typedef typename itk::OtsuThresholdImageFilter<InImType, OutputImType> OtsuType;
+  typedef typename itk::OtsuThresholdImageFilter<InImType, BinaryType> OtsuType;
   typename OtsuType::Pointer Otsu = OtsuType::New();
   Otsu->SetInput(bthI);
   Otsu->SetInsideValue(0);
-  Otsu->SetOutsideValue(offset);
+  Otsu->SetOutsideValue(1);
 
+  // retain small regions
+  typedef typename itk::BinaryImageToShapeLabelMapFilter<BinaryType> LabellerType;
+  typename LabellerType::Pointer labeller = LabellerType::New();
+  labeller->SetInput(Otsu->GetOutput());
+  labeller->SetInputForegroundValue(1);
+  typedef typename itk::ShapeOpeningLabelMapFilter<typename LabellerType::OutputImageType> ShapeFilterType;
+  typename ShapeFilterType::Pointer shapefilter = ShapeFilterType::New();
+  shapefilter->SetLambda(volumeopening);
+  shapefilter->SetAttribute("NumberOfPixels");
+  shapefilter->ReverseOrderingOn();
+  shapefilter->SetInput(labeller->GetOutput());
+
+  typename LabellerType::OutputImageType::Pointer rleObj = shapefilter->GetOutput();
+  rleObj->Update();
+  rleObj->DisconnectPipeline();
+
+  for(unsigned int i = 1; i < rleObj->GetNumberOfLabelObjects(); ++i)
+   {
+   typename LabellerType::OutputImageType::LabelObjectType* shapeLabelObject =
+     rleObj->GetNthLabelObject(i);
+     shapeLabelObject->SetLabel(i + offset + 1);
+   }
+ 
+
+
+  typedef typename itk::LabelMapToLabelImageFilter<typename LabellerType::OutputImageType, OutputImType> ConvType;
+
+  typename ConvType::Pointer tolabIm = ConvType::New();
+  tolabIm->SetInput(rleObj);
+  
+  typename OutputImType::Pointer result = tolabIm->GetOutput();
+  result->Update();
+  result->DisconnectPipeline();
+  writeImDbg<OutputImType>(result, "mk.mha");
+  return(result);
+
+
+#if 0
   // not sure if we need to worry about markerssofar - could use it to
   // delete some. Instead we'll take the max later
   typedef typename itk::ConnectedComponentImageFilter<OutputImType, OutputImType> LabellerType;
@@ -316,7 +360,7 @@ typename OutputImType::Pointer findDarkMarkers(
   result->DisconnectPipeline();
   writeImDbg<OutputImType>(result, "mk.mha");
   return(result);
-
+#endif
 }
 
 template <class InImType> 
@@ -401,7 +445,6 @@ int DoIt(CmdLineType &CmdLineObj){
         return EXIT_FAILURE;
         }
 
-    
     std::cout << "Bright markers" << std::endl;
     // Markers will be large areas
     int ForegroundLabels = 0;
@@ -413,7 +456,7 @@ int DoIt(CmdLineType &CmdLineObj){
 
     std::cout << "Dark markers blood cells" << std::endl;
 
-    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkers<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.darkmarkerdilate, ForegroundLabels+2);
+    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkers<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.darkmarkerdilate, ForegroundLabels+2, (float)CmdLineObj.darkmarkervolume);
 
     typedef typename itk::MaximumImageFilter<OutputImageType, OutputImageType, OutputImageType> MaxType;
     typename MaxType::Pointer combdark = MaxType::New();
@@ -449,7 +492,6 @@ int DoIt(CmdLineType &CmdLineObj){
     ws->SetMarkerImage(finalmarkers);
     ws->SetMarkWatershedLine(false);
 
-
     typedef typename itk::ChangeLabelImageFilter<OutputImageType, OutputImageType> ChangeType;
     typename ChangeType::Pointer changer = ChangeType::New();
     changer->SetInput(ws->GetOutput());
@@ -457,9 +499,7 @@ int DoIt(CmdLineType &CmdLineObj){
 
     writeIm<OutputImageType>(changer->GetOutput(), CmdLineObj.OutputImFile);
 
-
     return EXIT_SUCCESS;
- 
 
 }
 
