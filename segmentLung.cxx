@@ -10,6 +10,7 @@
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeOpeningLabelMapFilter.h>
 #include <itkOtsuThresholdImageFilter.h>
+#include <itkThresholdImageFilter.h>
 #include <itkParabolicErodeImageFilter.h>
 #include <itkLabelMapToLabelImageFilter.h>
 #include <itkStatisticsImageFilter.h>
@@ -23,6 +24,7 @@
 #include <itkAddImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
 #include <itkAttributeOpeningLabelMapFilter.h>
+#include <itkRegionalMaximaImageFilter.h>
 #include "tclap/CmdLine.h"
 
 bool WriteDebug = false;
@@ -52,8 +54,8 @@ void writeImDbg(typename ImType::Pointer Im, std::string filename){
 typedef class CmdLineType{
 public:
     std::string InputImFile, OutputImFile;
-  int DarkVol, markererode, markervolume, darkmarkervolume, MorphGradRad, darkmarkerdilate;
-    float SmoothGradSigma;
+  int DarkVol, markererode, markervolume, darkmarkervolume, MorphGradRad, darkmarkerdilate, BGCorrectionRadius;
+  float SmoothGradSigma, darksmooth;
     bool Compression;
     } CmdLineType;
 
@@ -76,20 +78,25 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 	ValueArg<int> markererodeArg("","markererode","Radius of erosion of thresholded image used to produce markers (voxels)",true, 30, "integer");
 	cmd.add( markererodeArg);
 
-	ValueArg<int> darkmarkerdilateArg("","darkmarkerdilate","Radius of dilation of image used to produce bloodcell markers (voxels)",true, 20, "integer");
-	cmd.add( darkmarkerdilateArg );
+//	ValueArg<int> darkmarkerdilateArg("","darkmarkerdilate","Radius of dilation of image used to produce bloodcell markers (voxels)",true, 20, "integer");
+//	cmd.add( darkmarkerdilateArg );
+	ValueArg<int> bgcorrectArg("","bgcorrect","Radius of tophat filter used in background illumination correction",true, 50, "integer");
+	cmd.add( bgcorrectArg );
 
 	ValueArg<int> markervolArg("","markervol","Minimum volume of a bright marker",false, 100000, "integer");
 	cmd.add( markervolArg);
 
-	ValueArg<int> darkmarkervolArg("","darkmarkervol","Maximum volume of a dark marker",false, 1000, "integer");
-	cmd.add( darkmarkervolArg);
+//	ValueArg<int> darkmarkervolArg("","darkmarkervol","Maximum volume of a dark marker",false, 1000, "integer");
+//	cmd.add( darkmarkervolArg);
 
 	ValueArg<int> morphgradArg("","morphgradrad","Radius of SE for morphologicad gradient",false, 1, "integer");
 	cmd.add( morphgradArg );
 
-	ValueArg<float> gradsmoothArg("","gradsigma","Smoothing kernel (voxels)",false, 1, "float");
+	ValueArg<float> gradsmoothArg("","gradsigma","Smoothing kernel (voxels) in gradient calculation",false, 1, "float");
 	cmd.add( gradsmoothArg);
+
+	ValueArg<float> darksmoothArg("","darksigma","Smoothing kernel (voxels) for regional minima (dark markers)",false, 5, "float");
+	cmd.add( darksmoothArg);
 
 	SwitchArg compArg("c", "compress", "write compressed images", false);
 	cmd.add( compArg );
@@ -111,10 +118,12 @@ void ParseCmdLine(int argc, char* argv[], CmdLineType &CmdLineObj){
 	CmdLineObj.Compression = compArg.getValue();
 	CmdLineObj.markererode = markererodeArg.getValue();
 	CmdLineObj.markervolume = markervolArg.getValue();
-	CmdLineObj.darkmarkervolume = darkmarkervolArg.getValue();
+	CmdLineObj.BGCorrectionRadius = bgcorrectArg.getValue();
+	//CmdLineObj.darkmarkervolume = darkmarkervolArg.getValue();
 	CmdLineObj.MorphGradRad = morphgradArg.getValue();
 	CmdLineObj.SmoothGradSigma = gradsmoothArg.getValue();
-	CmdLineObj.darkmarkerdilate = darkmarkerdilateArg.getValue();
+	CmdLineObj.darksmooth = darksmoothArg.getValue();
+	//CmdLineObj.darkmarkerdilate = darkmarkerdilateArg.getValue();
 	Compression = CmdLineObj.Compression;
 	WriteDebug = dbgArg.getValue();
 	DebugDir = dfArg.getValue();
@@ -262,7 +271,129 @@ typename OutputImType::Pointer findDarkMarkersWS(
     return(result);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+template <class InImType, class OutputImType> 
+typename OutputImType::Pointer findDarkMarkersMin(
+    typename InImType::Pointer input,
+    int BTHradius,
+    float smooth,
+    int offset) {
 
+// Take 2 of finding dark markers. Some red blood cells are very close
+// to the other dark structures, and aren't separated by simple
+// procedures, like those used in Take 1 (below). Thus we'll try
+// something more like a regional minima approach, but with some
+// tweaks to avoid the need for preflooding, and tricks to make it
+// faster.
+// Still need to adjust background
+
+// BTHradius - size of filter used to correct background (may not be
+// necessary in this approach.
+// smooth - smoothing kernel.
+// offset - added to the label values
+  typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
+
+  typename InImType::Pointer bthI = 0;
+  typename BinaryType::Pointer darkminI = 0;
+  {
+  typedef typename itk::FlatStructuringElement< InImType::ImageDimension > SRType;
+  typename SRType::RadiusType rad, bthrad;
+  rad.Fill(BTHradius);
+  SRType kernel, bthkernel;
+  
+  kernel = SRType::Box(rad);
+
+  // black tophat filter - there is some sort of edge artifact -
+  // uneven brightness
+  typedef typename itk::BlackTopHatImageFilter<InImType, InImType, SRType> BTHType;
+  typename BTHType::Pointer bth = BTHType::New();
+  bthrad.Fill(BTHradius);
+  bthkernel = SRType::Box(bthrad);
+  bth->SetInput(input);
+  bth->SetKernel(bthkernel);
+
+  typedef typename itk::SmoothingRecursiveGaussianImageFilter<InImType, InImType> SmoothType;
+  typename SmoothType::Pointer smoother = SmoothType::New();
+  
+  typename InImType::SpacingType sp = input->GetSpacing();
+  
+  if (smooth > 0){
+  // Lazy - assume isotropic
+  float sigma = sp[0] * smooth;
+  smoother->SetInput(bth->GetOutput());
+  smoother->SetSigma(sigma);
+  bthI = smoother->GetOutput();
+  }
+  bthI->Update();
+  bthI->DisconnectPipeline();
+  }
+  // Now we want to compute a threshold, and only look for dark makers
+  // in the dark part. However the black top hat has swapped things
+  // around
+  writeImDbg<InImType>(bthI, "smoothedBTH.mha");
+  {
+  // Use the otsu threshold filter, even though we only want the
+  // threshold value.
+  typedef typename itk::OtsuThresholdImageFilter<InImType, BinaryType> OtsuType;
+  typename OtsuType::Pointer Otsu = OtsuType::New();
+  Otsu->SetInput(bthI);
+  Otsu->SetInsideValue(0);
+  Otsu->SetOutsideValue(1);
+  Otsu->Update();
+
+  typename InImType::PixelType othresh = Otsu->GetThreshold();
+
+  // This is to set the areas we aren't interested to a value that the
+  // regional extrema filter will ignore.
+  typedef typename itk::ThresholdImageFilter<InImType> ThresholdType;
+  typename ThresholdType::Pointer tt = ThresholdType::New();
+  tt->SetInput(bthI);
+  tt->SetOutsideValue(itk::NumericTraits< typename InImType::PixelType >::NonpositiveMin() );
+  tt->ThresholdBelow(othresh);
+  
+  typedef typename itk::RegionalMaximaImageFilter<InImType, BinaryType> RegMaxType;
+  typename RegMaxType::Pointer rmax = RegMaxType::New();
+  FilterWatcher watcherrmax(rmax);
+  rmax->SetForegroundValue(1);
+  rmax->SetBackgroundValue(0);
+  rmax->SetInput(tt->GetOutput());
+  darkminI = rmax->GetOutput();
+  darkminI->Update();
+  darkminI->DisconnectPipeline();
+  writeImDbg<BinaryType>(darkminI, "regmin.mha");
+
+  }
+  // label maps to reduce memory footprint
+  typedef typename itk::BinaryImageToShapeLabelMapFilter<BinaryType> LabellerType;
+  typename LabellerType::Pointer labeller = LabellerType::New();
+  labeller->SetInput(darkminI);
+  labeller->SetInputForegroundValue(1);
+  // add the offset
+  typename LabellerType::OutputImageType::Pointer rleObj = labeller->GetOutput();
+  rleObj->Update();
+  rleObj->DisconnectPipeline();
+
+  for(unsigned int i = 1; i < rleObj->GetNumberOfLabelObjects(); ++i)
+   {
+   typename LabellerType::OutputImageType::LabelObjectType* shapeLabelObject =
+     rleObj->GetNthLabelObject(i);
+     shapeLabelObject->SetLabel(i + offset + 1);
+   }
+
+  typedef typename itk::LabelMapToLabelImageFilter<typename LabellerType::OutputImageType, OutputImType> ConvType;
+
+  typename ConvType::Pointer tolabIm = ConvType::New();
+  tolabIm->SetInput(rleObj);
+  
+  typename OutputImType::Pointer result = tolabIm->GetOutput();
+  result->Update();
+  result->DisconnectPipeline();
+  writeImDbg<OutputImType>(result, "mk.mha");
+  return(result);
+
+
+}
+//////////////////////////////////////////////////////////////////////////////
 template <class InImType, class OutputImType> 
 typename OutputImType::Pointer findDarkMarkers(
     typename InImType::Pointer input,
@@ -456,7 +587,7 @@ int DoIt(CmdLineType &CmdLineObj){
 
     std::cout << "Dark markers blood cells" << std::endl;
 
-    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkers<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.darkmarkerdilate, ForegroundLabels+2, (float)CmdLineObj.darkmarkervolume);
+    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkersMin<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.BGCorrectionRadius, CmdLineObj.darksmooth, ForegroundLabels+2);
 
     typedef typename itk::MaximumImageFilter<OutputImageType, OutputImageType, OutputImageType> MaxType;
     typename MaxType::Pointer combdark = MaxType::New();
@@ -500,7 +631,6 @@ int DoIt(CmdLineType &CmdLineObj){
     writeIm<OutputImageType>(changer->GetOutput(), CmdLineObj.OutputImFile);
 
     return EXIT_SUCCESS;
-
 }
 
 
