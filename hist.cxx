@@ -43,7 +43,7 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
 
     typename FilterType::HistogramSizeType size(CompPerPixel);
-    size.Fill(itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned
+    size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
@@ -208,14 +208,14 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, size_t compPerP
         typedef int InputComponentType;
         res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::ULONG:{        // uint64_t
-        typedef unsigned long InputComponentType;
-        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::LONG:{         // int64_t
-        typedef long InputComponentType;
-        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::ULONG:{        // uint64_t
+    //     typedef unsigned long InputComponentType;
+    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::LONG:{         // int64_t
+    //     typedef long InputComponentType;
+    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+    //     } break;
     //// floats neeed special treatment due to the use of num-traits min/max
     // case itk::ImageIOBase::FLOAT:{        // float32
     //     typedef float InputComponentType;
