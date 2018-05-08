@@ -21,6 +21,7 @@
 #include <itkSubtractImageFilter.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
 #include <itkChangeLabelImageFilter.h>
+#include <itkChangeLabelLabelMapFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
 #include <itkAttributeOpeningLabelMapFilter.h>
@@ -146,8 +147,8 @@ typename OutputImType::Pointer findBrightMarkers(
     typedef typename itk::OtsuThresholdImageFilter<InImType, BinaryType> OtsuType;
     typename OtsuType::Pointer Otsu = OtsuType::New();
     Otsu->SetInput(input);
-    Otsu->SetInsideValue(0);
-    Otsu->SetOutsideValue(1);
+    Otsu->SetInsideValue(1);
+    Otsu->SetOutsideValue(0);
 
     typedef typename itk::ParabolicErodeImageFilter<BinaryType, BinaryType> EType;
     typename EType::Pointer eroder = EType::New();
@@ -177,35 +178,32 @@ typename OutputImType::Pointer findBrightMarkers(
     return(result);
     }
 
-template <class InImType, class OutputImType> 
-typename OutputImType::Pointer findDarkMarkersWS(
+template <class InImType, class OutputImType, class BinaryImType> 
+typename BinaryImType::Pointer findDarkMarkersWS(
     typename InImType::Pointer input,
     typename OutputImType::Pointer markers,
     int BorderLabel){
-    // Tesselate the bright regions by doing a watershed on the inverted
-    // input.
-    // Invert by subtracting input from the max, so no funny business
-    // with unsigned types.
+   
+  // assumes that input is a blacktophat filter output
+    // typedef typename itk::StatisticsImageFilter<InImType> StatsType;
+    // typename StatsType::Pointer stats = StatsType::New();
+    // stats->SetInput(input);
+    // stats->Update();
 
-    typedef typename itk::StatisticsImageFilter<InImType> StatsType;
-    typename StatsType::Pointer stats = StatsType::New();
-    stats->SetInput(input);
-    stats->Update();
-
-    typedef typename itk::ShiftScaleImageFilter<InImType, InImType> ShiftType;
-    typename ShiftType::Pointer shifter = ShiftType::New();
-    shifter->SetInput(input);
-    shifter->SetShift(- stats->GetMaximum() );
-    shifter->SetScale(-1);
+    // typedef typename itk::ShiftScaleImageFilter<InImType, InImType> ShiftType;
+    // typename ShiftType::Pointer shifter = ShiftType::New();
+    // shifter->SetInput(input);
+    // shifter->SetShift(- stats->GetMaximum() );
+    // shifter->SetScale(-1);
 
     typedef typename itk::MorphologicalWatershedFromMarkersImageFilter<InImType, OutputImType> WSType;
     typename WSType::Pointer ws = WSType::New();
     FilterWatcher watcherws1(ws);
-    ws->SetInput(shifter->GetOutput());
+    ws->SetInput(input);
     ws->SetMarkerImage(markers);
     ws->SetMarkWatershedLine(true);
 
-    typedef typename itk::BinaryThresholdImageFilter<OutputImType, OutputImType> SelectType;
+    typedef typename itk::BinaryThresholdImageFilter<OutputImType, BinaryImType> SelectType;
     typename SelectType::Pointer select = SelectType::New();
     select->SetInput(ws->GetOutput());
     select->SetLowerThreshold(0);
@@ -251,51 +249,35 @@ typename OutputImType::Pointer findDarkMarkersWS(
 
     std::cout << "Stats " << msize << " " << MMean << " " << MSigma << std::endl;
 
-    // create a mask to remove bright border pixels
-    typedef typename itk::Image<unsigned char, InImType::ImageDimension > MaskImType;
-    typedef typename itk::BinaryThresholdImageFilter<InImType, MaskImType> ThreshType;
+    // create a mask to remove dark border pixels
+    //typedef typename itk::Image<unsigned char,
+    //InImType::ImageDimension > MaskImType;
+    
+    typedef typename itk::BinaryThresholdImageFilter<InImType, BinaryImType> ThreshType;
     typename ThreshType::Pointer thresh = ThreshType::New();
     thresh->SetInput(input);
-    thresh->SetUpperThreshold(MMean - MSigma);
-    thresh->SetInsideValue(1);
-    thresh->SetOutsideValue(0);
+    thresh->SetUpperThreshold(MMean + MSigma);
+    thresh->SetInsideValue(0);
+    thresh->SetOutsideValue(1);
 
-    typedef typename itk::MaskImageFilter<OutputImType, MaskImType, OutputImType> MaskerType;
+    typedef typename itk::MaskImageFilter<BinaryImType, BinaryImType, BinaryImType> MaskerType;
     typename MaskerType::Pointer masker = MaskerType::New();
     masker->SetInput(select->GetOutput());
     masker->SetInput2(thresh->GetOutput());
 
-    typename OutputImType::Pointer result = masker->GetOutput();
+    typename BinaryImType::Pointer result = masker->GetOutput();
     result->Update();
     result->DisconnectPipeline();
     return(result);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-template <class InImType, class OutputImType> 
-typename OutputImType::Pointer findDarkMarkersMin(
+template <class InImType>
+typename InImType::Pointer adjustBG(
     typename InImType::Pointer input,
-    int BTHradius,
-    float smooth,
-    int offset) {
-
-// Take 2 of finding dark markers. Some red blood cells are very close
-// to the other dark structures, and aren't separated by simple
-// procedures, like those used in Take 1 (below). Thus we'll try
-// something more like a regional minima approach, but with some
-// tweaks to avoid the need for preflooding, and tricks to make it
-// faster.
-// Still need to adjust background
-
+    int BTHradius) {
 // BTHradius - size of filter used to correct background (may not be
-// necessary in this approach.
-// smooth - smoothing kernel.
-// offset - added to the label values
-  typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
 
-  typename InImType::Pointer bthI = 0;
-  typename BinaryType::Pointer darkminI = 0;
-  {
   typedef typename itk::FlatStructuringElement< InImType::ImageDimension > SRType;
   typename SRType::RadiusType rad, bthrad;
   rad.Fill(BTHradius);
@@ -311,6 +293,35 @@ typename OutputImType::Pointer findDarkMarkersMin(
   bthkernel = SRType::Box(bthrad);
   bth->SetInput(input);
   bth->SetKernel(bthkernel);
+  typename InImType::Pointer bthI = bth->GetOutput();
+  bthI->Update();
+  bthI->DisconnectPipeline();
+  return(bthI);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template <class InImType, class OutputImType> 
+typename OutputImType::Pointer findDarkMarkersMin(
+    typename InImType::Pointer input,
+    float smooth,
+    int offset) {
+
+// Take 2 of finding dark markers. Some red blood cells are very close
+// to the other dark structures, and aren't separated by simple
+// procedures, like those used in Take 1 (below). Thus we'll try
+// something more like a regional minima approach, but with some
+// tweaks to avoid the need for preflooding, and tricks to make it
+// faster.
+// Still need to adjust background
+
+// necessary in this approach.
+// smooth - smoothing kernel.
+// offset - added to the label values
+  typedef typename itk::Image<unsigned char, InImType::ImageDimension > BinaryType;
+
+  typename InImType::Pointer bthI = 0;
+  typename BinaryType::Pointer darkminI = 0;
+  {
 
   typedef typename itk::SmoothingRecursiveGaussianImageFilter<InImType, InImType> SmoothType;
   typename SmoothType::Pointer smoother = SmoothType::New();
@@ -320,9 +331,11 @@ typename OutputImType::Pointer findDarkMarkersMin(
   if (smooth > 0){
   // Lazy - assume isotropic
   float sigma = sp[0] * smooth;
-  smoother->SetInput(bth->GetOutput());
+  smoother->SetInput(input);
   smoother->SetSigma(sigma);
   bthI = smoother->GetOutput();
+  } else {
+  bthI = input;
   }
   bthI->Update();
   bthI->DisconnectPipeline();
@@ -363,6 +376,8 @@ typename OutputImType::Pointer findDarkMarkersMin(
   writeImDbg<BinaryType>(darkminI, "regmin.mha");
 
   }
+  return(darkminI);
+#if 0
   // label maps to reduce memory footprint
   typedef typename itk::BinaryImageToShapeLabelMapFilter<BinaryType> LabellerType;
   typename LabellerType::Pointer labeller = LabellerType::New();
@@ -390,7 +405,7 @@ typename OutputImType::Pointer findDarkMarkersMin(
   result->DisconnectPipeline();
   writeImDbg<OutputImType>(result, "mk.mha");
   return(result);
-
+#endif
 
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -559,6 +574,7 @@ int DoIt(CmdLineType &CmdLineObj){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<TRealType, Dimension>        GreyImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+    typedef typename itk::Image<unsigned char, Dimension > BinaryImType;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -576,27 +592,60 @@ int DoIt(CmdLineType &CmdLineObj){
         return EXIT_FAILURE;
         }
 
+    std::cout << "Background subtraction" << std::endl;
+    typename InputImageType::Pointer bgcorrected = adjustBG<InputImageType>(reader->GetOutput(), CmdLineObj.BGCorrectionRadius);
+    
+    writeImDbg<InputImageType>(bgcorrected, "bth.mha");
+
     std::cout << "Bright markers" << std::endl;
     // Markers will be large areas
     int ForegroundLabels = 0;
     typename OutputImageType::Pointer brightmarkers =
-      findBrightMarkers<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.markererode, CmdLineObj.markervolume, ForegroundLabels);
+      findBrightMarkers<InputImageType, OutputImageType>(bgcorrected, CmdLineObj.markererode, CmdLineObj.markervolume, ForegroundLabels);
 
     std::cout << "Dark markers" << std::endl;
-    typename OutputImageType::Pointer darkmarkers = findDarkMarkersWS<InputImageType, OutputImageType>(reader->GetOutput(), brightmarkers, ForegroundLabels+1);
+    typename BinaryImType::Pointer darkmarkers = findDarkMarkersWS<InputImageType, OutputImageType, BinaryImType>(bgcorrected, brightmarkers, 1);
 
     std::cout << "Dark markers blood cells" << std::endl;
 
-    typename OutputImageType::Pointer darkmarkersBC = findDarkMarkersMin<InputImageType, OutputImageType>(reader->GetOutput(), CmdLineObj.BGCorrectionRadius, CmdLineObj.darksmooth, ForegroundLabels+2);
+    typename BinaryImType::Pointer darkmarkersBC = findDarkMarkersMin<InputImageType, BinaryImType>(bgcorrected, CmdLineObj.darksmooth, ForegroundLabels+2);
+    typename OutputImageType::Pointer alldarkmarkers = 0; 
+
+    std::cout << "Dark marker combination" << std::endl;
 
     typedef typename itk::MaximumImageFilter<OutputImageType, OutputImageType, OutputImageType> MaxType;
-    typename MaxType::Pointer combdark = MaxType::New();
+    typedef typename itk::MaximumImageFilter<BinaryImType, BinaryImType, BinaryImType> BMaxType;
+    {
+    typename BMaxType::Pointer combdark = BMaxType::New();
     combdark->SetInput(darkmarkers);
     combdark->SetInput2(darkmarkersBC);
 
+    // now we label the combined markers
+    typedef typename itk::ConnectedComponentImageFilter<BinaryImType, OutputImageType> LabellerType;
+    typename LabellerType::Pointer labeller = LabellerType::New();
+    labeller->SetInput(combdark->GetOutput());
+    labeller->SetFullyConnected(true);
+    labeller->SetBackgroundValue(0);
+
+    // add the offset and mask
+    typedef typename itk::AddImageFilter<OutputImageType, OutputImageType, OutputImageType> AddType;
+    typename AddType::Pointer adder = AddType::New();
+    adder->SetInput1(labeller->GetOutput());
+    adder->SetConstant2(ForegroundLabels + 1);
+
+    typedef typename itk::MaskImageFilter<OutputImageType, BinaryImType, OutputImageType> MaskerType;
+    typename MaskerType::Pointer masker = MaskerType::New();
+    masker->SetInput(adder->GetOutput());
+    masker->SetInput2(combdark->GetOutput());
+    alldarkmarkers = masker->GetOutput();
+    alldarkmarkers->Update();
+    alldarkmarkers->DisconnectPipeline();
+    std::cout << "Alldarkmarkers done" << std::endl;
+    }
+
     typename MaxType::Pointer comb = MaxType::New();
     comb->SetInput(brightmarkers);
-    comb->SetInput2(combdark->GetOutput());
+    comb->SetInput2(alldarkmarkers);
        
     typename OutputImageType::Pointer finalmarkers = comb->GetOutput();
     finalmarkers->Update();
@@ -606,11 +655,11 @@ int DoIt(CmdLineType &CmdLineObj){
     darkmarkers = 0;
     darkmarkersBC = 0;
     comb = 0;
-    combdark = 0;
+    //combdark = 0;
 
     std::cout << "Gradient" << std::endl;
     typename InputImageType::Pointer grad = computeGrad<InputImageType>(reader->GetOutput(), CmdLineObj.MorphGradRad, CmdLineObj.SmoothGradSigma);
-
+    writeImDbg<InputImageType>(grad, "grad.mha");
     reader = 0;
     writeImDbg<OutputImageType>(finalmarkers, "markers.mha");
 
@@ -623,12 +672,14 @@ int DoIt(CmdLineType &CmdLineObj){
     ws->SetMarkerImage(finalmarkers);
     ws->SetMarkWatershedLine(false);
 
-    typedef typename itk::ChangeLabelImageFilter<OutputImageType, OutputImageType> ChangeType;
-    typename ChangeType::Pointer changer = ChangeType::New();
-    changer->SetInput(ws->GetOutput());
-    changer->SetChange(ForegroundLabels+1, 0);
+    // typedef typename itk::ChangeLabelImageFilter<OutputImageType, OutputImageType> ChangeType;
+    // writeImDbg<OutputImageType>(ws->GetOutput(), "wsout.mha");
 
-    writeIm<OutputImageType>(changer->GetOutput(), CmdLineObj.OutputImFile);
+    // typename ChangeType::Pointer changer = ChangeType::New();
+    // changer->SetInput(ws->GetOutput());
+    // changer->SetChange(ForegroundLabels+1, 0);
+
+    writeIm<OutputImageType>(ws->GetOutput(), CmdLineObj.OutputImFile);
 
     return EXIT_SUCCESS;
 }
