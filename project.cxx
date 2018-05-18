@@ -7,6 +7,13 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkMeanProjectionImageFilter.h>
+#include <itkMedianProjectionImageFilter.h>
+#include <itkMaximumProjectionImageFilter.h>
+#include <itkMinimumProjectionImageFilter.h>
+#include <itkSumProjectionImageFilter.h>
+#include <itkStandardDeviationProjectionImageFilter.h>
+#include <itkBinaryProjectionImageFilter.h>
+#include <itkBinaryThresholdProjectionImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -81,6 +88,48 @@ int DoIt(int argc, char *argv[]){
     switch(atoi(argv[4])){
     case 0: {
         typedef itk::MeanProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 1: {
+        typedef itk::MedianProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 2: {
+        typedef itk::MaximumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 3: {
+        typedef itk::MinimumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 4: {
+        typedef itk::SumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 5: {
+        typedef itk::StandardDeviationProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 6: {
+        typedef itk::BinaryProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    case 7: {
+        typedef itk::BinaryThresholdProjectionImageFilter<InputImageType, OutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
