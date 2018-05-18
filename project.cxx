@@ -1,5 +1,5 @@
 ////program to project an image along an axis (based on itkProjectionImageFilter, which is newer than itkAccumulateImageFilter and itkGetAverageSliceImageFilter?)
-//01: based on template.cxx
+//01: based on template_var-filter.cxx
 
 
 #include <complex>
@@ -12,14 +12,8 @@
 
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int argc, char *argv[]){
-
-    typedef InputPixelType  OutputPixelType;
-
-    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
-
+template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename OutputImageType, typename FilterType>
+int DoIt2(int argc, char *argv[], FilterType* filter){
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -39,12 +33,8 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-
-
-    typedef itk::MeanProjectionImageFilter<InputImageType, OutputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->SetProjectionDimension(atoi(argv[4]));
+    filter->SetProjectionDimension(atoi(argv[5]));
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
@@ -78,6 +68,29 @@ int DoIt(int argc, char *argv[]){
 
     }
 
+
+template<typename InputComponentType, typename InputPixelType, size_t Dimension>
+int DoIt(int argc, char *argv[]){
+    int res= 0;
+
+    typedef InputPixelType  OutputPixelType;
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
+
+
+    switch(atoi(argv[4])){
+    case 0: {
+        typedef itk::MeanProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typename FilterType::Pointer filter= FilterType::New();
+        std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    default:
+        std::cerr << "unknown filter type." << std::endl;
+        res= EXIT_FAILURE;
+        break;
+        }//switch
+    }
 
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
@@ -203,12 +216,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
+                  << " filterType"
                   << " proj-dim"
                   << std::endl;
 
