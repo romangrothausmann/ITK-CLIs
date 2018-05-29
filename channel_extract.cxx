@@ -87,14 +87,14 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    // case itk::ImageIOBase::RGB:{
-    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
-    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::RGBA:{
-    //     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-    //     } break;
+    case itk::ImageIOBase::RGB:{
+        typedef itk::RGBPixel<InputComponentType> InputPixelType;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        } break;
+    case itk::ImageIOBase::RGBA:{
+        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        } break;
     // case itk::ImageIOBase::COMPLEX:{
     //     typedef std::complex<InputComponentType> InputPixelType;
     //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
