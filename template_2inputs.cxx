@@ -154,20 +154,20 @@ int dispatch_pT2(itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType,
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType2){
-    case itk::ImageIOBase::SCALAR:{
+    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
         typedef InputComponentType2 InputPixelType2;
         res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
+    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+        typedef std::complex<InputComponentType2> InputPixelType2;
+        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType2> InputPixelType2;
         res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
+    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
         typedef itk::RGBAPixel<InputComponentType2> InputPixelType2;
-        res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType2> InputPixelType2;
         res= dispatch_D<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2>(dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
@@ -190,20 +190,20 @@ int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOP
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType1){
-    case itk::ImageIOBase::SCALAR:{
+    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
         typedef InputComponentType1 InputPixelType1;
         res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
+    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+        typedef std::complex<InputComponentType1> InputPixelType1;
+        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType1> InputPixelType1;
         res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
+    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
         typedef itk::RGBAPixel<InputComponentType1> InputPixelType1;
-        res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType1> InputPixelType1;
         res= dispatch_pT2<InputComponentType1, InputComponentType2, InputPixelType1>(pixelType2, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
