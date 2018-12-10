@@ -6,7 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkAddImageFilter.h>
+#include <itkSubtractImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -59,7 +59,7 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType2::Pointer& input2= reader2->GetOutput();
 
 
-    typedef itk::AddImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
+    typedef itk::SubtractImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput1(reader1->GetOutput());
     filter->SetInput2(reader2->GetOutput());
