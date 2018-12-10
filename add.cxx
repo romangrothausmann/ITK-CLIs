@@ -25,6 +25,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType1::Pointer reader1 = ReaderType1::New();
 
     reader1->SetFileName(argv[1]);
+    reader1->ReleaseDataFlagOn();
     FilterWatcher watcherI1(reader1);
     watcherI1.QuietOn();
     watcherI1.ReportTimeOn();
@@ -36,13 +37,14 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename InputImageType1::Pointer input1= reader1->GetOutput();
+    const typename InputImageType1::Pointer& input1= reader1->GetOutput();
 
 
     typedef itk::ImageFileReader<InputImageType2> ReaderType2;
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
     reader2->SetFileName(argv[2]);
+    reader2->ReleaseDataFlagOn();
     FilterWatcher watcherI2(reader2);
     watcherI2.QuietOn();
     watcherI2.ReportTimeOn();
@@ -54,7 +56,7 @@ int DoIt(int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    typename InputImageType2::Pointer input2= reader2->GetOutput();
+    const typename InputImageType2::Pointer& input2= reader2->GetOutput();
 
 
     typedef itk::AddImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
@@ -74,7 +76,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    typename OutputImageType::Pointer output= filter->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -98,7 +100,7 @@ int DoIt(int argc, char *argv[]){
 
 template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1, typename InputPixelType2>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
+  int res= EXIT_FAILURE;
   switch (dimensionType){
   case 1:
     res= DoIt<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2, 1>(argc, argv);
@@ -118,7 +120,7 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
 
 template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1>
 int dispatch_pT2(itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
+  int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
@@ -138,7 +140,7 @@ int dispatch_pT2(itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType,
 
 template<typename InputComponentType1, typename InputComponentType2>
 int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
+  int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
@@ -158,7 +160,7 @@ int dispatch_pT1(itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOP
 
 template<typename InputComponentType1>
 int dispatch_cT2(itk::ImageIOBase::IOComponentType componentType2, itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
+  int res= EXIT_FAILURE;
 
   //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
   //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
@@ -214,7 +216,7 @@ int dispatch_cT2(itk::ImageIOBase::IOComponentType componentType2, itk::ImageIOB
 }
 
 int dispatch_cT1(itk::ImageIOBase::IOComponentType componentType1, itk::ImageIOBase::IOComponentType componentType2, itk::ImageIOBase::IOPixelType pixelType1, itk::ImageIOBase::IOPixelType pixelType2, size_t dimensionType, int argc, char *argv[]){
-  int res= 0;
+  int res= EXIT_FAILURE;
 
   //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
   //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
