@@ -9,12 +9,19 @@
 #include <itkSubtractImageFilter.h>
 #include <itkImageFileWriter.h>
 
+template<typename T>
+using try_make_signed = // https://stackoverflow.com/questions/16377736/stdmake-signed-that-accepts-floating-point-types#16377818
+    typename std::conditional<
+    std::is_integral<T>::value, // http://www.cplusplus.com/reference/type_traits/is_integral/  http://www.cplusplus.com/reference/type_traits/is_floating_point/
+    std::make_signed<T>, // http://www.cplusplus.com/reference/type_traits/make_signed/
+    std::common_type<T> // https://stackoverflow.com/questions/16377736/stdmake-signed-that-accepts-floating-point-types#16377818
+    >::type;
 
 
 template<typename InputComponentType1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType1 OutputPixelType;
+    typedef typename try_make_signed<InputComponentType1>::type OutputPixelType;
 
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
