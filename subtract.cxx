@@ -11,7 +11,7 @@
 
 
 
-template<typename InputComponent1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
+template<typename InputComponentType1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
     typedef InputPixelType1 OutputPixelType;
