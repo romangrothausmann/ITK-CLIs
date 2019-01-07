@@ -1,4 +1,5 @@
 ////program to convert a voxel representation of a simplical 1-complex (e.g. voxel-skeleton consisting only of vertices and lines) into a vector/graph representation
+///// ITK only version of vo-skel2poly.cxx (VTK, predecessor), similar but not equivalent 
 //01: based on count_neighbours.cxx
 
 

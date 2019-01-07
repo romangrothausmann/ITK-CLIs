@@ -83,7 +83,7 @@ int DoIt(int argc, char *argv[]){
     std::cout << std::flush << std::endl;
 
     for(size_t i = 0; i < histogram->GetSize()[0]; ++i){
-        std::cout << +i + itk::NumericTraits<InputComponentType>::min();
+        std::cout << + static_cast<InputComponentType>(i + itk::NumericTraits<InputComponentType>::min());
         for(unsigned char j = 0; j < CompPerPixel; ++j)
             std::cout << "\t" << +histogram->GetFrequency(i, j);
         std::cout << std::endl;
