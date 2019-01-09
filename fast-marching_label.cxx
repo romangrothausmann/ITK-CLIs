@@ -1,5 +1,5 @@
-////program for itkFastMarchingImageFilter
-//01: based on template_2inputs.cxx and snippets from https://code.google.com/p/manageditk/source/browse/trunk/Source/Modules/LevelSetFilters/itkFastMarchingImageFilter.txx?r=2
+////program combining fast-marching with watershed_morph_marker to enable FM for a label image
+//01: based on fast-marching.cxx and watershed_morph_marker_UI32.cxx
 
 
 #include <complex>
@@ -10,6 +10,8 @@
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkFastMarchingImageFilter.h>
 #include <itkThresholdImageFilter.h>
+#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
+#include <itkMaskImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -113,10 +115,35 @@ int DoIt(int argc, char *argv[]){
         }
 
     ////remove all regions with values above FM-StoppingValue
-    typedef itk::ThresholdImageFilter<OutputImageType> MFilterType;
+    typedef itk::ThresholdImageFilter<OutputImageType> ThFilterType;
+    typename ThFilterType::Pointer th = ThFilterType::New();
+    th->SetInput(filter->GetOutput());
+    th->ThresholdAbove(filter->GetStoppingValue());
+    th->InPlaceOn();
+    FilterWatcher watcherM(th);
+
+    typedef itk::MorphologicalWatershedFromMarkersImageFilter<InputImageType, OutputImageType> WSType;
+    typename WSType::Pointer ws= WSType::New();
+    ws->SetInput(th->GetOutput());
+    ws->SetMarkerImage(input1);
+    ws->SetFullyConnected(atoi(argv[4]));
+    ws->SetMarkWatershedLine(atoi(argv[5]));
+
+    FilterWatcher watcherWS(ws);
+    try{ 
+        ws->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
+
+
+    ////masking WS result
+    typedef itk::MaskImageFilter<OutputImageType, InputImageType2, OutputImageType> MFilterType;
     typename MFilterType::Pointer mask = MFilterType::New();
-    mask->SetInput(filter->GetOutput());
-    mask->ThresholdAbove(filter->GetStoppingValue());
+    mask->SetInput(ws->GetOutput());
+    mask->SetMaskImage(th->GetOutput());
     mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
