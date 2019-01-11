@@ -98,17 +98,9 @@ int DoIt(int argc, char *argv[]){
     else
         th_h= InputPixelType(atof(arg));
 
-    if (th_l > th_h){
-        filter->ThresholdOutside(th_h, th_l);
-	if(argc > 6)
-	    filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
-        }
-    else {
-        filter->SetLower(th_l);
-        filter->SetUpper(th_h);
-	if(argc > 6)
-	    filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
-        }
+    filter->ThresholdOutside(th_l, th_h);
+    if(argc > 6)
+	filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
 
     std::cerr << "lower_th: "<< +filter->GetLower() << "   upper_th: " << +filter->GetUpper() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
