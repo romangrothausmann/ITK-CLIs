@@ -1,5 +1,5 @@
-////program for itkBinaryThresholdImageFilter
-//01: based on template.cxx
+////program for itkThresholdImageFilter
+//01: based on thresh-glob.cxx
 
 
 #include <complex>
@@ -8,7 +8,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include <itkBinaryThresholdImageFilter.h>
+#include <itkThresholdImageFilter.h>
 #ifdef USE_SDI
 #include <itkPipelineMonitorImageFilter.h>
 #endif
@@ -33,7 +33,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType; // ideally OutputPixelType should be determined in a DoIt2 depending on argv[6]
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -60,7 +60,7 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::BinaryThresholdImageFilter<InputImageType, OutputImageType> FilterType;
+    typedef itk::ThresholdImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
 
@@ -99,25 +99,18 @@ int DoIt(int argc, char *argv[]){
         th_h= InputPixelType(atof(arg));
 
     if (th_l > th_h){
-        filter->SetLowerThreshold(th_h);
-        filter->SetUpperThreshold(th_l);
+        filter->ThresholdOutside(th_h, th_l);
 	if(argc > 6)
 	    filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
-	else
-	    filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::max());
-        filter->SetInsideValue(itk::NumericTraits<OutputPixelType>::Zero);
         }
     else {
-        filter->SetLowerThreshold(th_l);
-        filter->SetUpperThreshold(th_h);
-        filter->SetOutsideValue(itk::NumericTraits<OutputPixelType>::Zero);
+        filter->SetLower(th_l);
+        filter->SetUpper(th_h);
 	if(argc > 6)
-	    filter->SetInsideValue(static_cast<OutputPixelType>(atof(argv[6])));
-	else
-	    filter->SetInsideValue(itk::NumericTraits<OutputPixelType>::max());
+	    filter->SetOutsideValue(static_cast<OutputPixelType>(atof(argv[6])));
         }
 
-    std::cerr << "lower_th: "<< +filter->GetLowerThreshold() << "   upper_th: " << +filter->GetUpperThreshold() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
+    std::cerr << "lower_th: "<< +filter->GetLower() << "   upper_th: " << +filter->GetUpper() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
 #ifndef USE_SDI
     FilterWatcher watcher1(filter);
