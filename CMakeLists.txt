@@ -77,7 +77,9 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags") # use RPATH instead of RUNPATH (currently ignored on Debian-9), -WL tells gcc to pass option to the linker
 
 ## check if specific modules are enabled
+message(STATUS "ITK_MODULES_ENABLED:\n" "${ITK_MODULES_ENABLED}")
 LIST(FIND ITK_MODULES_ENABLED ITKReview ITKReview_FOUND)
+LIST(FIND ITK_MODULES_ENABLED ITKGPUCommon ITKGPUCommon_FOUND)
 LIST(FIND ITK_MODULES_ENABLED LesionSizingToolkit LesionSizingToolkit_FOUND)
 LIST(FIND ITK_MODULES_ENABLED MinimalPathExtraction MinimalPathExtraction_FOUND)#in itk-4.8: https://github.com/Kitware/ITK/commit/da17ae4d4955bb92d5259c6ac47bfce6c474be18
 LIST(FIND ITK_MODULES_ENABLED ParabolicMorphology ParabolicMorphology_FOUND)#in itk-4.8: https://github.com/InsightSoftwareConsortium/ITK/commit/2b3190575b82e8457c028040c3bfd0f69fa1ef35
@@ -632,13 +634,13 @@ TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "mean_GPU")
-IF(NOT ITKGPUSmoothing_LOADED)# -1 if not found!
+IF(ITKGPUCommon_FOUND LESS 0)# -1 if not found!
   MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ITK_USE_GPU ON)")
-ELSE()
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ELSE(ITKGPUCommon_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
 ENDIF()
 
 SET(CurrentExe "count_neighbours")
