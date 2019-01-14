@@ -42,9 +42,26 @@ RUN mkdir -p ITK_build && \
     make -j"$(nproc)" install
 
 
+### ITK-CLIs
+COPY . /code/
+
+RUN mkdir -p /build/ && \
+    cd /build/ && \
+    cmake \
+    	  -DCMAKE_INSTALL_PREFIX=/opt/ITK-CLIs/ \
+	  -DCMAKE_PREFIX_PATH=/opt/itk/lib/cmake/ \
+	  -DCMAKE_BUILD_TYPE=Release \
+	  /code/ && \
+    make -j"$(nproc)" && \
+    make -j"$(nproc)" install
+
+
 ################################################################################
 # install
 ################################################################################
 FROM system as install
 
 COPY --from=builder /opt/itk/ /opt/itk/
+COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
+
+ENV PATH "/opt/ITK-CLIs/bin/:${PATH}"
