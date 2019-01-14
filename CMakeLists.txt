@@ -183,14 +183,13 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "watershed_morph_nX_marker_float")
 ADD_EXECUTABLE(${CurrentExe}  "watershed_morph_nX_marker.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT" LINK_FLAGS "-lprocps")#ADD_DEFINITIONS(-DUSE_FLOAT) is not target specific!
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "procps")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "watershed_morph_nX_marker_double")
 ADD_EXECUTABLE(${CurrentExe}  "watershed_morph_nX_marker.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES LINK_FLAGS "-lprocps")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "procps")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "watershed_morph+growing_border")
@@ -659,14 +658,13 @@ INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "label_uncertainty_float")
 ADD_EXECUTABLE(${CurrentExe}  "label_uncertainty.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT" LINK_FLAGS "-lprocps")#ADD_DEFINITIONS(-DUSE_FLOAT) is not target specific!
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "procps")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "label_uncertainty_double")
 ADD_EXECUTABLE(${CurrentExe}  "label_uncertainty.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES LINK_FLAGS "-lprocps")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "procps")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "toUInt8")
