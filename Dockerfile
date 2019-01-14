@@ -1,17 +1,26 @@
-FROM ubuntu:16.04 as builder
+################################################################################
+# base system
+################################################################################
+FROM ubuntu:16.04 as system
+
+
+################################################################################
+# builder
+################################################################################
+FROM system as builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     git \
     ca-certificates `# essential for git over https` \
     build-essential
 
-RUN git clone https://itk.org/ITK.git
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl
-
+### cmake independent of distro version
 RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.sh
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
+
+### ITK
+RUN git clone https://itk.org/ITK.git
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
@@ -33,6 +42,9 @@ RUN mkdir -p ITK_build && \
     make -j"$(nproc)" install
 
 
-FROM ubuntu:16.04
+################################################################################
+# install
+################################################################################
+FROM system as install
 
 COPY --from=builder /opt/itk/ /opt/itk/
