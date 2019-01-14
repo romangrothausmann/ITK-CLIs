@@ -51,6 +51,7 @@ RUN mkdir -p /build/ && \
     	  -DCMAKE_INSTALL_PREFIX=/opt/ITK-CLIs/ \
 	  -DCMAKE_PREFIX_PATH=/opt/itk/lib/cmake/ \
 	  -DCMAKE_BUILD_TYPE=Release \
+	  -DCMAKE_CXX_STANDARD=11 \
 	  /code/ && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
