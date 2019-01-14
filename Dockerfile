@@ -43,6 +43,9 @@ RUN mkdir -p ITK_build && \
 
 
 ### ITK-CLIs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libprocps-dev
+
 COPY . /code/
 
 RUN mkdir -p /build/ && \
