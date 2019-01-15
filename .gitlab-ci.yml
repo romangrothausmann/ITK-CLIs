@@ -51,6 +51,8 @@ build:
 
 test01:
   stage: test
+  variables:
+    GIT_STRATEGY: none
   script:
     - docker pull $IMAGE_TAG:test
     - docker run --rm
@@ -61,6 +63,8 @@ test01:
 
 release:
   stage: release
+  variables:
+    GIT_STRATEGY: none
   script:
     - docker pull $IMAGE_TAG:test
     - docker tag  $IMAGE_TAG:test $IMAGE_TAG:latest
