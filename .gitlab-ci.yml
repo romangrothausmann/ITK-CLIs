@@ -55,10 +55,10 @@ test01:
     GIT_STRATEGY: none
   script:
     - docker pull $IMAGE_TAG:test
-    - docker run --rm
+    - "docker run --rm
                  $IMAGE_TAG:test
                  file_converter
-                 |& grep 'Missing Parameters'
+                 2>&1 | grep 'Missing Parameters'"
   retry: 2
 
 release:
