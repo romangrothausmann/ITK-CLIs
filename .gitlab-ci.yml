@@ -55,6 +55,7 @@ test01:
     GIT_STRATEGY: none
   script:
     - docker pull $IMAGE_TAG:test
+    - set +o pipefail # essential if return-value of pipe is used to determine job status
     - "docker run --rm
                  $IMAGE_TAG:test
                  file_converter
