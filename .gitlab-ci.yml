@@ -72,5 +72,6 @@ release:
     - docker push $IMAGE_TAG:latest
     - docker tag  $IMAGE_TAG:test $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
     - docker push $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
+    - docker rmi $(docker images | awk -v IMG=$IMAGE_TAG '$1 ~ (IMG) && $2 ~ /[0-9a-f]{8}/' | tail -n +6) || true  # keep last 5 images: https://stackoverflow.com/questions/40891610/docker-remove-all-but-last-n-images#40892314
   only:
     - master
