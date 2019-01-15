@@ -58,7 +58,7 @@ test01:
     - docker run --rm
                  $IMAGE_TAG:test
                  file_converter
-                 | grep 'Missing Parameters'
+                 |& grep 'Missing Parameters'
   retry: 2
 
 release:
