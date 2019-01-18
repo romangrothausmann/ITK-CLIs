@@ -18,6 +18,8 @@ build:
   stage: build
   tags:
     - multicore
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   script:
     - docker pull $IMAGE_TAG:system-latest || true
     - docker pull $IMAGE_TAG:builder-latest || true
