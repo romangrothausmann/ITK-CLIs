@@ -3,3 +3,4 @@
 *.txx      diff=cpp
 *.hxx      diff=cpp
 *.h        diff=cpp
+CMakeLists.txt  diff=cpp
