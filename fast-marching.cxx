@@ -9,7 +9,7 @@
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkFastMarchingImageFilter.h>
-#include <itkMaskImageFilter.h>
+#include <itkThresholdImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -112,11 +112,11 @@ int DoIt(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    ////remove infinity values within mask, there can still be inf in the output (as filter->GetLargeValue() is protected)!
-    typedef itk::MaskImageFilter<OutputImageType, InputImageType2, OutputImageType> MFilterType;
+    ////remove all regions with values above FM-StoppingValue
+    typedef itk::ThresholdImageFilter<OutputImageType> MFilterType;
     typename MFilterType::Pointer mask = MFilterType::New();
     mask->SetInput(filter->GetOutput());
-    mask->SetMaskImage(input2);
+    mask->ThresholdAbove(filter->GetStoppingValue());
     mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
