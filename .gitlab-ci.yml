@@ -1,0 +1,77 @@
+image: docker:stable
+
+services:
+  - docker:dind
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+
+stages:
+  - build
+  - test
+  - release
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG
+
+build:
+  stage: build
+  tags:
+    - multicore
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    ## 1st stage build
+    - docker pull $IMAGE_TAG:system-latest || true
+    - docker build --pull
+                   --cache-from $IMAGE_TAG:system-latest
+                   --tag $IMAGE_TAG:system-latest
+                   --target system
+                   .
+    - docker push $IMAGE_TAG:system-latest
+    ## 2nd stage build
+    - docker pull $IMAGE_TAG:builder-latest || true
+    - docker build --pull
+                   --cache-from $IMAGE_TAG:system-latest
+                   --cache-from $IMAGE_TAG:builder-latest
+                   --tag $IMAGE_TAG:builder-latest
+                   --target builder 
+                   .
+    - docker push $IMAGE_TAG:builder-latest
+    ## 3rd stage build
+    - docker pull $IMAGE_TAG:test || true
+    - docker build --pull
+                   --cache-from $IMAGE_TAG:system-latest
+                   --cache-from $IMAGE_TAG:builder-latest
+                   --cache-from $IMAGE_TAG:test
+                   --tag $IMAGE_TAG:test
+                   .
+    - docker push $IMAGE_TAG:test
+  retry: 2
+
+test01:
+  stage: test
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker pull $IMAGE_TAG:test
+    - set +o pipefail # essential if return-value of pipe is used to determine job status
+    - "docker run --rm
+                 $IMAGE_TAG:test
+                 file_converter
+                 2>&1 | grep 'Missing Parameters'"
+  retry: 2
+
+release:
+  stage: release
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker pull $IMAGE_TAG:test
+    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:latest
+    - docker push $IMAGE_TAG:latest
+    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
+    - docker push $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
+    - docker rmi $(docker images | awk -v IMG=$IMAGE_TAG '$1 ~ (IMG) && $2 ~ /[0-9a-f]{8}/' | tail -n +6) || true  # keep last 5 images: https://stackoverflow.com/questions/40891610/docker-remove-all-but-last-n-images#40892314
+  only:
+    - master

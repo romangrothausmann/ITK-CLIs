@@ -1,0 +1,4 @@
+**/.git
+**/.gitattributes
+**/.gitmodules
+.gitlab-ci.yml
