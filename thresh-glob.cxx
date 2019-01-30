@@ -33,7 +33,7 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef InputPixelType  OutputPixelType; // ideally OutputPixelType should be determined in a DoIt2 depending on argv[6]
+    typedef uint8_t  OutputPixelType; // ideally OutputPixelType should be determined in a DoIt2 depending on argv[6]
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
