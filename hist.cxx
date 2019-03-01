@@ -50,9 +50,15 @@ int DoIt(int argc, char *argv[]){
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
-    lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
+    if (argc > 3)
+	lowerBound.Fill(atoi(argv[3]));
+    else
+	lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
     typename FilterType::HistogramMeasurementVectorType upperBound(CompPerPixel);
-    upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
+    if (argc > 4)
+	upperBound.Fill(atoi(argv[4]));
+    else
+	upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
 
     filter->SetAutoMinimumMaximum(false); // essential!!!
     filter->SetHistogramBinMinimum(lowerBound);
@@ -275,6 +281,7 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " [bins]"
+                  << " [min] [max]"
                   << std::endl;
 
         return EXIT_FAILURE;
