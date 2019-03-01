@@ -46,7 +46,7 @@ int DoIt(int argc, char *argv[]){
     if (argc > 2)
 	size.Fill(atoi(argv[2]));
     else
-	size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
+	size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min()); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
