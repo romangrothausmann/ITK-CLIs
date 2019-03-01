@@ -86,13 +86,17 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "50th percentile along the first dimension = " << histogram->Quantile(0, 0.5) << std::flush << std::endl;
 
-    std::cout << "Bin";
+    std::cout << "Bin"
+              << "\t" << "lBd"
+              << "\t" << "uBd";
     for(unsigned int j = 0; j < CompPerPixel; ++j)
         printf("\tFreq:%d", j);
     std::cout << std::flush << std::endl;
 
     for(size_t i = 0; i < histogram->GetSize()[0]; ++i){
-        std::cout << + static_cast<InputComponentType>(i + itk::NumericTraits<InputComponentType>::min());
+        std::cout << i;
+	std::cout << "\t" << +histogram->GetBinMin(0, i);
+	std::cout << "\t" << +histogram->GetBinMax(0, i);
         for(unsigned char j = 0; j < CompPerPixel; ++j)
             std::cout << "\t" << +histogram->GetFrequency(i, j);
         std::cout << std::endl;
