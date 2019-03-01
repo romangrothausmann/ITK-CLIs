@@ -43,7 +43,10 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
 
     typename FilterType::HistogramSizeType size(CompPerPixel);
-    size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
+    if (argc > 2)
+	size.Fill(atoi(argv[2]));
+    else
+	size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
@@ -267,10 +270,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 2 ){
+    if ( argc < 2 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
+                  << " [bins]"
                   << std::endl;
 
         return EXIT_FAILURE;
