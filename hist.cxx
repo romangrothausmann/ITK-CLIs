@@ -51,12 +51,12 @@ int DoIt(int argc, char *argv[]){
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
     if (argc > 3)
-	lowerBound.Fill(atoi(argv[3]));
+	lowerBound.Fill(atof(argv[3]));
     else
 	lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
     typename FilterType::HistogramMeasurementVectorType upperBound(CompPerPixel);
     if (argc > 4)
-	upperBound.Fill(atoi(argv[4]));
+	upperBound.Fill(atof(argv[4]));
     else
 	upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
 
@@ -217,23 +217,23 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, size_t compPerP
         typedef int InputComponentType;
         res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
         } break;
-    // case itk::ImageIOBase::ULONG:{        // uint64_t
-    //     typedef unsigned long InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::LONG:{         // int64_t
-    //     typedef long InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::ULONG:{        // uint64_t
+        typedef unsigned long InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
     //// floats neeed special treatment due to the use of num-traits min/max
-    // case itk::ImageIOBase::FLOAT:{        // float32
-    //     typedef float InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::DOUBLE:{       // float64
-    //     typedef double InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::FLOAT:{        // float32
+        typedef float InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::DOUBLE:{       // float64
+        typedef double InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
