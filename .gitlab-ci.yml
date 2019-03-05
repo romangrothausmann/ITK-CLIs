@@ -84,10 +84,10 @@ release:
   script:
     - apk add --update --no-cache curl
     - export ms='application/vnd.docker.distribution.manifest.v2+json'
-    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/test
-      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/latest '
-    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/test
-      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/$CI_COMMIT_SHORT_SHA '
+    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH_SLUG/$CI_COMMIT_REF_SLUG/manifests/test
+      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH_SLUG/$CI_COMMIT_REF_SLUG/manifests/latest '
+    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH_SLUG/$CI_COMMIT_REF_SLUG/manifests/test
+      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH_SLUG/$CI_COMMIT_REF_SLUG/manifests/$CI_COMMIT_SHORT_SHA '
     - docker rmi $(docker images | awk -v IMG=$IMAGE_TAG '$1 ~ (IMG) && $2 ~ /[0-9a-f]{8}/' | tail -n +6) || true  # keep last 5 images: https://stackoverflow.com/questions/40891610/docker-remove-all-but-last-n-images#40892314
   only:
     - master
