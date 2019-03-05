@@ -82,11 +82,12 @@ release:
   variables:
     GIT_STRATEGY: none
   script:
-    - docker pull $IMAGE_TAG:test
-    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:latest
-    - docker push $IMAGE_TAG:latest
-    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
-    - docker push $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
+    - apk add --update --no-cache curl
+    - export ms='application/vnd.docker.distribution.manifest.v2+json'
+    - ' curl -s         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/test
+      | curl -sS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/latest '
+    - ' curl -s         -H "Accept: $ms"       -H "Authorization:Bearer $CI_JOB_TOKEN"       https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/test
+      | curl -sS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $CI_JOB_TOKEN" -d @- https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/master/manifests/$CI_COMMIT_SHORT_SHA '
     - docker rmi $(docker images | awk -v IMG=$IMAGE_TAG '$1 ~ (IMG) && $2 ~ /[0-9a-f]{8}/' | tail -n +6) || true  # keep last 5 images: https://stackoverflow.com/questions/40891610/docker-remove-all-but-last-n-images#40892314
   only:
     - master
