@@ -70,3 +70,5 @@ COPY --from=builder /opt/itk/ /opt/itk/
 COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
 
 ENV PATH "/opt/ITK-CLIs/bin/:${PATH}"
+
+WORKDIR /images
