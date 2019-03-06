@@ -77,6 +77,11 @@ stat:
   variables:
     CMD: "$CI_JOB_NAME tests/min-path_fm/manual/ACN_speed.mha"
 
+stat_SDI:
+  <<: *test
+  variables:
+    CMD: "$CI_JOB_NAME tests/min-path_fm/manual/ACN_speed.mha 10"
+
 release:
   stage: release
   variables:
