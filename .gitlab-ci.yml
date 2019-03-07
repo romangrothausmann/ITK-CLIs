@@ -88,7 +88,7 @@ release:
     - 'export TOKEN=$(
        curl https://gitlab.com/jwt/auth
        -s -f
-       -u $CI_REGISTRY_USER:$CI_JOB_TOKEN
+       -u $CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD
        --get
        -d client_id=docker
        -d offline_token=true
