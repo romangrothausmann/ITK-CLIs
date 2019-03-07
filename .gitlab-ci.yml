@@ -93,7 +93,7 @@ release:
     - curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" | jq '.[] | .name'
     - 'curl -fs
            --request DELETE
-           --data "name_regex=[0-9a-z]{8}"
+           --data "name_regex=[0-9a-f]{8}"
            --data "keep_n=5"
            --header "PRIVATE-TOKEN: $REGISTRY_TOKEN"
            "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" ' # https://docs.gitlab.com/ce/api/container_registry.html#delete-repository-tags-in-bulk
