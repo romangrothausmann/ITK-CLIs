@@ -2,3 +2,4 @@
 **/.gitattributes
 **/.gitmodules
 .gitlab-ci.yml
+Dockerfile

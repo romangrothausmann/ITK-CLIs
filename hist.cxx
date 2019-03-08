@@ -43,13 +43,22 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
 
     typename FilterType::HistogramSizeType size(CompPerPixel);
-    size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min() + 1); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
+    if (argc > 2)
+	size.Fill(atoi(argv[2]));
+    else
+	size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min()); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
-    lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
+    if (argc > 3)
+	lowerBound.Fill(atof(argv[3]));
+    else
+	lowerBound.Fill(itk::NumericTraits<InputComponentType>::min());
     typename FilterType::HistogramMeasurementVectorType upperBound(CompPerPixel);
-    upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
+    if (argc > 4)
+	upperBound.Fill(atof(argv[4]));
+    else
+	upperBound.Fill(itk::NumericTraits<InputComponentType>::max());
 
     filter->SetAutoMinimumMaximum(false); // essential!!!
     filter->SetHistogramBinMinimum(lowerBound);
@@ -77,13 +86,17 @@ int DoIt(int argc, char *argv[]){
 
     std::cerr << "50th percentile along the first dimension = " << histogram->Quantile(0, 0.5) << std::flush << std::endl;
 
-    std::cout << "Bin";
+    std::cout << "Bin"
+              << "\t" << "lBd"
+              << "\t" << "uBd";
     for(unsigned int j = 0; j < CompPerPixel; ++j)
         printf("\tFreq:%d", j);
     std::cout << std::flush << std::endl;
 
     for(size_t i = 0; i < histogram->GetSize()[0]; ++i){
-        std::cout << + static_cast<InputComponentType>(i + itk::NumericTraits<InputComponentType>::min());
+        std::cout << i;
+	std::cout << "\t" << +histogram->GetBinMin(0, i);
+	std::cout << "\t" << +histogram->GetBinMax(0, i);
         for(unsigned char j = 0; j < CompPerPixel; ++j)
             std::cout << "\t" << +histogram->GetFrequency(i, j);
         std::cout << std::endl;
@@ -208,23 +221,23 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, size_t compPerP
         typedef int InputComponentType;
         res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
         } break;
-    // case itk::ImageIOBase::ULONG:{        // uint64_t
-    //     typedef unsigned long InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::LONG:{         // int64_t
-    //     typedef long InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::ULONG:{        // uint64_t
+        typedef unsigned long InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
     //// floats neeed special treatment due to the use of num-traits min/max
-    // case itk::ImageIOBase::FLOAT:{        // float32
-    //     typedef float InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
-    // case itk::ImageIOBase::DOUBLE:{       // float64
-    //     typedef double InputComponentType;
-    //     res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
-    //     } break;
+    case itk::ImageIOBase::FLOAT:{        // float32
+        typedef float InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::DOUBLE:{       // float64
+        typedef double InputComponentType;
+        res= dispatch_cPP<InputComponentType>(compPerPixel, pixelType, dimensionType, argc, argv);
+        } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
         std::cerr << "unknown component type" << std::endl;
@@ -267,10 +280,12 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 2 ){
+    if ( argc < 2 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
+                  << " [bins]"
+                  << " [min] [max]"
                   << std::endl;
 
         return EXIT_FAILURE;
