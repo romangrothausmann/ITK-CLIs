@@ -87,11 +87,35 @@ release:
   variables:
     GIT_STRATEGY: none
   script:
-    - docker pull $IMAGE_TAG:test
-    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:latest
-    - docker push $IMAGE_TAG:latest
-    - docker tag  $IMAGE_TAG:test $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
-    - docker push $IMAGE_TAG:$CI_COMMIT_SHORT_SHA
-    - docker rmi $(docker images | awk -v IMG=$IMAGE_TAG '$1 ~ (IMG) && $2 ~ /[0-9a-f]{8}/' | tail -n +6) || true  # keep last 5 images: https://stackoverflow.com/questions/40891610/docker-remove-all-but-last-n-images#40892314
+    - apk add --update --no-cache curl jq
+    - export ms='application/vnd.docker.distribution.manifest.v2+json'
+    - export APIURL=$( echo "https://$CI_REGISTRY/v2/$CI_PROJECT_PATH/$CI_COMMIT_REF_SLUG" | tr '[:upper:]' '[:lower:]' )
+    - 'export TOKEN=$(
+       curl https://gitlab.com/jwt/auth
+       -s -f
+       -u $GITLAB_USER_LOGIN:$REGISTRY_TOKEN
+       --get
+       -d client_id=docker
+       -d offline_token=true
+       -d service=container_registry
+       -d "scope=repository:$CI_PROJECT_PATH/$CI_COMMIT_REF_SLUG:*"
+       | sed -r "s/(\{\"token\":\"|\"\})//g"
+       )'
+    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $TOKEN"       $APIURL/manifests/test
+      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $TOKEN" -d @- $APIURL/manifests/latest '
+    - ' curl -fs         -H "Accept: $ms"       -H "Authorization:Bearer $TOKEN"       $APIURL/manifests/test
+      | curl -fsS -X PUT -H "Content-type: $ms" -H "Authorization:Bearer $TOKEN" -d @- $APIURL/manifests/$CI_COMMIT_SHORT_SHA '
+    ## remove old images (keep N) with GIT-SHA tag
+    - export URLENC=$( echo $CI_PROJECT_PATH | sed 's|/|%2F|g' ) # https://docs.gitlab.com/ce/api/README.html#namespaced-path-encoding
+    - export registryID=$( curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories" | jq ".[] | select(.location==\"$IMAGE_TAG\") | .id" ) # https://docs.gitlab.com/ce/api/container_registry.html#list-registry-repositories
+    - curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" | jq '.[] | .name'
+    - 'curl -fs
+           --request DELETE
+           --data "name_regex=[0-9a-f]{8}"
+           --data "keep_n=5"
+           --header "PRIVATE-TOKEN: $REGISTRY_TOKEN"
+           "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" ' # https://docs.gitlab.com/ce/api/container_registry.html#delete-repository-tags-in-bulk
+    - sleep 30
+    - curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" | jq '.[] | .name'
   only:
     - master
