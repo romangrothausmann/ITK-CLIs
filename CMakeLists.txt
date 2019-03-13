@@ -333,11 +333,12 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "thresh-erase_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "thresh-glob.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+## man. test showed that the output of thresh-erase_SDI differs to that of thresh-erase -> bug? -> SDI-test for ITK?
+# SET(CurrentExe "thresh-erase_SDI")
+# ADD_EXECUTABLE(${CurrentExe}  "thresh-glob.cxx")
+# SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
+# TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+# install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "stat")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
