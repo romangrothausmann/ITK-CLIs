@@ -92,7 +92,11 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 	fprintf(stderr, "\r%5d: ", optimizer->GetCurrentIteration());
 	if(optimizer->GetValue() < 1e18){
 	    fprintf(stderr, "%7.3e\t", optimizer->GetValue());
-	    std::cerr << optimizer->GetGradient() << "\t";
+	    typename OptimizerType::DerivativeType gradient = optimizer->GetGradient();
+	    double mag= 0;
+	    for (itk::SizeValueType i= 0; i < gradient.GetSize(); i++)
+		mag+= double(gradient[i]) * double(gradient[i]);
+	    std::cerr << std::sqrt(mag) << "\t";
 	    std::cerr << optimizer->GetCurrentPosition();
 	    }
         }
