@@ -1,5 +1,6 @@
-**/.git
-**/.gitattributes
-**/.gitmodules
-.gitlab-ci.yml
-Dockerfile
+**
+!*.h
+!*.cxx
+!CMakeLists.txt
+!filter
+!tclap/**
