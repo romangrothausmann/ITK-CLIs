@@ -78,7 +78,7 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename OptimizerType>
 int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
-    const char offset= 8;
+    const char offset= 9;
     if((argc - offset) % Dimension){
         fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
         return EXIT_FAILURE;
@@ -199,7 +199,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     pathFilter->SetInput(speed); //needs the image values to be scaled to [0; 1]
     pathFilter->SetCostFunction(cost);
     pathFilter->SetOptimizer(optimizer);
-    pathFilter->SetTerminationValue(2.0);
+    pathFilter->SetTerminationValue(atof(argv[8])); // see https://itk.org/Doxygen/html/classitk_1_1ArrivalFunctionToPathFilter.html and https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/issues/22
 
     // Setup path points
     typename SpeedImageType::IndexType start, end;
@@ -644,7 +644,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 8 ){
+    if ( argc < 9 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -654,6 +654,7 @@ int main(int argc, char *argv[]){
                   << " optimizer"
                   << " iterations"
                   << " step-size"
+                  << " term-value"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
