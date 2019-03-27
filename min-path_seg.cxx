@@ -462,7 +462,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case -1:{
@@ -470,7 +470,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 0:{
@@ -486,11 +486,15 @@ int DoIt(int argc, char *argv[]){
         reader->UpdateOutputInformation();
 
 	typename OptimizerType::NeighborhoodSizeType size(Dimension);
-	for (unsigned int i=0; i<Dimension; i++)
-	    size[i] = reader->GetOutput()->GetSpacing()[i] * atof(argv[7]);
+	for (unsigned int i=0; i<Dimension; i++){
+	    size[i] = atof(argv[7]); // not using argv[7] as a scale factor here to conform to its use for the other optimizers
+	    if (size[i] < reader->GetOutput()->GetSpacing()[i])
+		std::cout << "WARNING: neighborhood size (" << i << ") is smaller than voxel size!" << std::endl;
+	    }
 	optimizer->SetNeighborhoodSize(size);
 
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
+        std::cout << "Using neighborhood size (physical space!): " << optimizer->GetNeighborhoodSize() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 1:{
@@ -498,7 +502,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 2:{
@@ -508,7 +512,7 @@ int DoIt(int argc, char *argv[]){
 	optimizer->SetRelaxationFactor(.5);
 	optimizer->SetMaximumStepLength(1.0);
 	optimizer->SetMinimumStepLength(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     default:
@@ -649,13 +653,13 @@ int main(int argc, char *argv[]){
                   << " sigma"
                   << " optimizer"
                   << " iterations"
-                  << " step-scale"
+                  << " step-size"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
                   << std::endl;
-        std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
-        std::cerr << " step-scale will correspond to distance between points for a speed function ~1 along path" << std::endl;
+        std::cerr << " Point coordinates are either expected in voxel units (prefixed with 'v', starting with 1) or in physical units (prefixed with 'p')!" << std::endl;
+        std::cerr << " step-size (in physical space!) will correspond to distance between points for a speed function ~1 along path" << std::endl;
 
         return EXIT_FAILURE;
         }
