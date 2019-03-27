@@ -78,7 +78,7 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename OptimizerType>
 int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 
-    const char offset= 8;
+    const char offset= 9;
     if((argc - offset) % Dimension){
         fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
         return EXIT_FAILURE;
@@ -199,7 +199,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     pathFilter->SetInput(speed); //needs the image values to be scaled to [0; 1]
     pathFilter->SetCostFunction(cost);
     pathFilter->SetOptimizer(optimizer);
-    pathFilter->SetTerminationValue(2.0);
+    pathFilter->SetTerminationValue(atof(argv[8])); // see https://itk.org/Doxygen/html/classitk_1_1ArrivalFunctionToPathFilter.html and https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/issues/22
 
     // Setup path points
     typename SpeedImageType::IndexType start, end;
@@ -479,7 +479,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case -1:{
@@ -487,7 +487,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 0:{
@@ -503,11 +503,15 @@ int DoIt(int argc, char *argv[]){
         reader->UpdateOutputInformation();
 
 	typename OptimizerType::NeighborhoodSizeType size(Dimension);
-	for (unsigned int i=0; i<Dimension; i++)
-	    size[i] = reader->GetOutput()->GetSpacing()[i] * atof(argv[7]);
+	for (unsigned int i=0; i<Dimension; i++){
+	    size[i] = atof(argv[7]); // not using argv[7] as a scale factor here to conform to its use for the other optimizers
+	    if (size[i] < reader->GetOutput()->GetSpacing()[i])
+		std::cout << "WARNING: neighborhood size (" << i << ") is smaller than voxel size!" << std::endl;
+	    }
 	optimizer->SetNeighborhoodSize(size);
 
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
+        std::cout << "Using neighborhood size (physical space!): " << optimizer->GetNeighborhoodSize() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 1:{
@@ -515,7 +519,7 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetLearningRate(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     case 2:{
@@ -525,7 +529,7 @@ int DoIt(int argc, char *argv[]){
 	optimizer->SetRelaxationFactor(.5);
 	optimizer->SetMaximumStepLength(1.0);
 	optimizer->SetMinimumStepLength(atof(argv[7]));
-        std::cout << "Using interpolator: " << optimizer->GetNameOfClass() << std::endl;
+        std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
     default:
@@ -657,7 +661,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 8 ){
+    if ( argc < 9 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -666,13 +670,14 @@ int main(int argc, char *argv[]){
                   << " sigma"
                   << " optimizer"
                   << " iterations"
-                  << " step-scale"
+                  << " step-size"
+                  << " term-value"
                   << " start-point..."
                   << " end-point..."
                   << " way-point..."
                   << std::endl;
-        std::cerr << " Point coordinates are expected in voxel units (starting with 1)!" << std::endl;
-        std::cerr << " step-scale will correspond to distance between points for a speed function ~1 along path" << std::endl;
+        std::cerr << " Point coordinates are either expected in voxel units (prefixed with 'v', starting with 1) or in physical units (prefixed with 'p')!" << std::endl;
+        std::cerr << " step-size (in physical space!) will correspond to distance between points for a speed function ~1 along path" << std::endl;
 
         return EXIT_FAILURE;
         }

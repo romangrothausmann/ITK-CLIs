@@ -29,7 +29,6 @@ RUN mkdir -p ITK_build && \
     cd ITK_build && \
     cmake \
     	  -DCMAKE_INSTALL_PREFIX=/opt/itk/ \
-	  -DCMAKE_MODULE_PATH=/opt/vtk/lib/cmake \
 	  -DCMAKE_BUILD_TYPE=Release \
 	  -DBUILD_SHARED_LIBS=ON \
 	  -DBUILD_TESTING=OFF \

@@ -66,10 +66,11 @@ test01:
   stage: test
   script:
     - docker pull $IMAGE_TAG:test
+    - echo $CMD
     - docker run --rm
                  -v $(pwd):/images
                  $IMAGE_TAG:test
-                 $CMD
+                 /bin/bash -c "$CMD"
   retry: 2
 
 stat:
@@ -81,6 +82,16 @@ stat_SDI:
   <<: *test
   variables:
     CMD: "$CI_JOB_NAME tests/min-path_fm/manual/ACN_speed.mha 10"
+
+thresh-erase:
+  <<: *test
+  variables:
+    CMD: "$CI_JOB_NAME tests/min-path_fm/manual/ACN_speed.mha output.mha  0 -0.5 +0.5 && stat output.mha  2>/dev/null "
+
+thresh-erase_SDI:
+  <<: *test
+  variables:
+    CMD: "$CI_JOB_NAME tests/min-path_fm/manual/ACN_speed.mha output.mha 10 -0.5 +0.5 && stat output.mha  2>/dev/null "
 
 release:
   stage: release
