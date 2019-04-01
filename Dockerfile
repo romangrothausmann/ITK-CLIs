@@ -20,7 +20,7 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
-RUN git clone https://itk.org/ITK.git && cd ITK && git checkout b2884129bf6db53cb102137d81e7176e893c5e5f
+RUN git clone https://itk.org/ITK.git && cd ITK && git checkout 36b574e48a24c2aefa16b6001d6babce7a553733
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
@@ -35,6 +35,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_MinimalPathExtraction=ON \
 	  -DModule_ParabolicMorphology=ON \
 	  -DModule_StreamingSinc=ON \
+	  -DModule_Thickness3D=ON \
 	  -DModule_LesionSizingToolkit=OFF \
 	  ../ITK && \
     make -j"$(nproc)" && \

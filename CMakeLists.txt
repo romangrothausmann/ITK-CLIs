@@ -60,14 +60,6 @@ IF ( ITK_FOUND )
 ENDIF( ITK_FOUND )
 
 
-INCLUDE_DIRECTORIES(
-  # $ENV{HOME}/itk/parabolicMorphology/
-  # $ENV{HOME}/itk/ITKbinaryThinningImageFilter3D/Source/
-  # $ENV{HOME}/itk/itkWindowImageFilter/
-  # $ENV{HOME}/itk/itkLabelSetErodeDilate_IJ_886/
-  # filter/internal/
-  )
-
 SET(Libraries
   ${ITK_LIBRARIES}
 )

@@ -29,7 +29,7 @@ An increase in removed end-points can occure if a branch section lies such that 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkNeighborhoodIterator.h>
-#include "filter/external/itkBinaryThinningImageFilter3D/itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
+#include <itkBinaryThinningImageFilter3D.h> // now available as external module: https://github.com/InsightSoftwareConsortium/ITKThickness3D
 #include <itkImageFileWriter.h>
 
 
