@@ -1,5 +1,6 @@
 ////program for itkResampleImageFilter
 //01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
+//02: combining with resample_SDI.cxx to single code-base
 
 
 #include "itkFilterWatcher.h"
@@ -35,6 +36,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+#ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -45,6 +47,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#else
+    reader->UpdateOutputInformation();
+#endif
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
@@ -81,6 +86,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
 
+#ifndef USE_SDI
     FilterWatcher watcher1(filter);
     try{
         filter->Update();
@@ -89,6 +95,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#endif
 
 
     typename OutputImageType::Pointer output= filter->GetOutput();
@@ -99,7 +106,12 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
+#ifndef USE_SDI
     writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -339,7 +351,11 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
+#ifndef USE_SDI
                   << " compress"
+#else
+		  << " stream-chunks"
+#endif
                   << " Interpolator_Type"
                   << " spacing..."
                   << std::endl;
