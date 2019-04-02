@@ -101,8 +101,8 @@ stat:
 thresh-erase:
   <<: *testSDI
   variables:
-    CMD:    " $CI_JOB_NAME       tests/min-path_fm/manual/ACN_speed.mha output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
-    CMDSDI: " ${CI_JOB_NAME}_SDI tests/min-path_fm/manual/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/min-path_fm/manual/ACN_speed.mha output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v ${CI_JOB_NAME}_SDI tests/min-path_fm/manual/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
 
 release:
   stage: release

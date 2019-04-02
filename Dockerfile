@@ -66,6 +66,9 @@ RUN mkdir -p /build/ && \
 ################################################################################
 FROM system as install
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    time
+
 COPY --from=builder /opt/itk/ /opt/itk/
 COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
 
