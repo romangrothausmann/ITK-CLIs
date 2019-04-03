@@ -110,10 +110,15 @@ resample:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  1  0.5 0.4 0.3 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v ${CI_JOB_NAME}_SDI tests/data/ACN_speed.mha output_SDI.mha 10  1  0.5 0.4 0.3 && stat output_SDI.mha  2>/dev/null "
 
-min-path_seg_f32:
+min-path_seg_f32.0: # 0: IterateNeighborhoodOptimizer
   <<: *test
   variables: # YAML interprets \r and \n in double quotes! https://stackoverflow.com/questions/24291402/how-to-store-or-read-a-literal-carriage-return-and-newline-from-yaml-in-python#24291536
-    CMD: " $CI_JOB_NAME tests/data/ACN.mha ACN_mps 0  5.5 1 100 1.1 1.0   v217 v19 v49  v41 v123 v127   v91 v58 v53 |& sed '/progress/d;s/\r/\\n/g' " # \r should be interpreted by YAML \n not!
+    CMD: " min-path_seg_f32 tests/data/ACN.mha ACN_mps 0  5.5  0  100 1.1 1.0   v217 v19 v49  v41 v123 v127   v91 v58 v53 |& sed '/progress/d;s/\r/\\n/g' " # \r should be interpreted by YAML \n not!
+
+min-path_seg_f32.1: # 1: GradientDescentOptimizer
+  <<: *test
+  variables:
+    CMD: " min-path_seg_f32 tests/data/ACN.mha ACN_mps 0  5.5  1  100 1.1 1.0   v217 v19 v49  v41 v123 v127   v91 v58 v53 |& sed '/progress/d;s/\r/\\n/g' "
 
 release:
   stage: release
