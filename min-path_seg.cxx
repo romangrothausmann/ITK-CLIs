@@ -51,8 +51,9 @@ namespace itk{
 	/** Run-time type information (and related methods). */
 	itkTypeMacro(MyIterateNeighborhoodOptimizer, IterateNeighborhoodOptimizer);
 
-	/** Constructor */
-	MyIterateNeighborhoodOptimizer(){
+	/** set m_LastPosition when initial position is set */
+	void SetInitialPosition(const ParametersType & param){
+	    IterateNeighborhoodOptimizer::SetInitialPosition(param); // OK here, but: https://en.wikipedia.org/wiki/Call_super
 	    m_LastPosition= this->GetInitialPosition();
 	    }
 
