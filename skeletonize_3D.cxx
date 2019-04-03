@@ -4,7 +4,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkBinaryThinningImageFilter3D.h> // now available as external module: https://github.com/InsightSoftwareConsortium/ITKThickness3D
+#include "filter/external/itkBinaryThinningImageFilter3D/itkBinaryThinningImageFilter3D.h" //not included in itk-4.8 yet, nor on github
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkImageFileWriter.h>
 
