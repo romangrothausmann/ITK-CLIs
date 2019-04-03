@@ -43,15 +43,39 @@ namespace itk{
 	typedef SmartPointer<Self>             Pointer;
 	typedef SmartPointer<const Self>       ConstPointer;
 
+	ParametersType m_LastPosition;
+
 	/** Method for creation through the object factory. */
 	itkNewMacro(Self); //essential for typedef creation, needs all typedefs above!
 
 	/** Run-time type information (and related methods). */
 	itkTypeMacro(MyIterateNeighborhoodOptimizer, IterateNeighborhoodOptimizer);
 
+	/** Constructor */
+	MyIterateNeighborhoodOptimizer(){
+	    m_LastPosition= this->GetInitialPosition();
+	    }
+
 	// "rename" GetCurrentValue() to GetValue()
-	double GetValue(){this->GetCurrentValue();};
-	};
+	double GetValue(){
+	    return(this->GetCurrentValue());
+	    }
+
+	// gradient reported is the difference between the last and the current position
+	DerivativeType GetGradient(){
+	    const unsigned int spaceDimension =  m_CostFunction->GetNumberOfParameters();
+	    DerivativeType m_Gradient(spaceDimension);
+	    const ParametersType & currentPosition = this->GetCurrentPosition();
+
+	    for ( unsigned int j = 0; j < spaceDimension; j++ )
+		{
+		m_Gradient[j] = currentPosition[j] - m_LastPosition[j];
+		}
+
+	    m_LastPosition= currentPosition;
+	    return(m_Gradient);
+	    }
+	}; // ; essential here!
     }
 
 
