@@ -43,15 +43,40 @@ namespace itk{
 	typedef SmartPointer<Self>             Pointer;
 	typedef SmartPointer<const Self>       ConstPointer;
 
+	ParametersType m_LastPosition;
+
 	/** Method for creation through the object factory. */
 	itkNewMacro(Self); //essential for typedef creation, needs all typedefs above!
 
 	/** Run-time type information (and related methods). */
 	itkTypeMacro(MyIterateNeighborhoodOptimizer, IterateNeighborhoodOptimizer);
 
+	/** set m_LastPosition when initial position is set */
+	void SetInitialPosition(const ParametersType & param){
+	    IterateNeighborhoodOptimizer::SetInitialPosition(param); // OK here, but: https://en.wikipedia.org/wiki/Call_super
+	    m_LastPosition= this->GetInitialPosition();
+	    }
+
 	// "rename" GetCurrentValue() to GetValue()
-	double GetValue(){this->GetCurrentValue();};
-	};
+	double GetValue(){
+	    return(this->GetCurrentValue());
+	    }
+
+	// gradient reported is the difference between the last and the current position
+	DerivativeType GetGradient(){
+	    const unsigned int spaceDimension =  m_CostFunction->GetNumberOfParameters();
+	    DerivativeType m_Gradient(spaceDimension);
+	    const ParametersType & currentPosition = this->GetCurrentPosition();
+
+	    for ( unsigned int j = 0; j < spaceDimension; j++ )
+		{
+		m_Gradient[j] = currentPosition[j] - m_LastPosition[j];
+		}
+
+	    m_LastPosition= currentPosition;
+	    return(m_Gradient);
+	    }
+	}; // ; essential here!
     }
 
 
@@ -66,7 +91,12 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
         OptimizerType* optimizer= dynamic_cast<OptimizerType *>(caller);
 	fprintf(stderr, "\r%5d: ", optimizer->GetCurrentIteration());
 	if(optimizer->GetValue() < 1e18){
-	    fprintf(stderr, "%7.3f ", optimizer->GetValue());
+	    fprintf(stderr, "%7.3e\t", optimizer->GetValue());
+	    typename OptimizerType::DerivativeType gradient = optimizer->GetGradient();
+	    double mag= 0;
+	    for (itk::SizeValueType i= 0; i < gradient.GetSize(); i++)
+		mag+= double(gradient[i]) * double(gradient[i]);
+	    std::cerr << std::sqrt(mag) << "\t";
 	    std::cerr << optimizer->GetCurrentPosition();
 	    }
         }
