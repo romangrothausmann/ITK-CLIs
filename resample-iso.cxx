@@ -67,11 +67,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename OutputImageType::SizeType outputSize;
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
-    for (unsigned int i= 0; i < Dimension-1; i++)
+    for (unsigned int i= 0; i < Dimension; i++)
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
-    const unsigned int i= Dimension-1;
-    outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i] - 1);; //do not resample last output slice
 
     typedef itk::CastImageFilter<InputImageType, InternalImageType> CastFilterType;
     typename CastFilterType::Pointer  caster=  CastFilterType::New();
@@ -159,7 +157,8 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
-    switch(atoi(argv[4])){
+    int opt= atoi(argv[4]);
+    switch(opt){
     case 0:{
         typedef itk::NearestNeighborInterpolateImageFunction<InternalImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
@@ -172,35 +171,11 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
-    case 2:{
+    case 2 ... 5 :{ // https://stackoverflow.com/questions/4494170/grouping-switch-statement-cases-together#28292802
         typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(2);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 3:{
-        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(3);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 4:{
-        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(4);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 5:{
-        typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(5);
+        interpolator->SetSplineOrder(opt);
         std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;

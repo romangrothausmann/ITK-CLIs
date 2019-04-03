@@ -38,6 +38,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_MinimalPathExtraction=ON \
 	  -DModule_ParabolicMorphology=ON \
 	  -DModule_StreamingSinc=ON \
+	  -DModule_Thickness3D=ON \
 	  -DModule_LesionSizingToolkit=OFF \
 	  ../ITK && \
     make -j"$(nproc)" && \
@@ -67,6 +68,9 @@ RUN mkdir -p /build/ && \
 # install
 ################################################################################
 FROM system as install
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    time
 
 COPY --from=builder /opt/itk/ /opt/itk/
 COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
