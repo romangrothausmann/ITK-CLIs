@@ -130,7 +130,8 @@ int DoIt(int argc, char *argv[]){
     typedef double TCoefficientType;
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
-    switch(atoi(argv[4])){
+    int opt= atoi(argv[4]);
+    switch(opt){
     case 0:{
         typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
@@ -143,35 +144,11 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
-    case 2:{
+    case 2 ... 5: { // https://stackoverflow.com/questions/4494170/grouping-switch-statement-cases-together#28292802
         typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(2);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 3:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(3);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 4:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(4);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 5:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(5);
+        interpolator->SetSplineOrder(opt);
         std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
