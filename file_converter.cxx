@@ -1,5 +1,6 @@
 ////program to use itk to convert between file-formats
 //01: based on template_vec.cxx
+//02: combining with file_converter_SDI.cxx to single code-base
 
 
 #include <complex>
@@ -24,6 +25,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+#ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -34,6 +36,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#endif
 
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
@@ -42,7 +45,12 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(reader->GetOutput());
+#ifndef USE_SDI
     writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -239,7 +247,11 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
+#ifndef USE_SDI
                   << " compress"
+#else
+		  << " stream-chunks"
+#endif
                   << std::endl;
 
         return EXIT_FAILURE;

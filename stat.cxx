@@ -57,7 +57,7 @@ int DoIt(int argc, char *argv[]){
 #endif
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
-    std::cerr << "input region index: " << input->GetLargestPossibleRegion().GetIndex()
+    std::cout << "input region index: " << input->GetLargestPossibleRegion().GetIndex()
 	      << "  size: " <<  input->GetLargestPossibleRegion().GetSize()
 	      << std::endl;
 

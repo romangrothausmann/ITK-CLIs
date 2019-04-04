@@ -1,5 +1,6 @@
 ////program for itkResampleImageFilter
 //01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
+//02: combining with resample_SDI.cxx to single code-base
 
 
 #include "itkFilterWatcher.h"
@@ -35,6 +36,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+#ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -45,6 +47,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#else
+    reader->UpdateOutputInformation();
+#endif
 
     typename InputImageType::Pointer input= reader->GetOutput();
 
@@ -63,11 +68,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename OutputImageType::SizeType outputSize;
 
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
-    for (unsigned int i= 0; i < Dimension-1; i++)
+    for (unsigned int i= 0; i < Dimension; i++)
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
-    const unsigned int i= Dimension-1;
-    outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i] - 1);; //do not resample last output slice
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
@@ -81,6 +84,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
 
+#ifndef USE_SDI
     FilterWatcher watcher1(filter);
     try{
         filter->Update();
@@ -89,6 +93,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#endif
 
 
     typename OutputImageType::Pointer output= filter->GetOutput();
@@ -99,7 +104,12 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
+#ifndef USE_SDI
     writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -120,7 +130,8 @@ int DoIt(int argc, char *argv[]){
     typedef double TCoefficientType;
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
-    switch(atoi(argv[4])){
+    int opt= atoi(argv[4]);
+    switch(opt){
     case 0:{
         typedef itk::NearestNeighborInterpolateImageFunction<InputImageType, TCoordRep> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
@@ -133,35 +144,11 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
-    case 2:{
+    case 2 ... 5: { // https://stackoverflow.com/questions/4494170/grouping-switch-statement-cases-together#28292802
         typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(2);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 3:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(3);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 4:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(4);
-        std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
-        }break;
-    case 5:{
-        typedef itk::BSplineInterpolateImageFunction<InputImageType, TCoordRep, TCoefficientType> InterpolatorType;
-        typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
-        std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
-        interpolator->SetSplineOrder(5);
+        interpolator->SetSplineOrder(opt);
         std::cerr << "Spline order: " << interpolator->GetSplineOrder() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
@@ -339,7 +326,11 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
+#ifndef USE_SDI
                   << " compress"
+#else
+		  << " stream-chunks"
+#endif
                   << " Interpolator_Type"
                   << " spacing..."
                   << std::endl;
