@@ -161,3 +161,4 @@ release:
     - curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" | jq '.[] | .name'
   only:
     - master
+    - ITK-4
