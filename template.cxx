@@ -49,6 +49,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
+#ifndef USE_SDI
     FilterWatcher watcherI(reader);
     watcherI.QuietOn();
     watcherI.ReportTimeOn();
@@ -59,6 +60,9 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#else
+    reader->UpdateOutputInformation();
+#endif
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -70,6 +74,7 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
+#ifndef USE_SDI
     FilterWatcher watcher1(filter);
     // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
     // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
@@ -81,6 +86,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
+#endif
 
 
     const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
@@ -91,8 +97,12 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+#ifndef USE_SDI
+    writer->SetUseCompression(atoi(argv[3]));
+#else
+    writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
+#endif
     try{
         writer->Update();
         }
@@ -250,7 +260,11 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
+#ifndef USE_SDI
                   << " compress"
+#else
+                  << " stream-chunks"
+#endif
                   << std::endl;
 
         return EXIT_FAILURE;
