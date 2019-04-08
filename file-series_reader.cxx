@@ -1,6 +1,7 @@
 ////program to use itk to convert between file-formats, streaming version
 //01: based on file_converter_SDI.cxx and http://www.itk.org/Wiki/ITK/Examples/IO/VolumeFromSlices
 //02: based on template_vec.cxx
+//03: single program for SDI and noSDI (based on new template_vec.cxx)
 
 
 #include <complex>
@@ -9,10 +10,6 @@
 #include <itkImageSeriesReader.h>
 #include <itkChangeInformationImageFilter.h>
 #include <itkImageFileWriter.h>
-
-#ifdef USE_SDI
-#include <itkPipelineMonitorImageFilter.h>
-#endif
 
 
 
@@ -24,6 +21,8 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+
+    bool noSDI= false; // SDI only program
 
     std::vector<std::string> names;
 
@@ -40,34 +39,21 @@ int DoIt(int argc, char *argv[]){
     ////reading compressed MHA/MHD is supported for streaming!
     reader->SetFileNames(names);
     reader->ReleaseDataFlagOn();
-#ifndef USE_SDI
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-#else
-    try{
-        reader->UpdateOutputInformation();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-    reader->UseStreamingOn(); //optional, default: On
-#endif
-
-#ifdef USE_SDI
-    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
-    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
-    monitorFilter->SetInput(reader->GetOutput());
-    // monitorFilter->DebugOn();
-#endif
+    if(noSDI){ // not used, SDI only program
+	FilterWatcher watcherI(reader);
+	watcherI.QuietOn();
+	watcherI.ReportTimeOn();
+	try{
+	    reader->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
+    else{
+	reader->UpdateOutputInformation();
+	}
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -81,37 +67,31 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::ChangeInformationImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-#ifndef USE_SDI
     filter->SetInput(input);
-#else
-    filter->SetInput(monitorFilter->GetOutput());
-#endif
     filter->ReleaseDataFlagOn();
     filter->SetOutputSpacing(outputSpacing);
     filter->ChangeSpacingOn();
 
     FilterWatcher watcher1(filter);
     try{
-        filter->UpdateOutputInformation();
-        }
+	filter->UpdateOutputInformation();
+	}
     catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
 
+
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[1]);
-    writer->SetInput(filter->GetOutput());
-#ifndef USE_SDI
-    writer->UseCompressionOn(); //writing compressed is sole purpose of non-SDI version
-#else
-    writer->UseCompressionOff(); //writing compressed is not supported for streaming!
+    writer->SetInput(output);
+    writer->UseCompressionOff(); // writing compressed is not supported when streaming!
     writer->SetNumberOfStreamDivisions(names.size());
-#endif
     try{
         writer->Update();
         }
@@ -119,12 +99,6 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
-
-#ifdef USE_SDI
-    if (!monitorFilter->VerifyAllInputCanStream(names.size())){ // reports a warning if expected and actual # chunks differ
-        // std::cerr << monitorFilter;
-        }
-#endif
 
     return EXIT_SUCCESS;
 
@@ -139,20 +113,20 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
+    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
         typedef InputComponentType InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
+    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+        typedef std::complex<InputComponentType> InputPixelType;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        } break;
+    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
+    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
@@ -313,6 +287,9 @@ int main(int argc, char *argv[]){
 
         return EXIT_FAILURE;
         }
+
+    //// for compression use file_converter afterwards
+    std::cerr << "Employing streaming (compression not possible then)." << std::endl;
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
