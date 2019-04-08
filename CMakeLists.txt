@@ -223,12 +223,6 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "bin_series_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "bin_series.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "label_connected_components")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
