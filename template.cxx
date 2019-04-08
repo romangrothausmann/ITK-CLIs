@@ -43,27 +43,30 @@ int DoIt(int argc, char *argv[]){
     // eventCallbackITK = itk::CStyleCommand::New();
     // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
+    int CompChunk= atoi(argv[3]);
+    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-#ifndef USE_SDI
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-#else
-    reader->UpdateOutputInformation();
-#endif
-
+    if(noSDI){
+	FilterWatcher watcherI(reader);
+	watcherI.QuietOn();
+	watcherI.ReportTimeOn();
+	try{
+	    reader->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
+    else{
+	reader->UpdateOutputInformation();
+	}
+	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
@@ -74,19 +77,19 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
-#ifndef USE_SDI
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-#endif
+    if(noSDI){
+	FilterWatcher watcher1(filter);
+	// filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+	// filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
+	// filter->AddObserver(itk::EndEvent(), eventCallbackITK);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
 
     const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
@@ -97,12 +100,13 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-#ifndef USE_SDI
-    writer->SetUseCompression(atoi(argv[3]));
-#else
-    writer->UseCompressionOff(); // writing compressed is not supported when streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
-#endif
+    if(noSDI){
+	writer->SetUseCompression(CompChunk);
+	}
+    else{
+	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+	writer->SetNumberOfStreamDivisions(CompChunk);
+	}
     try{
         writer->Update();
         }
@@ -260,15 +264,28 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-#ifndef USE_SDI
-                  << " compress"
-#else
-                  << " stream-chunks"
-#endif
+                  << " compress|stream-chunks"
                   << std::endl;
 
+        std::cerr << std::endl;
+        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
         return EXIT_FAILURE;
         }
+
+    int CompChunk= atoi(argv[3]);
+    if(CompChunk == 0){
+	std::cerr << "Employing no compression and no streaming." << std::endl;
+	}
+    else if (CompChunk == 1){
+	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
+	}
+    else if (CompChunk > 1){
+	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
+	}
+    else {
+	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
+        return EXIT_FAILURE;
+	}
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
