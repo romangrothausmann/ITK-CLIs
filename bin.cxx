@@ -1,6 +1,7 @@
 ////program for binning images by averaging
 //01: based on template_02.cxx
 //02: based on template_vec.cxx
+//03: single program for SDI and noSDI (based on new template_vec.cxx)
 
 
 #include <complex>
@@ -9,10 +10,6 @@
 #include <itkImageFileReader.h>
 #include <itkBinShrinkImageFilter.h>
 #include <itkImageFileWriter.h>
-
-#ifdef USE_SDI
-#include <itkPipelineMonitorImageFilter.h>
-#endif
 
 
 
@@ -24,24 +21,26 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
+    int CompChunk= atoi(argv[3]);
+    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-#ifndef USE_SDI
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-#endif
+    if(noSDI){
+	FilterWatcher watcherI(reader);
+	watcherI.QuietOn();
+	watcherI.ReportTimeOn();
+	try{
+	    reader->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -53,35 +52,33 @@ int DoIt(int argc, char *argv[]){
     filter->SetShrinkFactors(atoi(argv[4]));
     filter->ReleaseDataFlagOn();
 
-#ifndef USE_SDI
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-#else
-    typedef itk::PipelineMonitorImageFilter<OutputImageType> MonitorFilterType;
-    typename MonitorFilterType::Pointer monitorFilter = MonitorFilterType::New();
-    monitorFilter->SetInput(filter->GetOutput());
-#endif
+    if(noSDI){
+	FilterWatcher watcher1(filter);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
+
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-#ifndef USE_SDI
-    writer->SetInput(filter->GetOutput());
-    writer->SetUseCompression(atoi(argv[3]));
-#else
-    writer->SetInput(monitorFilter->GetOutput());
-    writer->UseCompressionOff(); //writer->SetUseCompression(atoi(argv[3]));//writing compressed is not supported for streaming!
-    writer->SetNumberOfStreamDivisions(atoi(argv[3]));
-#endif
+    writer->SetInput(output);
+    if(noSDI){
+	writer->SetUseCompression(CompChunk);
+	}
+    else{
+	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+	writer->SetNumberOfStreamDivisions(CompChunk);
+	}
     try{
         writer->Update();
         }
@@ -89,12 +86,6 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
-
-#ifdef USE_SDI
-    if (!monitorFilter->VerifyAllInputCanStream(atoi(argv[3]))){ // reports a warning if expected and actual # chunks differ
-        // std::cerr << monitorFilter;
-        }
-#endif
 
     return EXIT_SUCCESS;
 
@@ -109,20 +100,20 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
+    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
         typedef InputComponentType InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
+    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+        typedef std::complex<InputComponentType> InputPixelType;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        } break;
+    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
+    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
@@ -278,34 +269,29 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-#ifndef USE_SDI
-                  << " compress"
-#else
-                  << " stream-chunks"
-#endif
+                  << " compress|stream-chunks"
                   << " bin"
                   << std::endl;
 
+        std::cerr << std::endl;
+        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(atoi(argv[3]) < 0){
-        std::cerr << "3rd parameter must not be negative" << std::endl;
+    int CompChunk= atoi(argv[3]);
+    if(CompChunk == 0){
+	std::cerr << "Employing no compression and no streaming." << std::endl;
+	}
+    else if (CompChunk == 1){
+	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
+	}
+    else if (CompChunk > 1){
+	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
+	}
+    else {
+	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
         return EXIT_FAILURE;
-        }
-
-#ifndef USE_SDI
-    if(atoi(argv[3]) > 1){
-        std::cerr << "compress must be 0 or 1 (to avoid confusion with stream-chunks of SDI version" << std::endl;
-        return EXIT_FAILURE;
-        }
-#else
-    if(atoi(argv[3]) < 2){
-        std::cerr << "stream-chunks must be > 1 (or use non-SDI version)" << std::endl;
-        return EXIT_FAILURE;
-        }
-#endif
-
+	}
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
