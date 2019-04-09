@@ -309,6 +309,7 @@ int main(int argc, char *argv[]){
         }
 
     int CompChunk= atoi(argv[3]);
+    std::cerr << std::endl;
     if(CompChunk == 0){
 	std::cerr << "Employing no compression and no streaming." << std::endl;
 	}

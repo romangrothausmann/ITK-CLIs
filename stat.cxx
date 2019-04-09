@@ -236,6 +236,8 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
+    std::cerr << std::endl;
+
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
     size_t dimensionType;
