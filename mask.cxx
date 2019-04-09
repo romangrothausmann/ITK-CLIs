@@ -1,6 +1,7 @@
 ////program for itkMaskImageFilter
 //01: based on template_2inputs.cxx
 //02: single program for SDI and noSDI (based on new template_2inputs.cxx)
+//03: single program for mask and mask-negated (based on template_var-filter.cxx)
 
 
 #include <complex>
@@ -8,19 +9,13 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkMaskImageFilter.h>
+#include <itkMaskNegatedImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
 
-template<typename InputComponentType1, typename TypeInputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
-int DoIt(int argc, char *argv[]){
-
-    typedef InputPixelType1 OutputPixelType;
-
-    typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
-    typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
-
+template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension, typename InputImageType1, typename InputImageType2, typename OutputImageType, typename FilterType>
+int DoIt2(int argc, char *argv[], FilterType* filter){
 
     int CompChunk= atoi(argv[4]);
     bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
@@ -73,8 +68,6 @@ int DoIt(int argc, char *argv[]){
     const typename InputImageType2::Pointer& input2= reader2->GetOutput();
 
 
-    typedef itk::MaskImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput1(reader1->GetOutput());
     filter->SetInput2(reader2->GetOutput());
     filter->ReleaseDataFlagOn();
@@ -119,6 +112,35 @@ int DoIt(int argc, char *argv[]){
 
     }
 
+template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
+int DoIt(int argc, char *argv[]){
+    int res= 0;
+
+    typedef InputPixelType1 OutputPixelType;
+
+    typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
+    typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
+    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
+
+    int opt= 0;
+    if(argc > 5)
+	opt= atoi(argv[5]);
+    switch(opt){
+    case 0: {
+	typedef        itk::MaskImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
+	typename FilterType::Pointer filter= FilterType::New();
+ 	std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+	res= DoIt2<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2, Dimension, InputImageType1, InputImageType2, OutputImageType, FilterType>(argc, argv, filter);
+	} break;
+    default:
+	typedef itk::MaskNegatedImageFilter<InputImageType1, InputImageType2, OutputImageType> FilterType;
+	typename FilterType::Pointer filter= FilterType::New();
+	std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
+	res= DoIt2<InputComponentType1, InputComponentType2, InputPixelType1, InputPixelType2, Dimension, InputImageType1, InputImageType2, OutputImageType, FilterType>(argc, argv, filter);
+	break;
+        }//switch
+    return res;
+    }
 
 template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1, typename InputPixelType2>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
@@ -339,13 +361,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image1"
                   << " Input_Image2"
                   << " Output_Image"
                   << " compress|stream-chunks"
+                  << " [negate]"
                   << std::endl;
 
         std::cerr << std::endl;
