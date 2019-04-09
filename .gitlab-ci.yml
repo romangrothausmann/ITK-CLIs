@@ -107,12 +107,18 @@ thresh-erase:
   <<: *testSDI
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
-    CMDSDI: " /usr/bin/time -v ${CI_JOB_NAME}_SDI tests/data/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
 
 resample:
   <<: *test
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  1  0.5 0.4 0.3 && stat output.mha      2>/dev/null "
+
+sigmoid:
+  <<: *testSDI
+  variables:
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  2 1 0 100 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  2 1 0 100 && stat output_SDI.mha  2>/dev/null "
 
 min-path_seg_f32.0: # 0: IterateNeighborhoodOptimizer
   <<: *test
