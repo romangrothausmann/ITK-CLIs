@@ -202,6 +202,9 @@ void GetImageType (std::string fileName,
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
 
+    if(!imageReader->GetImageIO()->CanStreamRead())
+        std::cerr << "Cannot stream the reading of the input. Streaming will be inefficient!" << std::endl;
+
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
@@ -232,6 +235,8 @@ int main(int argc, char *argv[]){
 
         return EXIT_FAILURE;
         }
+
+    std::cerr << std::endl;
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
