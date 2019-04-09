@@ -369,11 +369,6 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-SET(CurrentExe "mask-negated")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-
 ## itkResampleImageFilter can stream for linear transforms since ITK @ 2c648ef65618407
 ## for detail see: https://github.com/InsightSoftwareConsortium/ITK/pull/469
 SET(CurrentExe "resample")
