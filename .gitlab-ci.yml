@@ -139,6 +139,12 @@ min-path_seg_f32.1: # 1: GradientDescentOptimizer
   variables:
     CMD: " min-path_seg_f32 tests/data/ACN.mha ACN_mps 0  5.5  1  100 1.1 1.0   v217 v19 v49  v41 v123 v127   v91 v58 v53 |& sed '/progress/d;s/\r/\\n/g' "
 
+shift-scale_ROI:
+  <<: *test
+  variables:
+    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mha output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
+    MD5: a50f7e9869ef5ce4c54806634ad42f47
+
 release:
   stage: release
   variables:
