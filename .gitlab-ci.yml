@@ -141,9 +141,11 @@ min-path_seg_f32.1: # 1: GradientDescentOptimizer
 
 shift-scale_ROI:
   <<: *test
+  tags:
+    - multicore
   variables:
     CMD: " $CI_JOB_NAME tests/data/ACN_speed.mha output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
-    MD5: a50f7e9869ef5ce4c54806634ad42f47
+    MD5: 7e62330dd6183e8b3e53b76321c48384
 
 release:
   stage: release
