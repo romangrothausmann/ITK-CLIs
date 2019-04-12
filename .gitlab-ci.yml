@@ -71,6 +71,9 @@ test01:
                  -v $(pwd):/images
                  $IMAGE_TAG:test
                  /bin/bash -c "$CMD"
+    - set +o pipefail # essential if return-value of pipe is used to determine job status
+    - 'echo "Expected MD5: $MD5"'
+    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.mha | tee /dev/stderr | grep $MD5'
   retry: 2
 
 .testSDI: &testSDI
@@ -91,6 +94,9 @@ test01:
     - res=$( awk '{print $1}' md5.out | sort -u | wc -l | awk '{print $1}' )
     - echo $res
     - test $res -eq 1
+    - set +o pipefail # essential if return-value of pipe is used to determine job status
+    - 'echo "Expected MD5: $MD5"'
+    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.mha | tee /dev/stderr | grep $MD5'
   retry: 2
 
 stat:
@@ -103,18 +109,21 @@ thresh-erase:
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
+    MD5: 862461122c1d136fd1bd5f776defede4
 
 resample:
   <<: *testSDI
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  1  0.5 0.4 0.3 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  1  0.5 0.4 0.3 && stat output_SDI.mha  2>/dev/null "
+    MD5: 61d898cb581bdabbf5db9969d1576acf
 
 sigmoid:
   <<: *testSDI
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  2 1 0 100 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  2 1 0 100 && stat output_SDI.mha  2>/dev/null "
+    MD5: 9b71263aaaf4d7ca0901e5857898244d
 
 min-path_seg_f32.0: # 0: IterateNeighborhoodOptimizer
   <<: *test
