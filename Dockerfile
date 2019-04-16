@@ -57,7 +57,7 @@ RUN mkdir -p /build/ && \
 	  -DCMAKE_PREFIX_PATH=/opt/itk/lib/cmake/ \
 	  -DCMAKE_BUILD_TYPE=Release \
 	  -DCMAKE_CXX_STANDARD=11 \
-	  -DCMAKE_CXX_FLAGS="-Wno-format ${CMAKE_CXX_FLAGS}" \
+	  -DCMAKE_CXX_FLAGS="-Wno-format -Werror ${CMAKE_CXX_FLAGS}" \
 	  /code/ && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
