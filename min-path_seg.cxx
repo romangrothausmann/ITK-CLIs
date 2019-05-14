@@ -12,6 +12,7 @@
 #include <itkParabolicOpenImageFilter.h>
 #include <itkRescaleIntensityImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
+#include <itkLinearInterpolateSelectedNeighborsImageFunction.h>
 #include <itkSpeedFunctionToPathFilter.h>
 #include <itkMorphologicalDistanceTransformImageFilter.h>
 #include "itkInverseGradientDescentOptimizer.h"
@@ -215,9 +216,14 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typedef itk::LinearInterpolateImageFunction<SpeedImageType, CoordRepType> InterpolatorType;
     typename InterpolatorType::Pointer interp = InterpolatorType::New();
 
+    // Create interpolator for gradient
+    typedef itk::LinearInterpolateSelectedNeighborsImageFunction<SpeedImageType, CoordRepType> InterpolatorTypeG;
+    typename InterpolatorTypeG::Pointer interpG = InterpolatorTypeG::New();
+
     // Create cost function
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
     cost->SetInterpolator(interp);
+    cost->SetGradientInterpolatorType(interpG);
     cost->SetDerivativeThreshold(1e9);
     std::cerr << "DerivativeThreshold: " << cost->GetDerivativeThreshold() << std::endl;
 
