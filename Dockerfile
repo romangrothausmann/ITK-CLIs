@@ -21,7 +21,7 @@ RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
 RUN git clone -b testMinimalPathExtraction --depth 1 https://github.com/romangrothausmann/ITK
-RUN cd ITK && git submodule add -f https://github.com/romangrothausmann/ITKMinimalPathExtraction Modules/Remote/MinimalPathExtraction/ # get commits not yet included in upstream before running cmake
+RUN cd ITK && git submodule add -f https://github.com/richardbeare/ITKMinimalPathExtraction Modules/Remote/MinimalPathExtraction/ # get commits not yet included in upstream before running cmake
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
