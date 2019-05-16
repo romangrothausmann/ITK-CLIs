@@ -283,19 +283,6 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-## according to the docs itkStatisticsImageFilter cannot stream
-## but StreamingStatisticsImageFilter can: https://github.com/blowekamp/itkStreamingSinc/
-SET(CurrentExe "stat_SDI")
-IF(StreamingSinc_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with Module_StreamingSinc ON)")
-ELSE()
-ADD_EXECUTABLE(${CurrentExe}  "stat.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-MESSAGE(STATUS "${CurrentExe} will be compiled!")
-ENDIF()
-
 # SET(CurrentExe "label_stack_SBS")
 # ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 # TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
