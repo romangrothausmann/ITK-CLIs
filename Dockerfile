@@ -33,7 +33,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_ITKReview=ON \
 	  -DModule_LabelErodeDilate=ON \
 	  -DModule_MinimalPathExtraction=ON \
-	  -DModule_ParabolicMorphology=ON \
+	  -DModule_ParabolicMorphology=OFF \
 	  -DModule_StreamingSinc=ON \
 	  -DModule_Thickness3D=ON \
 	  -DModule_LesionSizingToolkit=OFF \
