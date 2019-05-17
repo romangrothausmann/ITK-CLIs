@@ -109,6 +109,11 @@ stat_SDI:
   variables:
     CMD: " stat tests/data/ACN_speed.mhd 10 "
 
+hist:
+  <<: *test
+  variables:
+    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd 10 -2 2 "
+
 thresh-erase:
   <<: *testSDI
   variables:
