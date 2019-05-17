@@ -102,27 +102,27 @@ test01:
 stat:
   <<: *test
   variables:
-    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mha "
+    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd "
 
 thresh-erase:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
-    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output.mha      0  -0.5 +0.5 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output_SDI.mha 10  -0.5 +0.5 && stat output_SDI.mha  2>/dev/null "
     MD5: 862461122c1d136fd1bd5f776defede4
 
 resample:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  1  0.5 0.4 0.3 && stat output.mha      2>/dev/null "
-    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  1  0.5 0.4 0.3 && stat output_SDI.mha  2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output.mha      0  1  0.5 0.4 0.3 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output_SDI.mha 10  1  0.5 0.4 0.3 && stat output_SDI.mha  2>/dev/null "
     MD5: 61d898cb581bdabbf5db9969d1576acf
 
 sigmoid:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output.mha      0  2 1 0 100 && stat output.mha      2>/dev/null "
-    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mha output_SDI.mha 10  2 1 0 100 && stat output_SDI.mha  2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output.mha      0  2 1 0 100 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output_SDI.mha 10  2 1 0 100 && stat output_SDI.mha  2>/dev/null "
     MD5: 9b71263aaaf4d7ca0901e5857898244d
 
 min-path_seg_f32.0: # 0: IterateNeighborhoodOptimizer
@@ -138,7 +138,7 @@ min-path_seg_f32.1: # 1: GradientDescentOptimizer
 shift-scale_ROI:
   <<: *test
   variables:
-    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mha output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
+    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
     MD5: 90c399cf4601125e8518589fff9394d3
 
 release:
