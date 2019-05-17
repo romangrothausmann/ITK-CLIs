@@ -6,6 +6,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkRGBToVectorImageAdaptor.h>
 #include <itkVectorGradientMagnitudeImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -46,11 +47,14 @@ int DoIt(int argc, char *argv[]){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    
+    typedef itk::RGBToVectorImageAdaptor<InputImageType> AdaptorType;
+    typename AdaptorType::Pointer adaptor= AdaptorType::New();
+    adaptor->SetImage(input);
 
-
-    typedef itk::VectorGradientMagnitudeImageFilter<InputImageType, TRealType> FilterType;
+    typedef itk::VectorGradientMagnitudeImageFilter<AdaptorType, TRealType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(adaptor);
     filter->ReleaseDataFlagOn();
     filter->SetUsePrincipleComponents(atoi(argv[4]));
 
@@ -116,18 +120,18 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-	if(CompPerPixel == 1){
-	    std::cerr << "Error: NumberOfComponentsPerPixel (" << CompPerPixel << ") not handled by itkVectorGradientMagnitudeImageFilter!" << std::endl;
-	    return EXIT_FAILURE;
-	    }
-        typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::RGBA:{
+    //     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::VECTOR:{
+    // 	if(CompPerPixel == 1){
+    // 	    std::cerr << "Error: NumberOfComponentsPerPixel (" << CompPerPixel << ") not handled by itkVectorGradientMagnitudeImageFilter!" << std::endl;
+    // 	    return EXIT_FAILURE;
+    // 	    }
+    //     typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType, CompPerPixel>(dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
