@@ -121,7 +121,7 @@ int DoIt(int argc, char *argv[]){
 	//FilterWatcher watcher2(stat);
 
 	typename AddType::Pointer adder = AddType::New();
-	adder->SetInput1(stat->GetOutput());
+	adder->SetInput1(extractor->GetOutput());
 	adder->SetConstant2(m_lastMax);
 	//FilterWatcher watcher3(adder);
 
@@ -131,7 +131,7 @@ int DoIt(int argc, char *argv[]){
 	//FilterWatcher watcher4(ch);
 
 	ch->Update();
-	//stat->Update();
+	stat->Update();// needed with ITK #855
 
 	savedPointers.push_back( ch.GetPointer() );
 
@@ -316,6 +316,9 @@ void GetImageType (std::string fileName,
     itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
+
+    if(!imageReader->GetImageIO()->CanStreamRead())
+        std::cerr << "Cannot stream the reading of the input. Streaming will be inefficient!" << std::endl;
 
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();

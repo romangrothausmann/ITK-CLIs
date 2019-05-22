@@ -43,23 +43,30 @@ int DoIt(int argc, char *argv[]){
     // eventCallbackITK = itk::CStyleCommand::New();
     // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
 
+    int CompChunk= atoi(argv[3]);
+    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
+    if(noSDI){
+	FilterWatcher watcherI(reader);
+	watcherI.QuietOn();
+	watcherI.ReportTimeOn();
+	try{
+	    reader->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
+    else{
+	reader->UpdateOutputInformation();
+	}
+	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
@@ -70,17 +77,19 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
-    FilterWatcher watcher1(filter);
-    // filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-    // filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    if(noSDI){
+	FilterWatcher watcher1(filter);
+	// filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
+	// filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
+	// filter->AddObserver(itk::EndEvent(), eventCallbackITK);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
 
     const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
@@ -91,8 +100,13 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    //writer->UseCompressionOn();
-    //writer->SetUseCompression(atoi(argv[3]));
+    if(noSDI){
+	writer->SetUseCompression(CompChunk);
+	}
+    else{
+	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+	writer->SetNumberOfStreamDivisions(CompChunk);
+	}
     try{
         writer->Update();
         }
@@ -230,6 +244,9 @@ void GetImageType (std::string fileName,
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
 
+    if(!imageReader->GetImageIO()->CanStreamRead())
+        std::cerr << "Cannot stream the reading of the input. Streaming will be inefficient!" << std::endl;
+
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
@@ -250,11 +267,29 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-                  << " compress"
+                  << " compress|stream-chunks"
                   << std::endl;
 
+        std::cerr << std::endl;
+        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
         return EXIT_FAILURE;
         }
+
+    int CompChunk= atoi(argv[3]);
+    std::cerr << std::endl;
+    if(CompChunk == 0){
+	std::cerr << "Employing no compression and no streaming." << std::endl;
+	}
+    else if (CompChunk == 1){
+	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
+	}
+    else if (CompChunk > 1){
+	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
+	}
+    else {
+	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
+        return EXIT_FAILURE;
+	}
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;

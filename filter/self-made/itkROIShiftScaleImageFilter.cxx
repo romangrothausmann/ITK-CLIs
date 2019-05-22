@@ -55,8 +55,8 @@ namespace itk{
 	//std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
 
 	typename SSImageFilterType::Pointer ss= SSImageFilterType::New();
-	ss->SetShift(static_cast<typename SSImageFilterType::RealType>(m_DesiredMean - stat->GetMean() * m_DesiredStd/stat->GetSigma()));
-	ss->SetScale(static_cast<typename SSImageFilterType::RealType>(m_DesiredStd/stat->GetSigma()));
+	ss->SetShift(static_cast<typename SSImageFilterType::RealType>(m_DesiredMean * stat->GetSigma() / m_DesiredStd - stat->GetMean()));
+	ss->SetScale(static_cast<typename SSImageFilterType::RealType>(m_DesiredStd / stat->GetSigma()));
 	//std::cerr << " Shift: " << +ss->GetShift() << " Scale: " << +ss->GetScale() << std::endl;
 	ss->SetInput(input);
 

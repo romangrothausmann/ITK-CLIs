@@ -1,5 +1,6 @@
 ////program for itkImageToHistogramFilter
 //01: based on template_vec.cxx
+//02: single program for SDI and noSDI (based on new template_vec.cxx)
 
 
 #include <complex>
@@ -7,8 +8,6 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkImageToHistogramFilter.h>
-#include <itkImageFileWriter.h>
-
 
 
 
@@ -22,16 +21,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    reader->UpdateOutputInformation();
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -68,14 +58,16 @@ int DoIt(int argc, char *argv[]){
     if(CompPerPixel > 1)
         std::cerr << "Generating " << CompPerPixel << "D histogram (although only printing the trace), this may take a while!" << std::flush << std::endl;
 
+    if(argc > 5 && atoi(argv[5]))
+	filter->SetNumberOfStreamDivisions(atoi(argv[5]));
     FilterWatcher watcher1(filter);
     try{
-        filter->Update();
-        }
+	filter->Update();
+	}
     catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
 
     typename FilterType::HistogramType* histogram = filter->GetOutput();
 
@@ -115,20 +107,20 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
+    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
         typedef InputComponentType InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
+    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+        typedef std::complex<InputComponentType> InputPixelType;
+        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+        } break;
+    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGBA:{
+    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{
-        typedef std::complex<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
     case itk::ImageIOBase::VECTOR:{
@@ -263,6 +255,9 @@ void GetImageType (std::string fileName,
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
 
+    if(!imageReader->GetImageIO()->CanStreamRead())
+        std::cerr << "Cannot stream the reading of the input. Streaming will be inefficient!" << std::endl;
+
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
@@ -286,6 +281,7 @@ int main(int argc, char *argv[]){
                   << " Input_Image"
                   << " [bins]"
                   << " [min] [max]"
+                  << " [stream-chunks]"
                   << std::endl;
 
         return EXIT_FAILURE;

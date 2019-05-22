@@ -84,20 +84,8 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "file_converter_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "file_converter.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "file-series_reader")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
-SET(CurrentExe "file-series_reader_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "file-series_reader.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
@@ -116,31 +104,13 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "subimage_extract_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "subimage_extract.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "subimage_extract_series")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "subimage_extract_series_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "subimage_extract_series.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "subimage_mask")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
-SET(CurrentExe "subimage_mask_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "subimage_mask.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
@@ -234,7 +204,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "distance_map_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "distance_map_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -248,20 +218,8 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "bin_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "bin.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "bin_series")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
-SET(CurrentExe "bin_series_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "bin_series.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
@@ -315,20 +273,8 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "thresh-glob_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "thresh-glob.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
 SET(CurrentExe "thresh-erase")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-
-SET(CurrentExe "thresh-erase_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "thresh-erase.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
@@ -337,23 +283,10 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-## according to the docs itkStatisticsImageFilter cannot stream
-## but StreamingStatisticsImageFilter can: https://github.com/blowekamp/itkStreamingSinc/
-SET(CurrentExe "stat_SDI")
-IF(StreamingSinc_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with Module_StreamingSinc ON)")
-ELSE()
-ADD_EXECUTABLE(${CurrentExe}  "stat.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-MESSAGE(STATUS "${CurrentExe} will be compiled!")
-ENDIF()
-
-SET(CurrentExe "label_stack_SBS")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+# SET(CurrentExe "label_stack_SBS")
+# ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+# TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+# install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "label_stack")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
@@ -415,21 +348,10 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-SET(CurrentExe "mask-negated")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-
-SET(CurrentExe "resample")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-
 ## itkResampleImageFilter can stream for linear transforms since ITK @ 2c648ef65618407
 ## for detail see: https://github.com/InsightSoftwareConsortium/ITK/pull/469
-SET(CurrentExe "resample_SDI")
-ADD_EXECUTABLE(${CurrentExe}  "resample.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
+SET(CurrentExe "resample")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
@@ -478,12 +400,16 @@ SET(CurrentExe "min-path_seg_f32")
 IF(MinimalPathExtraction_FOUND LESS 0)# -1 if not found!
   MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
 ELSE(MinimalPathExtraction_FOUND LESS 0)
-  ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkConstGradientDescentOptimizer.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkInverseGradientDescentOptimizer.cxx")
-  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-  TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${PROJECT_SOURCE_DIR}/filter/internal/")
-  SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
-  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+  IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
+  ELSE(ParabolicMorphology_FOUND LESS 0)
+    ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkConstGradientDescentOptimizer.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkInverseGradientDescentOptimizer.cxx")
+    TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+    TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${PROJECT_SOURCE_DIR}/filter/internal/")
+    SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+    INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+    MESSAGE(STATUS "${CurrentExe} will be compiled!")
+  ENDIF(ParabolicMorphology_FOUND LESS 0)
 ENDIF(MinimalPathExtraction_FOUND LESS 0)
 
 SET(CurrentExe "skeletonize_SBS")
@@ -515,7 +441,7 @@ INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "dilate_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "dilate_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -526,7 +452,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "erode_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "erode_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -537,7 +463,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "open_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "open_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -548,7 +474,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "close_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "close_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -575,7 +501,7 @@ ENDIF(LabelErodeDilate_FOUND LESS 0)
 
 SET(CurrentExe "open_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='O') # https://stackoverflow.com/questions/9017573/define-preprocessor-macro-through-cmake#32255212
@@ -586,7 +512,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "close_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='C')
@@ -597,7 +523,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "erode_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='E')
@@ -608,7 +534,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "dilate_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='D')
@@ -752,6 +678,11 @@ TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "channel_extract")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+
+SET(CurrentExe "sigmoid")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)

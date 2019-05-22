@@ -130,7 +130,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
 
         labelCnt= stat->GetMaximum();
-        labelImg= stat->GetOutput();
+        labelImg= reader2->GetOutput();// stat->GetOutput() not available any more with ITK #855
         labelImg->DisconnectPipeline();//will need its own Delete later on!
         }
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);
@@ -451,6 +451,9 @@ void GetImageType (std::string fileName,
     itk::ImageFileReader<ImageType>::Pointer imageReader= itk::ImageFileReader<ImageType>::New();
     imageReader->SetFileName(fileName.c_str());
     imageReader->UpdateOutputInformation();
+
+    if(!imageReader->GetImageIO()->CanStreamRead())
+        std::cerr << "Cannot stream the reading of the input. Streaming will be inefficient!" << std::endl;
 
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();
