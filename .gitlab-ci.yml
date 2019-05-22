@@ -102,7 +102,22 @@ test01:
 stat:
   <<: *test
   variables:
-    CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd "
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd "
+
+stat_SDI:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v stat tests/data/ACN_speed.mhd 10 "
+
+hist:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd 10 -2 2 "
+
+hist_SDI:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v hist         tests/data/ACN_speed.mhd 10 -2 2 10 "
 
 thresh-erase:
   <<: *testSDI

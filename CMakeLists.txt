@@ -204,7 +204,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "distance_map_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "distance_map_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -283,23 +283,10 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-## according to the docs itkStatisticsImageFilter cannot stream
-## but StreamingStatisticsImageFilter can: https://github.com/blowekamp/itkStreamingSinc/
-SET(CurrentExe "stat_SDI")
-IF(StreamingSinc_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with Module_StreamingSinc ON)")
-ELSE()
-ADD_EXECUTABLE(${CurrentExe}  "stat.cxx")
-SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_SDI")
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
-MESSAGE(STATUS "${CurrentExe} will be compiled!")
-ENDIF()
-
-SET(CurrentExe "label_stack_SBS")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+# SET(CurrentExe "label_stack_SBS")
+# ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+# TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+# install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "label_stack")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
@@ -413,12 +400,16 @@ SET(CurrentExe "min-path_seg_f32")
 IF(MinimalPathExtraction_FOUND LESS 0)# -1 if not found!
   MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
 ELSE(MinimalPathExtraction_FOUND LESS 0)
-  ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkConstGradientDescentOptimizer.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkInverseGradientDescentOptimizer.cxx")
-  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-  TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${PROJECT_SOURCE_DIR}/filter/internal/")
-  SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
-  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+  IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
+  ELSE(ParabolicMorphology_FOUND LESS 0)
+    ADD_EXECUTABLE(${CurrentExe}  "min-path_seg.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkConstGradientDescentOptimizer.cxx" "${PROJECT_SOURCE_DIR}/filter/internal/itkInverseGradientDescentOptimizer.cxx")
+    TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+    TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${PROJECT_SOURCE_DIR}/filter/internal/")
+    SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+    INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+    MESSAGE(STATUS "${CurrentExe} will be compiled!")
+  ENDIF(ParabolicMorphology_FOUND LESS 0)
 ENDIF(MinimalPathExtraction_FOUND LESS 0)
 
 SET(CurrentExe "skeletonize_SBS")
@@ -450,7 +441,7 @@ INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
 SET(CurrentExe "dilate_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "dilate_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -461,7 +452,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "erode_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "erode_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -472,7 +463,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "open_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "open_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -483,7 +474,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "close_parabolic_f32")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "close_parabolic.cxx")
   SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
@@ -510,7 +501,7 @@ ENDIF(LabelErodeDilate_FOUND LESS 0)
 
 SET(CurrentExe "open_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='O') # https://stackoverflow.com/questions/9017573/define-preprocessor-macro-through-cmake#32255212
@@ -521,7 +512,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "close_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='C')
@@ -532,7 +523,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "erode_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='E')
@@ -543,7 +534,7 @@ ENDIF(ParabolicMorphology_FOUND LESS 0)
 
 SET(CurrentExe "dilate_bin_para")
 IF(ParabolicMorphology_FOUND LESS 0)# -1 if not found!
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with MinimalPathExtraction ON)")
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ParabolicMorphology ON)")
 ELSE(ParabolicMorphology_FOUND LESS 0)
   ADD_EXECUTABLE(${CurrentExe}  "X_bin_para.cxx")
   target_compile_definitions(${CurrentExe} PRIVATE FILTER='D')
