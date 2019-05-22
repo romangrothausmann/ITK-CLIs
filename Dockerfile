@@ -20,7 +20,7 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
-RUN git clone https://github.com/InsightSoftwareConsortium/ITK.git && cd ITK && git checkout c76b193eace50ab287ac64cdd4f61d3bcb3daa03
+RUN git clone https://github.com/InsightSoftwareConsortium/ITK.git && cd ITK && git checkout db7dcb043c9181a5a5d90b4b0db349fbb2acd090
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
@@ -33,7 +33,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_ITKReview=ON \
 	  -DModule_LabelErodeDilate=ON \
 	  -DModule_MinimalPathExtraction=ON \
-	  -DModule_ParabolicMorphology=OFF \
+	  -DModule_ParabolicMorphology=ON \
 	  -DModule_StreamingSinc=ON \
 	  -DModule_Thickness3D=ON \
 	  -DModule_LesionSizingToolkit=OFF \
