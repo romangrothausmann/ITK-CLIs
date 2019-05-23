@@ -107,16 +107,16 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
-        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-        typedef itk::Image<RealPixelType, Dimension>  RealImageType;
-        typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorCurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
-        typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
-        } break;
+    // case itk::ImageIOBase::RGB:{
+    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    //     typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+    //     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    //     typedef itk::Image<RealPixelType, Dimension>  RealImageType;
+    //     typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
+    //     typedef itk::VectorCurvatureAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+    //     typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
+    //     } break;
     case itk::ImageIOBase::RGBA:{
         typedef itk::RGBAPixel<InputComponentType> InputPixelType;
         typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
@@ -169,18 +169,18 @@ template<typename InputComponentType>
 int dispatch_cPP(size_t compPerPixel, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (compPerPixel){
-    case 1:
-        res= dispatch_D<InputComponentType, 1>(pixelType, dimensionType, argc, argv);
-        break;
-    case 2:
-        res= dispatch_D<InputComponentType, 2>(pixelType, dimensionType, argc, argv);
-        break;
-    case 3:
-        res= dispatch_D<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
-        break;
-    // case 4:
-    //     res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+    // case 1:
+    //     res= dispatch_D<InputComponentType, 1>(pixelType, dimensionType, argc, argv);
     //     break;
+    // case 2:
+    //     res= dispatch_D<InputComponentType, 2>(pixelType, dimensionType, argc, argv);
+    //     break;
+    // case 3:
+    //     res= dispatch_D<InputComponentType, 3>(pixelType, dimensionType, argc, argv);
+    //     break;
+    case 4:
+        res= dispatch_D<InputComponentType, 4>(pixelType, dimensionType, argc, argv);
+        break;
     // case 5:
     //     res= dispatch_D<InputComponentType, 5>(pixelType, dimensionType, argc, argv);
     //     break;
