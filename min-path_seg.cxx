@@ -81,6 +81,32 @@ namespace itk{
     }
 
 
+template <typename TInput>
+class ValidNeighbor
+{
+ public:
+  ValidNeighbor() = default;
+  ~ValidNeighbor() = default;
+  bool operator!=(const ValidNeighbor &) const
+  {
+    return false;
+  }
+
+  bool operator==(const ValidNeighbor & other) const
+  {
+    return !( *this != other );
+  }
+
+  inline bool operator()(const TInput & A) const
+  { 
+    return A < m_IllegalValue; 
+  }
+
+ private:
+  TInput m_IllegalValue = static_cast< TInput >( itk::NumericTraits< TInput >::max()/2 );
+};
+
+
 template<typename OptimizerType>
 void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
@@ -212,18 +238,15 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
     typedef typename PathFilterType::CostFunctionType::CoordRepType CoordRepType;
 
-    // Create interpolator
-    typedef itk::LinearInterpolateImageFunction<SpeedImageType, CoordRepType> InterpolatorType;
-    typename InterpolatorType::Pointer interp = InterpolatorType::New();
+    std::cout << "Illegal value " <<  static_cast< typename PathFilterType::InputImagePixelType >( itk::NumericTraits< typename PathFilterType::InputImagePixelType >::max()/2 ) << std::endl;
 
     // Create interpolator for gradient
-    typedef itk::LinearInterpolateSelectedNeighborsImageFunction<SpeedImageType, CoordRepType> InterpolatorTypeG;
+    typedef itk::LinearInterpolateSelectedNeighborsImageFunction<SpeedImageType, CoordRepType, ValidNeighbor<typename PathFilterType::InputImagePixelType>> InterpolatorTypeG;
     typename InterpolatorTypeG::Pointer interpG = InterpolatorTypeG::New();
 
     // Create cost function
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
-    cost->SetInterpolator(interp);
-    cost->SetGradientInterpolatorType(interpG);
+    cost->SetInterpolator(interpG);
     cost->SetDerivativeThreshold(1e9);
     std::cerr << "DerivativeThreshold: " << cost->GetDerivativeThreshold() << std::endl;
 
