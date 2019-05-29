@@ -571,8 +571,8 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetRelaxationFactor(.5);
-	optimizer->SetMaximumStepLength(1.0);
-	optimizer->SetMinimumStepLength(atof(argv[7]));
+	optimizer->SetMaximumStepLength(atof(argv[7]));
+	optimizer->SetMinimumStepLength(atof(argv[7])/5);
         std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
