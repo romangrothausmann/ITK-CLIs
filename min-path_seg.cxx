@@ -247,7 +247,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     // Create cost function
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
     cost->SetInterpolator(interpG);
-    cost->SetDerivativeThreshold(1e9);
+    cost->SetDerivativeThreshold(itk::NumericTraits<typename PathFilterType::InputImagePixelType>::max());
     std::cerr << "DerivativeThreshold: " << cost->GetDerivativeThreshold() << std::endl;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
