@@ -81,6 +81,32 @@ namespace itk{
     }
 
 
+template <typename TInput>
+class ValidNeighbor
+{
+ public:
+  ValidNeighbor() = default;
+  ~ValidNeighbor() = default;
+  bool operator!=(const ValidNeighbor &) const
+  {
+    return false;
+  }
+
+  bool operator==(const ValidNeighbor & other) const
+  {
+    return !( *this != other );
+  }
+
+  inline bool operator()(const TInput & A) const
+  { 
+    return A < m_IllegalValue; 
+  }
+
+ private:
+  TInput m_IllegalValue = static_cast< TInput >( itk::NumericTraits< TInput >::max()/2 );
+};
+
+
 template<typename OptimizerType>
 void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
 
@@ -107,7 +133,7 @@ void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, v
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename OptimizerType>
-int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
+int DoIt2(int argc, char *argv[], OptimizerType* optimizer, int interpolatorchoice=1){
 
     const char offset= 9;
     if((argc - offset) % Dimension){
@@ -212,19 +238,29 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     typedef itk::SpeedFunctionToPathFilter<SpeedImageType, PathType> PathFilterType;
     typedef typename PathFilterType::CostFunctionType::CoordRepType CoordRepType;
 
+    std::cout << "Illegal value " <<  static_cast< typename PathFilterType::InputImagePixelType >( itk::NumericTraits< typename PathFilterType::InputImagePixelType >::max()/2 ) << std::endl;
+
     // Create interpolator
     typedef itk::LinearInterpolateImageFunction<SpeedImageType, CoordRepType> InterpolatorType;
     typename InterpolatorType::Pointer interp = InterpolatorType::New();
 
     // Create interpolator for gradient
-    typedef itk::LinearInterpolateSelectedNeighborsImageFunction<SpeedImageType, CoordRepType> InterpolatorTypeG;
+    // don't use the selected neighbours one with the neighbourhood optimizer
+    typedef itk::LinearInterpolateSelectedNeighborsImageFunction<SpeedImageType, CoordRepType, ValidNeighbor<typename PathFilterType::InputImagePixelType>> InterpolatorTypeG;
     typename InterpolatorTypeG::Pointer interpG = InterpolatorTypeG::New();
 
     // Create cost function
     typename PathFilterType::CostFunctionType::Pointer cost = PathFilterType::CostFunctionType::New();
-    cost->SetInterpolator(interp);
-    cost->SetGradientInterpolatorType(interpG);
-    cost->SetDerivativeThreshold(1e9);
+    if (interpolatorchoice == 1) 
+	{
+	std::cout << "Using selected neighbour interpolator" << std::endl;
+	cost->SetInterpolator(interpG);
+	} 
+    else
+	{
+	cost->SetInterpolator(interp);
+	}
+    cost->SetDerivativeThreshold(itk::NumericTraits<typename PathFilterType::InputImagePixelType>::max());
     std::cerr << "DerivativeThreshold: " << cost->GetDerivativeThreshold() << std::endl;
 
     itk::CStyleCommand::Pointer eventCallbackITK;
@@ -533,7 +569,7 @@ int DoIt(int argc, char *argv[]){
 
         std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << " (ignoring iterations parameter)" << std::endl;
         std::cout << "Using neighborhood size (physical space!): " << optimizer->GetNeighborhoodSize() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
+        res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer, 2);
         }break;
     case 1:{
 	typedef itk::GradientDescentOptimizer OptimizerType;
@@ -548,8 +584,8 @@ int DoIt(int argc, char *argv[]){
 	typename OptimizerType::Pointer optimizer = OptimizerType::New();
 	optimizer->SetNumberOfIterations(atoi(argv[6]));
 	optimizer->SetRelaxationFactor(.5);
-	optimizer->SetMaximumStepLength(1.0);
-	optimizer->SetMinimumStepLength(atof(argv[7]));
+	optimizer->SetMaximumStepLength(atof(argv[7]));
+	optimizer->SetMinimumStepLength(atof(argv[7])/5);
         std::cout << "Using optimizer: " << optimizer->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, OptimizerType>(argc, argv, optimizer);
         }break;
