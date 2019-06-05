@@ -1,5 +1,5 @@
-////program for WhiteTopHatImageFilter
-//01: based on template.cxx
+////program to mimic tophat-speed.r from SITK-CLIs in order to be less mem hungry
+//01: based on tophat.cxx
 
 
 #include <complex>
@@ -8,6 +8,12 @@
 #include <itkImageFileReader.h>
 #include <itkBinaryBallStructuringElement.h>
 #include <itkWhiteTopHatImageFilter.h>
+#include <itkStatisticsImageFilter.h>
+#include <itkBinaryThresholdImageFilter.h>
+#include <itkAddImageFilter.h>
+#include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkMaskImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -46,20 +52,19 @@ int DoIt(int argc, char *argv[]){
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-
+    double bglevel= atof(argv[4]);
+    double sigma= atof(argv[5]);
 
     typedef itk::BinaryBallStructuringElement<InputPixelType, Dimension> StructuringElementType;
     StructuringElementType  structuringElement;
 
-    structuringElement.SetRadius(atoi(argv[4])); // SITK procedural interface uses a default radius of 1: https://itk.org/SimpleITKDoxygen/html/namespaceitk_1_1simple.html#a106c90567c31d49b3d08fff7be93483f
+    structuringElement.SetRadius(1); // SITK procedural interface uses a default radius of 1: https://itk.org/SimpleITKDoxygen/html/namespaceitk_1_1simple.html#a106c90567c31d49b3d08fff7be93483f
     structuringElement.CreateStructuringElement();
 
     typedef itk::WhiteTopHatImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
-    filter->SetSafeBorder(atoi(argv[5])); // default: true https://github.com/InsightSoftwareConsortium/ITK/blob/32b6db797478db8efc5c7e93dde440bfc07f3307/Modules/Filtering/MathematicalMorphology/include/itkWhiteTopHatImageFilter.hxx#L33
-    // filter->SetAlgorithm(HISTO); // https://itk.org/Doxygen/html/classitk_1_1WhiteTopHatImageFilter.html#a0c9e9b9fd763bf22c14d7fbefaec670d  default: HISTO (1) https://github.com/InsightSoftwareConsortium/ITK/blob/32b6db797478db8efc5c7e93dde440bfc07f3307/Modules/Filtering/MathematicalMorphology/include/itkWhiteTopHatImageFilter.hxx#L34
     filter->ReleaseDataFlagOn();
 
     if(noSDI){
@@ -73,15 +78,70 @@ int DoIt(int argc, char *argv[]){
 	    }
 	}
 
+    const typename OutputImageType::Pointer& wth= filter->GetOutput();
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    typedef itk::StatisticsImageFilter<InputImageType> StatType;
+    typename StatType::Pointer stat= StatType::New();
+    stat->SetInput(wth);
+    if(!noSDI)
+	stat->SetNumberOfStreamDivisions(CompChunk);
+    FilterWatcher watcherS(stat);
+    stat->Update();
+    
+    double MX1= stat->GetMaximum();
+    double bgconst= MX1 * bglevel;
+    
+    typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThreshType;
+    typename ThreshType::Pointer th= ThreshType::New();
+    th->SetInput(input);
+    th->SetUpperThreshold(0);
+    th->SetOutsideValue(0);
+    th->SetInsideValue(bgconst);
+    // th->ReleaseDataFlagOn();
+    FilterWatcher watcherT(th);
+
+    typedef itk::AddImageFilter<InputImageType, InputImageType, InputImageType> AddType;
+    typename AddType::Pointer add = AddType::New();
+    add->SetInput1(wth);
+    add->SetInput2(th->GetOutput());
+    add->ReleaseDataFlagOn();
+    add->InPlaceOn(); // overwrites input1
+    FilterWatcher watcherA(add);
+
+    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, InputImageType> SmoothType;
+    typename SmoothType::Pointer smooth= SmoothType::New();
+    smooth->SetInput(add->GetOutput());
+    smooth->SetSigma(input->GetSpacing().GetVnlVector().min_value()); // std::min(input->GetSpacing()) not working due to incompatible types  https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/ThirdParty/VNL/src/vxl/core/vnl/vnl_vector.h
+    smooth->NormalizeAcrossScaleOff();
+    smooth->ReleaseDataFlagOn();
+    smooth->InPlaceOn();
+    FilterWatcher watcherSM(smooth);
+
+    typedef itk::MaskImageFilter<InputImageType, InputImageType, InputImageType> MaskType;
+    typename MaskType::Pointer mask = MaskType::New();
+    mask->SetInput(smooth->GetOutput());
+    mask->SetMaskImage(th->GetOutput());
+    mask->ReleaseDataFlagOn();
+    mask->InPlaceOn(); // overwrites SetInput
+    FilterWatcher watcherM(mask);
+
+    stat->SetInput(mask->GetOutput());
+    stat->Update();
+
+    typedef itk::MultiplyImageFilter<InputImageType, InputImageType, OutputImageType> MultType;
+    typename MultType::Pointer mult = MultType::New();
+    mult->SetInput(mask->GetOutput());
+    mult->SetConstant(1.0 / stat->GetMaximum());
+    FilterWatcher watcherMU(mult);
+
+    const typename OutputImageType::Pointer& output= mult->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
-    writer->SetInput(output);
+    writer->SetInput(mult->GetOutput());
     if(noSDI){
 	writer->SetUseCompression(CompChunk);
 	}
@@ -106,9 +166,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
@@ -150,38 +207,6 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     //IOComponentType: UNKNOWNCOMPONENTTYPE, UCHAR, CHAR, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT, DOUBLE
 
     switch (componentType){
-    case itk::ImageIOBase::UCHAR:{        // uint8_t
-        typedef unsigned char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::CHAR:{         // int8_t
-        typedef char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::USHORT:{       // uint16_t
-        typedef unsigned short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::SHORT:{        // int16_t
-        typedef short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UINT:{         // uint32_t
-        typedef unsigned int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::INT:{          // int32_t
-        typedef int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::ULONG:{        // uint64_t
-        typedef unsigned long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::LONG:{         // int64_t
-        typedef long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
-        } break;
     case itk::ImageIOBase::FLOAT:{        // float32
         typedef float InputComponentType;
         res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
@@ -238,8 +263,8 @@ int main(int argc, char *argv[]){
                   << " Input_Image"
                   << " Output_Image"
                   << " compress|stream-chunks"
-                  << " radius"
-                  << " safeBorder"
+                  << " bglevel"
+                  << " sigma"
                   << std::endl;
 
         std::cerr << std::endl;
