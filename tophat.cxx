@@ -58,6 +58,8 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
+    filter->SetSafeBorder(atoi(argv[5])); // default: true https://github.com/InsightSoftwareConsortium/ITK/blob/32b6db797478db8efc5c7e93dde440bfc07f3307/Modules/Filtering/MathematicalMorphology/include/itkWhiteTopHatImageFilter.hxx#L33
+    // filter->SetAlgorithm(HISTO); // https://itk.org/Doxygen/html/classitk_1_1WhiteTopHatImageFilter.html#a0c9e9b9fd763bf22c14d7fbefaec670d  default: HISTO (1) https://github.com/InsightSoftwareConsortium/ITK/blob/32b6db797478db8efc5c7e93dde440bfc07f3307/Modules/Filtering/MathematicalMorphology/include/itkWhiteTopHatImageFilter.hxx#L34
     filter->ReleaseDataFlagOn();
 
     if(noSDI){
@@ -230,13 +232,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress|stream-chunks"
                   << " radius"
+                  << " safeBorder"
                   << std::endl;
 
         std::cerr << std::endl;
