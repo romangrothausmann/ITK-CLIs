@@ -75,3 +75,10 @@ COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
 ENV PATH "/opt/ITK-CLIs/bin/:${PATH}"
 
 WORKDIR /images
+
+ENV USERNAME diUser
+RUN useradd -m $USERNAME && \
+    echo "$USERNAME:$USERNAME" | chpasswd && \
+    usermod --shell /bin/bash $USERNAME
+
+USER $USERNAME
