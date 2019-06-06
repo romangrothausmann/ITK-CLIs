@@ -94,7 +94,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThreshType;
     typename ThreshType::Pointer th= ThreshType::New();
     th->SetInput(input); // needs re-exec reader->Update() if reader->ReleaseDataFlagOn() https://insightsoftwareconsortium.atlassian.net/browse/ITK-3351?attachmentOrder=desc
-    th->SetUpperThreshold(0);
+    th->SetLowerThreshold(0); // input > 0
     th->SetOutsideValue(0);
     th->SetInsideValue(bgconst);
     // th->ReleaseDataFlagOn();
