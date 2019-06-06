@@ -34,21 +34,8 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     // reader->ReleaseDataFlagOn(); // needed by filter and th
-    if(noSDI){
-	FilterWatcher watcherI(reader);
-	watcherI.QuietOn();
-	watcherI.ReportTimeOn();
-	try{
-	    reader->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	}
-    else{
-	reader->UpdateOutputInformation();
-	}
+    FilterWatcher watcherI(reader);
+    reader->UpdateOutputInformation();
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -66,17 +53,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     // filter->ReleaseDataFlagOn(); // needed by stat and add
-
-    if(noSDI){
-	FilterWatcher watcher1(filter);
-	try{
-	    filter->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	}
+    FilterWatcher watcher1(filter);
 
     const typename OutputImageType::Pointer& wth= filter->GetOutput();
 
