@@ -11,7 +11,7 @@
 #include <itkStatisticsImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkAddImageFilter.h>
-#include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkDiscreteGaussianImageFilter.h>
 #include <itkMaskImageFilter.h>
 #include <itkMultiplyImageFilter.h>
 #include <itkImageFileWriter.h>
@@ -85,13 +85,12 @@ int DoIt(int argc, char *argv[]){
     add->InPlaceOn(); // overwrites input1
     FilterWatcher watcherA(add);
 
-    typedef itk::SmoothingRecursiveGaussianImageFilter<InputImageType, InputImageType> SmoothType;
+    typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType> SmoothType;
     typename SmoothType::Pointer smooth= SmoothType::New();
     smooth->SetInput(add->GetOutput());
-    smooth->SetSigma(input->GetSpacing().GetVnlVector().min_value()); // std::min(input->GetSpacing()) not working due to incompatible types  https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/ThirdParty/VNL/src/vxl/core/vnl/vnl_vector.h
-    smooth->NormalizeAcrossScaleOff();
-    smooth->ReleaseDataFlagOn();
-    smooth->InPlaceOn();
+    smooth->SetVariance(std::pow(input->GetSpacing().GetVnlVector().min_value(), 2)); // sigma == stdDev, sigma^2 == variance https://en.wikipedia.org/wiki/Normal_distribution ;  std::min(input->GetSpacing()) not working due to incompatible types  https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/ThirdParty/VNL/src/vxl/core/vnl/vnl_vector.h
+    smooth->SetUseImageSpacingOn(); // default: On
+    // smooth->ReleaseDataFlagOn();
     FilterWatcher watcherSM(smooth);
 
     typedef itk::MaskImageFilter<InputImageType, InputImageType, InputImageType> MaskType;
