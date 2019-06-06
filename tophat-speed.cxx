@@ -33,7 +33,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
+    // reader->ReleaseDataFlagOn(); // needed by filter and th
     if(noSDI){
 	FilterWatcher watcherI(reader);
 	watcherI.QuietOn();
@@ -65,7 +65,7 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
-    filter->ReleaseDataFlagOn();
+    // filter->ReleaseDataFlagOn(); // needed by stat and add
 
     if(noSDI){
 	FilterWatcher watcher1(filter);
@@ -93,7 +93,7 @@ int DoIt(int argc, char *argv[]){
     
     typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThreshType;
     typename ThreshType::Pointer th= ThreshType::New();
-    th->SetInput(input);
+    th->SetInput(input); // needs re-exec reader->Update() if reader->ReleaseDataFlagOn() https://insightsoftwareconsortium.atlassian.net/browse/ITK-3351?attachmentOrder=desc
     th->SetUpperThreshold(0);
     th->SetOutsideValue(0);
     th->SetInsideValue(bgconst);
@@ -102,7 +102,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::AddImageFilter<InputImageType, InputImageType, InputImageType> AddType;
     typename AddType::Pointer add = AddType::New();
-    add->SetInput1(wth);
+    add->SetInput1(wth); // needs re-exec filter->Update() if filter->ReleaseDataFlagOn() https://insightsoftwareconsortium.atlassian.net/browse/ITK-3351?attachmentOrder=desc
     add->SetInput2(th->GetOutput());
     add->ReleaseDataFlagOn();
     add->InPlaceOn(); // overwrites input1
@@ -120,8 +120,8 @@ int DoIt(int argc, char *argv[]){
     typedef itk::MaskImageFilter<InputImageType, InputImageType, InputImageType> MaskType;
     typename MaskType::Pointer mask = MaskType::New();
     mask->SetInput(smooth->GetOutput());
-    mask->SetMaskImage(th->GetOutput());
-    mask->ReleaseDataFlagOn();
+    mask->SetMaskImage(th->GetOutput()); // needs re-exec th->Update() if th->ReleaseDataFlagOn()
+    // mask->ReleaseDataFlagOn(); // needed by stat and mult
     mask->InPlaceOn(); // overwrites SetInput
     FilterWatcher watcherM(mask);
 
