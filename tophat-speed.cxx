@@ -34,7 +34,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     // reader->ReleaseDataFlagOn(); // needed by filter and th
-    FilterWatcher watcherI(reader);
+    if(noSDI) FilterWatcher watcherI(reader);
     reader->UpdateOutputInformation();
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
@@ -53,7 +53,7 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
     // filter->ReleaseDataFlagOn(); // needed by stat and add
-    FilterWatcher watcher1(filter);
+    if(noSDI) FilterWatcher watcher1(filter);
 
     const typename OutputImageType::Pointer& wth= filter->GetOutput();
 
@@ -75,7 +75,7 @@ int DoIt(int argc, char *argv[]){
     th->SetOutsideValue(0);
     th->SetInsideValue(bgconst);
     // th->ReleaseDataFlagOn();
-    FilterWatcher watcherT(th);
+    if(noSDI) FilterWatcher watcherT(th);
 
     typedef itk::AddImageFilter<InputImageType, InputImageType, InputImageType> AddType;
     typename AddType::Pointer add = AddType::New();
@@ -83,7 +83,7 @@ int DoIt(int argc, char *argv[]){
     add->SetInput2(th->GetOutput());
     add->ReleaseDataFlagOn();
     add->InPlaceOn(); // overwrites input1
-    FilterWatcher watcherA(add);
+    if(noSDI) FilterWatcher watcherA(add);
 
     typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType> SmoothType;
     typename SmoothType::Pointer smooth= SmoothType::New();
@@ -91,7 +91,7 @@ int DoIt(int argc, char *argv[]){
     smooth->SetVariance(std::pow(input->GetSpacing().GetVnlVector().min_value(), 2)); // sigma == stdDev, sigma^2 == variance https://en.wikipedia.org/wiki/Normal_distribution ;  std::min(input->GetSpacing()) not working due to incompatible types  https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/ThirdParty/VNL/src/vxl/core/vnl/vnl_vector.h
     smooth->SetUseImageSpacingOn(); // default: On
     // smooth->ReleaseDataFlagOn();
-    FilterWatcher watcherSM(smooth);
+    if(noSDI) FilterWatcher watcherSM(smooth);
 
     typedef itk::MaskImageFilter<InputImageType, InputImageType, InputImageType> MaskType;
     typename MaskType::Pointer mask = MaskType::New();
@@ -99,7 +99,7 @@ int DoIt(int argc, char *argv[]){
     mask->SetMaskImage(th->GetOutput()); // needs re-exec th->Update() if th->ReleaseDataFlagOn()
     // mask->ReleaseDataFlagOn(); // needed by stat and mult
     mask->InPlaceOn(); // overwrites SetInput
-    FilterWatcher watcherM(mask);
+    if(noSDI) FilterWatcher watcherM(mask);
 
     stat->SetInput(mask->GetOutput());
     stat->Update();
@@ -108,7 +108,7 @@ int DoIt(int argc, char *argv[]){
     typename MultType::Pointer mult = MultType::New();
     mult->SetInput(mask->GetOutput());
     mult->SetConstant(1.0 / stat->GetMaximum());
-    FilterWatcher watcherMU(mult);
+    if(noSDI) FilterWatcher watcherMU(mult);
 
     const typename OutputImageType::Pointer& output= mult->GetOutput();
 
