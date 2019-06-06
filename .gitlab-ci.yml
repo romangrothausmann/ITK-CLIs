@@ -152,7 +152,7 @@ tophat-speed:
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output.mha      0  0.005 -1 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd output_SDI.mha 10  0.005 -1 && stat output_SDI.mha  2>/dev/null "
-    MD5: 7dd303d1990c9808d605d17353b8ea8b
+    MD5: b60d10e8eec163933792969d9f20e0a3
 
 min-path_seg_f32.0: # 0: IterateNeighborhoodOptimizer
   <<: *test
