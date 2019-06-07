@@ -20,12 +20,23 @@ int main(int argc, char** argv)
     typename TransformType::Pointer transform = TransformType::New();
     transform->SetIdentity();
     typename ImageType::SpacingType outputSpacing;
-    outputSpacing.Fill(1.0);
+    outputSpacing[0]= 0.5;
+    outputSpacing[1]= 0.4;
+    outputSpacing[2]= 0.3;
+
+    const typename ImageType::SpacingType& inputSpacing= input->GetSpacing();
+    const typename ImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
+    typename ImageType::SizeType outputSize;
+
+    typedef typename ImageType::SizeType::SizeValueType SizeValueType;
+    for (unsigned int i= 0; i < 3; i++)
+        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
+
 
     FilterType::Pointer filter = FilterType::New();
     filter->SetInput(reader->GetOutput());
     filter->SetInterpolator(InterpolatorType::New());
-    filter->SetSize(input->GetLargestPossibleRegion().GetSize());
+    filter->SetSize(outputSize);
     filter->SetOutputOrigin(input->GetOrigin());
 
     filter->SetTransform(transform);
