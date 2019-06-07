@@ -39,7 +39,6 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
     if(noSDI){
 	FilterWatcher watcherI(reader);
 	watcherI.QuietOn();
