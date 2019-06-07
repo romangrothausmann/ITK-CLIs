@@ -38,11 +38,11 @@ int main(int argc, char** argv)
     writer->SetInput(filter->GetOutput());
     try
     {
-        writer->SetFileName("C:/Misc/Tester/out1.mha");
+        writer->SetFileName("out1.mhd");
         writer->SetNumberOfStreamDivisions(1);
         writer->Update();
 
-        writer->SetFileName("C:/Misc/Tester/out4.mha");
+        writer->SetFileName("out4.mhd");
         writer->SetNumberOfStreamDivisions(4);
         writer->Update();
     }
