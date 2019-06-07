@@ -3,7 +3,7 @@
 #include <itkGaussianInterpolateImageFunction.h>
 #include <itkImageFileWriter.h>
 
-using ImageType = itk::Image<int, 3>;
+using ImageType = itk::Image<float, 3>;
 using ReaderType = itk::ImageFileReader<ImageType>;
 using FilterType = itk::ResampleImageFilter<ImageType, ImageType>;
 using TransformType = itk::IdentityTransform<double, 3>;
