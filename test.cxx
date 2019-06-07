@@ -33,9 +33,18 @@ int main(int argc, char** argv)
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
 
+    typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
+    std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
+    typename InterpolatorType::ArrayType sigma;
+    for (unsigned int i= 0; i < 3; i++)
+	sigma[i]= 0.8; //as suggested in pub: http://www.insight-journal.org/browse/publication/705
+    interpolator->SetSigma(sigma);
+    interpolator->SetAlpha(3.0);
+    std::cerr << "Sigma: " << interpolator->GetSigma() << " Alpha: " << interpolator->GetAlpha() << std::endl;
+
     FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(reader->GetOutput());
-    filter->SetInterpolator(InterpolatorType::New());
+    filter->SetInput(input);
+    filter->SetInterpolator(interpolator);
     filter->SetSize(outputSize);
     filter->SetOutputOrigin(input->GetOrigin());
 
