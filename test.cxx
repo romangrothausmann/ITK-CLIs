@@ -53,16 +53,16 @@ int main(int argc, char** argv)
     filter->SetDefaultPixelValue(0);
     filter->ReleaseDataFlagOn();
 
+    int chunks= atoi(argv[2]);
+    std::stringstream sss;
+    sss.str(""); sss << "out" << chunks << ".mhd";
+   
     WriterType::Pointer writer = WriterType::New();
     writer->SetInput(filter->GetOutput());
     try
     {
-        writer->SetFileName("out1.mhd");
-        writer->SetNumberOfStreamDivisions(1);
-        writer->Update();
-
-        writer->SetFileName("out10.mhd");
-        writer->SetNumberOfStreamDivisions(10);
+        writer->SetFileName(sss.str().c_str());
+        writer->SetNumberOfStreamDivisions(chunks);
         writer->Update();
     }
     catch (itk::ExceptionObject& exc)
