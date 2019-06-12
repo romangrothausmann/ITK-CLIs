@@ -192,6 +192,12 @@ shift-scale_ROI:
     CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
     MD5: 90c399cf4601125e8518589fff9394d3
 
+test:
+  <<: *testSDI
+  variables:
+    CMD:    " $CI_JOB_NAME tests/data/ACN_speed.mhd  1 && stat  out1.mhd 2>/dev/null "
+    CMDSDI: " $CI_JOB_NAME tests/data/ACN_speed.mhd 10 && stat out10.mhd 2>/dev/null "
+
 release:
   stage: release
   variables:
