@@ -61,7 +61,6 @@ int main(int argc, char** argv)
         writer->SetNumberOfStreamDivisions(1);
         writer->Update();
 
-	input->Modified();
         writer->SetFileName("out10.mhd");
         writer->SetNumberOfStreamDivisions(10);
         writer->Update();
