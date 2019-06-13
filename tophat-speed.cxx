@@ -9,7 +9,8 @@
 #include <itkBinaryBallStructuringElement.h>
 #include <itkWhiteTopHatImageFilter.h>
 #include <itkStatisticsImageFilter.h>
-#include <itkBinaryThresholdImageFilter.h>
+#include <itkLogicOpsFunctors.h>
+#include <itkBinaryFunctorImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkDiscreteGaussianImageFilter.h>
 #include <itkMaskImageFilter.h>
@@ -68,12 +69,12 @@ int DoIt(int argc, char *argv[]){
     double MX1= stat->GetMaximum();
     double bgconst= MX1 * bglevel;
     
-    typedef itk::BinaryThresholdImageFilter<InputImageType, InputImageType> ThreshType;
+    typedef itk::BinaryFunctorImageFilter<InputImageType, InputImageType, InputImageType, itk::Functor::Greater<typename InputImageType::PixelType> > ThreshType;
     typename ThreshType::Pointer th= ThreshType::New();
     th->SetInput(input); // needs re-exec reader->Update() if reader->ReleaseDataFlagOn() https://insightsoftwareconsortium.atlassian.net/browse/ITK-3351?attachmentOrder=desc
-    th->SetLowerThreshold(0); // input > 0
-    th->SetOutsideValue(0);
-    th->SetInsideValue(bgconst);
+    th->SetConstant(0); // input > 0
+    th->GetFunctor().SetBackgroundValue(0);
+    th->GetFunctor().SetForegroundValue(bgconst);
     // th->ReleaseDataFlagOn();
     if(noSDI) FilterWatcher watcherT(th);
 
