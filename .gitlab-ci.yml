@@ -176,6 +176,12 @@ shift-scale_ROI:
     CMD: " $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  1.0 1.0  0 0 0  217 202 137 && stat output.mha 2>/dev/null"
     MD5: 90c399cf4601125e8518589fff9394d3
 
+fast-marching_f32:
+  <<: *test
+  variables:
+    CMD: " $CI_JOB_NAME tests/data/seed.mha tests/data/ACN.mha output.mha 0 50 200 && stat output.mha 2>/dev/null"
+    MD5: 8284c3219baac898d4f63f1a02d9a651
+
 release:
   stage: release
   variables:
