@@ -34,7 +34,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileReader<InputImageType1> ReaderType1;
     typename ReaderType1::Pointer reader1 = ReaderType1::New();
 
-    reader1->SetFileName(argv[1]);
+    reader1->SetFileName(argv[6]);
     reader1->ReleaseDataFlagOn();
     FilterWatcher watcherI1(reader1);
     watcherI1.QuietOn();
@@ -53,7 +53,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::ImageFileReader<InputImageType2> ReaderType2;
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
-    reader2->SetFileName(argv[2]);
+    reader2->SetFileName(argv[1]);
     //reader2->ReleaseDataFlagOn();//needed twice
     FilterWatcher watcherI2(reader2);
     watcherI2.QuietOn();
@@ -79,7 +79,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::FastMarchingImageFilter<OutputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(rescaler2->GetOutput());
-    filter->SetStoppingValue(atof(argv[5]));
+    filter->SetStoppingValue(atof(argv[4]));
     filter->ReleaseDataFlagOn();
 
     typedef typename FilterType::NodeContainer  NodeContainer;
@@ -117,7 +117,7 @@ int DoIt(int argc, char *argv[]){
     typename MFilterType::Pointer mask = MFilterType::New();
     mask->SetInput(filter->GetOutput());
     mask->ThresholdAbove(filter->GetStoppingValue());
-    mask->SetOutsideValue(atof(argv[6]));
+    mask->SetOutsideValue(atof(argv[5]));
     mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
@@ -127,9 +127,9 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[3]);
+    writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[4]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -352,12 +352,12 @@ int main(int argc, char *argv[]){
     if ( argc != 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Source_Image"
                   << " Speed_Image"
                   << " Output_Image"
                   << " compress"
                   << " stop-value"
                   << " not-reached-value"
+                  << " Source_Image"
                   << std::endl;
 
         return EXIT_FAILURE;
@@ -372,8 +372,8 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[1], pixelType1, componentType1, dimensionType1);
-        GetImageType(argv[2], pixelType2, componentType2, dimensionType2);
+        GetImageType(argv[6], pixelType1, componentType1, dimensionType1);
+        GetImageType(argv[1], pixelType2, componentType2, dimensionType2);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
