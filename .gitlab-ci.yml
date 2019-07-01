@@ -179,8 +179,26 @@ shift-scale_ROI:
 fast-marching_f32:
   <<: *test
   variables:
-    CMD: " $CI_JOB_NAME tests/data/seed.mha tests/data/ACN.mha output.mha 0 50 200 && stat output.mha 2>/dev/null"
+    CMD: " $CI_JOB_NAME tests/data/ACN.mha output.mha 0 50 200 tests/data/seed.mha && stat output.mha 2>/dev/null"
     MD5: 8284c3219baac898d4f63f1a02d9a651
+
+fast-marching_f32.p:
+  <<: *test
+  variables:
+    CMD: " fast-marching_f32 tests/data/ACN.mha output.mha 0 50 200  p272 p534.3 p267.7 && stat output.mha 2>/dev/null"
+    MD5: 8284c3219baac898d4f63f1a02d9a651
+
+fast-marching_f32.1:
+  <<: *test
+  variables:
+    CMD: " fast-marching_f32 tests/data/ACN.mha output.mha 0 50 200  v038 v129 v136 && stat output.mha 2>/dev/null"
+    MD5: 8284c3219baac898d4f63f1a02d9a651
+
+fast-marching_f32.2:
+  <<: *test
+  variables:
+    CMD: " fast-marching_f32 tests/data/ACN.mha output.mha 0 50 200  v038 v129 v136  v216 v000 v020 && stat output.mha 2>/dev/null"
+    MD5: ba0d86fda4310c84a33adaa2805ad1d4
 
 release:
   stage: release
