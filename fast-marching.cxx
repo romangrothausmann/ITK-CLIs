@@ -115,11 +115,16 @@ int DoIt(int argc, char *argv[]){
 
 	unsigned int count = 0;
 	for(int i= offset; i < argc; i+= Dimension){
+	    typename InputImageType2::PointType point;
 	    typename InputImageType2::IndexType index;
 	    
 	    for(int j= 0; j < Dimension; j++){
-		index[j]= atof(argv[i+j]);
+		point[j]= atof(argv[i+j]+1);//+1 to skip prefix-letter
+		index[j]= point[j];//interpret as index directly
 		}
+
+	    if(argv[i][0]=='p')
+		input2->TransformPhysicalPointToIndex(point, index);//overwrites index
 	    
 	    NodeType node;
 	    node.SetIndex(index);
