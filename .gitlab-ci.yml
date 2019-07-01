@@ -204,6 +204,7 @@ release:
   stage: release
   variables:
     GIT_STRATEGY: none
+  dependencies: []
   script:
     - apk add --update --no-cache curl jq
     - export ms='application/vnd.docker.distribution.manifest.v2+json'
