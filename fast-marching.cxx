@@ -117,8 +117,7 @@ int DoIt(int argc, char *argv[]){
     typename MFilterType::Pointer mask = MFilterType::New();
     mask->SetInput(filter->GetOutput());
     mask->ThresholdAbove(filter->GetStoppingValue());
-    if (argc > 6)
-	mask->SetOutsideValue(atof(argv[6]));
+    mask->SetOutsideValue(atof(argv[6]));
     mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
@@ -350,7 +349,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc != 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Source_Image"
@@ -358,7 +357,7 @@ int main(int argc, char *argv[]){
                   << " Output_Image"
                   << " compress"
                   << " stop-value"
-                  << " [not-reached-value]"
+                  << " not-reached-value"
                   << std::endl;
 
         return EXIT_FAILURE;
