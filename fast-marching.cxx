@@ -31,25 +31,6 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
-    typedef itk::ImageFileReader<InputImageType1> ReaderType1;
-    typename ReaderType1::Pointer reader1 = ReaderType1::New();
-
-    reader1->SetFileName(argv[6]);
-    reader1->ReleaseDataFlagOn();
-    FilterWatcher watcherI1(reader1);
-    watcherI1.QuietOn();
-    watcherI1.ReportTimeOn();
-    try{
-        reader1->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
-    const typename InputImageType1::Pointer& input1= reader1->GetOutput();
-
-
     typedef itk::ImageFileReader<InputImageType2> ReaderType2;
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
@@ -87,6 +68,24 @@ int DoIt(int argc, char *argv[]){
 
     typename NodeContainer::Pointer ANodes = NodeContainer::New();
     ANodes->Initialize();
+
+    typedef itk::ImageFileReader<InputImageType1> ReaderType1;
+    typename ReaderType1::Pointer reader1 = ReaderType1::New();
+
+    reader1->SetFileName(argv[6]);
+    reader1->ReleaseDataFlagOn();
+    FilterWatcher watcherI1(reader1);
+    watcherI1.QuietOn();
+    watcherI1.ReportTimeOn();
+    try{
+        reader1->Update();
+        }
+    catch(itk::ExceptionObject &ex){
+        std::cerr << ex << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    const typename InputImageType1::Pointer& input1= reader1->GetOutput();
 
     typedef itk::ImageRegionConstIteratorWithIndex<InputImageType1> IteratorType;
     IteratorType it(input1, input1->GetLargestPossibleRegion() );
