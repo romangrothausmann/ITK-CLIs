@@ -23,7 +23,7 @@ RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 RUN git clone -b v4.13.1 --depth 1 https://itk.org/ITK.git 
 
 ### Module_StreamingSinc needs to be downloaded separately:
-RUN git clone https://github.com/blowekamp/itkStreamingSinc/ ITK/Modules/External/itkStreamingSinc/
+RUN git clone https://github.com/blowekamp/itkStreamingSinc/ ITK/Modules/External/itkStreamingSinc/ && cd ITK/Modules/External/itkStreamingSinc/ && git checkout d7d76e1a9196a9138c2156f7c66db98d39cab918
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
