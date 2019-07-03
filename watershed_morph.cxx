@@ -69,7 +69,7 @@ int DoIt(int argc, char *argv[]){
 	typename FilterType::Pointer filter= FilterType::New();
 	filter->SetInput(ss->GetOutput());
 	filter->ReleaseDataFlagOn();
-	filter->SetLevel(atoi(argv[4]));
+	filter->SetLevel(atof(argv[4]));
 	filter->SetFullyConnected(atoi(argv[5]));
 	filter->SetMarkWatershedLine(atoi(argv[6]));
 
@@ -89,7 +89,7 @@ int DoIt(int argc, char *argv[]){
 	typename FilterType::Pointer filter= FilterType::New();
 	filter->SetInput(reader->GetOutput());
 	filter->ReleaseDataFlagOn();
-	filter->SetLevel(atoi(argv[4]));
+	filter->SetLevel(atof(argv[4]));
 	filter->SetFullyConnected(atoi(argv[5]));
 	filter->SetMarkWatershedLine(atoi(argv[6]));
 
