@@ -237,6 +237,12 @@ anisoDiff-grad_f32.vec:
     CMD: " /usr/bin/time -v anisoDiff-grad_f32 tests/data/mosaic-color.mhd output.mha 0  2 0.0236 0.2 "
     MD5: 997a244f4384520eb8366fc98818afcb
 
+gradient_mag_vec_f32:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output.mha 0  0 && stat output.mha 2>/dev/null "
+    MD5: 6839ee4005d8369ab75ce73d5d75b5d3
+
 
 release:
   stage: release
