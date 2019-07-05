@@ -76,7 +76,7 @@ test01:
                  /bin/bash -c "$CMD"
     - set +o pipefail # essential if return-value of pipe is used to determine job status
     - 'echo "Expected MD5: $MD5"'
-    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.mha | tee /dev/stderr | grep $MD5'
+    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.* | tee /dev/stderr | grep $MD5'
   retry: 2
 
 .testSDI: &testSDI
@@ -96,13 +96,13 @@ test01:
                  -v $(pwd):/images
                  $IMAGE_TAG:test
                  /bin/bash -c "$CMDSDI"
-    - md5sum *.mha | tee md5.out
+    - md5sum output* | tee md5.out
     - res=$( awk '{print $1}' md5.out | sort -u | wc -l | awk '{print $1}' )
     - echo $res
     - test $res -eq 1
     - set +o pipefail # essential if return-value of pipe is used to determine job status
     - 'echo "Expected MD5: $MD5"'
-    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.mha | tee /dev/stderr | grep $MD5'
+    - '[[ -z $MD5 ]] &&  echo "No MD5 provided" || md5sum output.* | tee /dev/stderr | grep $MD5'
   retry: 2
 
 stat:
