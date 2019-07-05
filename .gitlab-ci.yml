@@ -219,6 +219,19 @@ slice.1:
     CMDSDI: " /usr/bin/time -v slice     tests/data/mosaic-color.mhd output_SDI.png 10  z 70 "
     MD5: 611920c5288f7f63f458811ef1344c27
 
+anisoDiff-curv_f32:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  2 0.0207 0.2 && stat output.mha 2>/dev/null "
+    MD5: 4c22cbca3e8640a70af91d8a4d94915f
+
+anisoDiff-grad_f32:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  2 0.0207 0.2 && stat output.mha 2>/dev/null "
+    MD5: 5c6b06013982d5aae5bce82e55f600b5
+
+
 release:
   stage: release
   variables:
