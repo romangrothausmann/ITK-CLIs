@@ -20,28 +20,12 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
-    bool noSDI= true;
-
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-    if(noSDI){
-	FilterWatcher watcherI(reader);
-	watcherI.QuietOn();
-	watcherI.ReportTimeOn();
-	try{
-	    reader->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
-	}
-    else{
-	reader->UpdateOutputInformation();
-	}
+    reader->UpdateOutputInformation();
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
     const typename InputImageType::RegionType region= input->GetLargestPossibleRegion();
@@ -54,6 +38,8 @@ int DoIt(int argc, char *argv[]){
         std::cout << "\tpoint_" << i+1;
     std::cout << std::endl;
 
+    typename InputImageType::SizeType   size;
+    size.Fill(1); // only needs to contain the pixel to probe
     unsigned int count = 0;
     for(int i= offset; i < argc; i+= Dimension){
 	typename InputImageType::PointType point;
@@ -78,7 +64,11 @@ int DoIt(int argc, char *argv[]){
 		}
 	    input->TransformIndexToPhysicalPoint(index, point);
 	    }
-	    
+
+	typename InputImageType::RegionType ROI(index, size);
+	input->SetRequestedRegion(ROI); // basis for streaming, see https://discourse.itk.org/t/combining-probing-of-pixel-values-with-streaming/2010/2
+	reader->Update();
+	
 	std::cout << count << "\t";
 	std::cout << +input->GetPixel(index) << "\t";
 	for (unsigned int j= 0; j < Dimension; j++)
