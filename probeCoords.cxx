@@ -80,7 +80,7 @@ int DoIt(int argc, char *argv[]){
 	    }
 	    
 	std::cout << count << "\t";
-	std::cout << input->GetPixel(index) << "\t";
+	std::cout << +input->GetPixel(index) << "\t";
 	for (unsigned int j= 0; j < Dimension; j++)
 	    std::cout << index[j] << "\t";
 	for (unsigned int j= 0; j < Dimension; j++)
@@ -109,18 +109,18 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef std::complex<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
+    // case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
+    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
+    //     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::VECTOR:{
+    //     typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
