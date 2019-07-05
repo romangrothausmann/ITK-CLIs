@@ -231,6 +231,12 @@ anisoDiff-grad_f32:
     CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  2 0.0207 0.2 && stat output.mha 2>/dev/null "
     MD5: 5c6b06013982d5aae5bce82e55f600b5
 
+anisoDiff-grad_f32.vec:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v anisoDiff-grad_f32 tests/data/mosaic-color.mhd output.mha 0  2 0.0236 0.2 && stat output.mha 2>/dev/null "
+    MD5: 997a244f4384520eb8366fc98818afcb
+
 
 release:
   stage: release
