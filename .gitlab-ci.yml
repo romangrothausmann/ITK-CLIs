@@ -205,6 +205,12 @@ probeCoords:
   variables:
     CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/seed.mha  v38 v129 v136   v39 v129 v136  v38 v129 v137  p271.962 p534.307 p268 "
 
+slice:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  z 70 && stat output.mha  2>/dev/null "
+    MD5: 3afb3c8b48582a89db03d0f5bc210fa9
+
 release:
   stage: release
   variables:
