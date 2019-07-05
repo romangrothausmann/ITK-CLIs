@@ -200,6 +200,11 @@ fast-marching_f32.2:
     CMD: " fast-marching_f32 tests/data/ACN.mha output.mha 0 50 200  v038 v129 v136  v216 v000 v020 && stat output.mha 2>/dev/null"
     MD5: ba0d86fda4310c84a33adaa2805ad1d4
 
+probeCoords:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/seed.mha  v38 v129 v136   v39 v129 v136  v38 v129 v137  p271.962 p534.307 p268 "
+
 release:
   stage: release
   variables:
