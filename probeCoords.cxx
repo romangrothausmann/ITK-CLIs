@@ -1,50 +1,26 @@
-////program for
-//01: based on template_vec.cxx
+////program for probing pixel values at specific coords
+//01: based on template_vec.cxx and https://itk.org/Doxygen/html/Examples_2DataRepresentation_2Image_2Image3_8cxx-example.html
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-//         if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-//             std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-//         else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-//             std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-//         }
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension>
 int DoIt(int argc, char *argv[]){
-
-    typedef   OutputPixelType;
+	
+    const char offset= 2;
+    if((argc - offset) % Dimension){
+	fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
+	return EXIT_FAILURE;
+	}
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
-    int CompChunk= atoi(argv[3]);
-    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
+    bool noSDI= true;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -68,52 +44,49 @@ int DoIt(int argc, char *argv[]){
 	}
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
+    const typename InputImageType::RegionType region= input->GetLargestPossibleRegion();
 
+    std::cout << "#index";
+    std::cout << "\tvalue";
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tindex_" << i+1;
+    for (unsigned int i= 0; i < Dimension; i++)
+        std::cout << "\tpoint_" << i+1;
+    std::cout << std::endl;
 
-
-    typedef itk::<InputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
-
-    if(noSDI){
-	FilterWatcher watcher1(filter);
-	// filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	// filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-	// filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{
-	    filter->Update();
+    unsigned int count = 0;
+    for(int i= offset; i < argc; i+= Dimension){
+	typename InputImageType::PointType point;
+	typename InputImageType::IndexType index;
+	    
+	count++;
+	for(int j= 0; j < Dimension; j++){
+	    point[j]= atof(argv[i+j]+1);//+1 to skip prefix-letter
+	    index[j]= point[j];//interpret as index directly
 	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
+
+	if(argv[i][0]=='p'){
+	    if(!input->TransformPhysicalPointToIndex(point, index)){
+		std::cerr << "Point not inside image region. Skipping: " << count << ": " << index << "; " << point << std::endl;
+		continue;
+		}
 	    }
+	else {
+	    if(!region.IsInside(index)){
+		std::cerr << "Point not inside image region. Skipping: " << count << ": " << index << std::endl;
+		continue;
+		}
+	    input->TransformIndexToPhysicalPoint(index, point);
+	    }
+	    
+	std::cout << count << "\t";
+	std::cout << input->GetPixel(index) << "\t";
+	for (unsigned int j= 0; j < Dimension; j++)
+	    std::cout << index[j] << "\t";
+	for (unsigned int j= 0; j < Dimension; j++)
+	    std::cout << point[j] << "\t";
+	std::cout << std::endl;
 	}
-
-
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
-
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[2]);
-    writer->SetInput(output);
-    if(noSDI){
-	writer->SetUseCompression(CompChunk);
-	}
-    else{
-	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
-	writer->SetNumberOfStreamDivisions(CompChunk);
-	}
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
 
     return EXIT_SUCCESS;
 
@@ -295,33 +268,15 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
-        std::cerr << "Missing Parameters: "
-                  << argv[0]
-                  << " Input_Image"
-                  << " Output_Image"
-                  << " compress|stream-chunks"
-                  << std::endl;
+    if ( argc < 3 ){
+	std::cerr << "Missing Parameters: "
+		  << argv[0]
+		  << " Input_Image"
+                  << " point-coords..."
+		  << std::endl;
 
-        std::cerr << std::endl;
-        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
-        return EXIT_FAILURE;
-        }
-
-    int CompChunk= atoi(argv[3]);
-    std::cerr << std::endl;
-    if(CompChunk == 0){
-	std::cerr << "Employing no compression and no streaming." << std::endl;
-	}
-    else if (CompChunk == 1){
-	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
-	}
-    else if (CompChunk > 1){
-	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
-	}
-    else {
-	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
-        return EXIT_FAILURE;
+	std::cerr << std::endl;
+	return EXIT_FAILURE;
 	}
 
     itk::ImageIOBase::IOPixelType pixelType;
