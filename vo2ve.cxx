@@ -21,6 +21,7 @@ this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 
 ////ToDo:
 // - resovle branchpoints correctly
+// -- check if modifications to prune_ends.cxx would be suitable for this
 
 
 #include "itkFilterWatcher.h"
