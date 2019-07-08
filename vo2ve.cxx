@@ -205,7 +205,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
-    std::cerr << "# of branching nodes: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
+    std::cerr << "# of non-connecting nodes: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
 
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;
