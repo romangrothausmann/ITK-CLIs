@@ -214,7 +214,7 @@ slice:
 slice.1:
   <<: *test
   variables:
-    CMD: " /usr/bin/time -v slice     tests/data/mosaic-color.mhd output.png 0  z 70 && stat output.png  2>/dev/null "
+    CMD: " /usr/bin/time -v slice     tests/data/mosaic-color.mhd output.png 0  z 70 "
     MD5: 611920c5288f7f63f458811ef1344c27
 
 release:
