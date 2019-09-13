@@ -260,7 +260,8 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
     pathFilter->SetInput(speed); //needs the image values to be scaled to [0; 1]
     pathFilter->SetCostFunction(cost);
     pathFilter->SetOptimizer(optimizer);
-    pathFilter->SetTerminationValue(atof(argv[8])); // see https://itk.org/Doxygen/html/classitk_1_1ArrivalFunctionToPathFilter.html and https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/issues/22
+    pathFilter->AutoTerminateOn();
+    pathFilter->SetAutoTerminateFactor(atof(argv[8])); // https://github.com/richardbeare/ITKMinimalPathExtraction/commit/f89bc840d7fee36a6e303652e00d338fa35023b7
 
     // Setup path points
     typename SpeedImageType::IndexType start, end;
