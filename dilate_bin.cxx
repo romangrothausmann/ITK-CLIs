@@ -51,7 +51,7 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
-    filter->SetDilateValue(static_cast<InputPixelType>(atof(argv[5])));
+    filter->SetForegroundValue(static_cast<InputPixelType>(atof(argv[5]))); // same as SetDilateValue
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
