@@ -1,5 +1,5 @@
-////program for itkBinaryErodeImageFilter
-//01: based on dilate_bin.cxx
+////program for itkGrayscaleErodeImageFilter
+//01: based on erode_bin.cxx
 
 
 #include <complex>
@@ -7,7 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkBinaryBallStructuringElement.h>
-#include <itkBinaryErodeImageFilter.h>
+#include <itkGrayscaleErodeImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -47,11 +47,10 @@ int DoIt(int argc, char *argv[]){
     structuringElement.SetRadius(atoi(argv[4]));
     structuringElement.CreateStructuringElement();
 
-    typedef itk::BinaryErodeImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
+    typedef itk::GrayscaleErodeImageFilter<InputImageType, OutputImageType, StructuringElementType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetKernel(structuringElement);
-    filter->SetForegroundValue(static_cast<InputPixelType>(atof(argv[5]))); // same as SetErodeValue
     filter->ReleaseDataFlagOn();
 
     FilterWatcher watcher1(filter);
@@ -216,14 +215,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
                   << " radius"
-                  << " fg-value"
                   << std::endl;
 
         return EXIT_FAILURE;
