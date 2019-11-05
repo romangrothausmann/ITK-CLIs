@@ -7,7 +7,6 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkIntensityWindowingImageFilter.h>
-#include <itkCastImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -54,7 +53,7 @@ int DoIt(int argc, char *argv[]){
 
 
 
-    typedef itk::IntensityWindowingImageFilter<InputImageType> FilterType;
+    typedef itk::IntensityWindowingImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
     filter->SetWindowMinimum(static_cast<InputPixelType>(atof(argv[4])));
@@ -64,12 +63,6 @@ int DoIt(int argc, char *argv[]){
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
-    typedef itk::CastImageFilter<InputImageType, OutputImageType> CastFilterType;
-    typename CastFilterType::Pointer  caster=  CastFilterType::New();
-    caster->SetInput(filter->GetOutput());
-    caster->ReleaseDataFlagOn();
-    caster->InPlaceOn();
-    
     if(noSDI){
 	FilterWatcher watcher1(filter);
 	try{
@@ -82,7 +75,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    const typename OutputImageType::Pointer& output= caster->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
