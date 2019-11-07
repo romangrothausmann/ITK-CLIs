@@ -310,5 +310,3 @@ release:
            "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" ' # https://docs.gitlab.com/ce/api/container_registry.html#delete-repository-tags-in-bulk
     - sleep 30
     - curl -fs "https://gitlab.com/api/v4/projects/$URLENC/registry/repositories/$registryID/tags" | jq '.[] | .name'
-  only:
-    - master
