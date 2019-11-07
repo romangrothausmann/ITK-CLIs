@@ -36,6 +36,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_ParabolicMorphology=ON \
 	  -DModule_Thickness3D=ON \
 	  -DModule_LesionSizingToolkit=OFF \
+	  -DModule_SCIFIO=ON `# for DM3 and other bioformats` \
 	  ../ITK && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
@@ -66,6 +67,7 @@ RUN mkdir -p /build/ && \
 FROM system as install
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-8-jre \
     time
 
 COPY --from=builder /opt/itk/ /opt/itk/
