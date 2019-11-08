@@ -569,15 +569,21 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-# SET(CurrentExe "mean_GPU")
-# IF(ITKGPUCommon_FOUND LESS 0)# -1 if not found!
-#   MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ITK_USE_GPU ON)")
-# ELSE(ITKGPUCommon_FOUND LESS 0)
-#   ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-#   TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-#   INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-#   MESSAGE(STATUS "${CurrentExe} will be compiled!")
-# ENDIF()
+IF(ITK_USE_GPU)# https://discourse.itk.org/t/check-with-cmake-if-found-itk-was-compiled-with-gpu-support/1522/4  https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Examples#comparison
+  
+SET(CurrentExe "mean_GPU")
+IF(ITKGPUCommon_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ITK_USE_GPU and ITKGPUCommon)")
+ELSE(ITKGPUCommon_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
+  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF()
+
+ELSE(ITK_USE_GPU)
+  MESSAGE(STATUS "GPU programs will not be compiled (requires ITK with ITK_USE_GPU ON)")
+ENDIF()
 
 SET(CurrentExe "count_neighbours")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
