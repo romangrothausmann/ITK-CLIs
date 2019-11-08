@@ -14,6 +14,8 @@
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension, typename InputImageType, typename RealImageType, typename CastFilterType, typename FilterType, typename CastFilterType2>
 int DoIt(int argc, char *argv[]){
 
+    itk::ObjectFactoryBase::RegisterFactory(itk::GPUImageFactory::New());//essential! http://public.kitware.com/pipermail/community/2014-April/005972.html
+
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
