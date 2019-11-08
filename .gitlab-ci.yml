@@ -276,7 +276,7 @@ gradient_mag_vec_f32:
 DM3:
   <<: *test
   variables:
-    CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0  && stat output.mha  2>/dev/null "
+    CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 "
     MD5: b6a304e103b396b122f72d525a3ed41f
 
 
