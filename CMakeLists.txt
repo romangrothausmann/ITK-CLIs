@@ -581,6 +581,17 @@ ELSE(ITKGPUCommon_FOUND LESS 0)
   MESSAGE(STATUS "${CurrentExe} will be compiled!")
 ENDIF()
 
+SET(CurrentExe "anisoDiff-grad_GPU_f32")
+IF(ITKGPUCommon_FOUND LESS 0)# -1 if not found!
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with ITK_USE_GPU and ITKGPUCommon)")
+ELSE(ITKGPUCommon_FOUND LESS 0)
+  ADD_EXECUTABLE(${CurrentExe}  "anisoDiff-grad_GPU.cxx")
+  SET_TARGET_PROPERTIES(${CurrentExe} PROPERTIES COMPILE_FLAGS "-DUSE_FLOAT")
+  TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+  INSTALL(TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+  MESSAGE(STATUS "${CurrentExe} will be compiled!")
+ENDIF()
+
 ELSE(ITK_USE_GPU)
   MESSAGE(STATUS "GPU programs will not be compiled (requires ITK with ITK_USE_GPU ON)")
 ENDIF()
