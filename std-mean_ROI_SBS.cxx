@@ -1,4 +1,4 @@
-////program for
+////program for itkROIShiftScaleImageFilter Slice-By-Slice
 //01: based on template.cxx
 
 
@@ -6,93 +6,136 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkExtractImageFilter.h>
+#include <itkStatisticsImageFilter.h>
+#include "filter/self-made/itkROIShiftScaleImageFilter.h"
+#include <itkSliceBySliceImageFilter.h>
 #include <itkImageFileWriter.h>
-
-
-
-// template<typename ReaderImageType, typename WriterImageType>
-// void FilterEventHandlerITK(itk::Object *caller, const itk::EventObject &event, void*){
-
-//     const itk::ProcessObject* filter = static_cast<const itk::ProcessObject*>(caller);
-
-//     if(itk::ProgressEvent().CheckEvent(&event))
-//         fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetNameOfClass(), 100.0 * filter->GetProgress());//stderr is flushed directly
-//     else if(itk::StartEvent().CheckEvent(&event)){
-// 	if(strstr(filter->GetNameOfClass(), "ImageFileReader"))
-// 	    std::cerr << "Reading: " << (dynamic_cast<itk::ImageFileReader<ReaderImageType> *>(caller))->GetFileName() << std::endl;//cast only works if reader was instanciated for ReaderImageType!
-// 	else if(strstr(filter->GetNameOfClass(), "ImageFileWriter"))
-// 	    std::cerr << "Writing: " << (dynamic_cast<itk::ImageFileWriter<WriterImageType> *>(caller))->GetFileName() << std::endl;//cast only works if writer was instanciated for WriterImageType!
-// 	}
-//     else if(itk::IterationEvent().CheckEvent(&event))
-//         std::cerr << " Iteration: " << (dynamic_cast<itk::SliceBySliceImageFilter<ReaderImageType, WriterImageType> *>(caller))->GetSliceIndex() << std::endl;
-//     else if(itk::EndEvent().CheckEvent(&event))
-//         std::cerr << std::endl;
-//     }
 
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    typedef   OutputPixelType;
+    if( argc != 3 + 2*Dimension){
+	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension - 1);
+	return EXIT_FAILURE;
+	}
+	
+
+    typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
-    // itk::CStyleCommand::Pointer eventCallbackITK;
-    // eventCallbackITK = itk::CStyleCommand::New();
-    // eventCallbackITK->SetCallback(FilterEventHandlerITK<InputImageType, OutputImageType>);
-
-    int CompChunk= atoi(argv[3]);
-    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
-    if(noSDI){
-	FilterWatcher watcherI(reader);
-	watcherI.QuietOn();
-	watcherI.ReportTimeOn();
-	try{
-	    reader->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+    FilterWatcher watcherI(reader);
+    watcherI.QuietOn();
+    watcherI.ReportTimeOn();
+    try{
+	reader->Update();
 	}
-    else{
-	reader->UpdateOutputInformation();
+    catch(itk::ExceptionObject &ex){
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
 	}
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
+    unsigned int i;
+    typename InputImageType::IndexType ROIindex;
+    typename InputImageType::SizeType  ROIsize;
 
-    typedef itk::<InputImageType> FilterType;
+    for (i= 0; i < Dimension; i++){
+        ROIindex[i]= atoi(argv[3+i]);
+    	std::cerr << ROIindex[i] << std::endl;
+    	}
+    for (i= 0; i < Dimension; i++){
+        ROIsize[i]= atoi(argv[3+Dimension+i]);
+    	std::cerr << ROIsize[i] << std::endl;
+    	}
+    typename InputImageType::RegionType ROI(ROIindex, ROIsize);
+
+
+    typedef itk::ExtractImageFilter<InputImageType, InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
+    filter->SetExtractionRegion(ROI);
+    filter->SetDirectionCollapseToIdentity(); // This is required.
 
-    if(noSDI){
-	FilterWatcher watcher1(filter);
-	// filter->AddObserver(itk::ProgressEvent(), eventCallbackITK);
-	// filter->AddObserver(itk::IterationEvent(), eventCallbackITK);
-	// filter->AddObserver(itk::EndEvent(), eventCallbackITK);
-	try{
-	    filter->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+    FilterWatcher watcher1(filter);
+    try{
+	filter->Update();
+	}
+    catch(itk::ExceptionObject &ex){
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
 	}
 
+    typedef itk::StatisticsImageFilter<InputImageType> StatType;
+    typename StatType::Pointer stat = StatType::New();
+    stat->SetInput(filter->GetOutput());
+    //stat->GetOutput()->SetRequestedRegion(ROI); //does not work for StatisticsImageFilter
+    //stat->GenerateInputRequestedRegion(); //does not help either
+    FilterWatcher watcher2(stat);
+    try { 
+	stat->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
 
-    const typename OutputImageType::Pointer& output= filterXYZ->GetOutput();
+    std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl; //+ promotes variable to a type printable as a number (e.g. for char)
+
+    typename StatType::RealType stackMean= stat->GetMean();
+    typename StatType::RealType stackStd= stat->GetSigma();
+
+    typedef itk::SliceBySliceImageFilter<InputImageType, OutputImageType> SBSFilterType;
+    typename SBSFilterType::Pointer sbs = SBSFilterType::New();
+    sbs->SetInput(input);
+
+    typedef typename  SBSFilterType::InternalInputImageType SBSInputImageType;
+    typedef typename  SBSFilterType::InternalOutputImageType SBSOutputImageType;
+
+
+    typename SBSInputImageType::IndexType ROISBSindex;
+    typename SBSInputImageType::SizeType  ROISBSsize;
+    for (i= 0; i < Dimension - 1; i++){
+        ROISBSindex[i]= atoi(argv[3+i]);
+    	std::cerr << ROISBSindex[i] << std::endl;
+    	}
+    for (i= 0; i < Dimension - 1; i++){
+        ROISBSsize[i]= atoi(argv[3+Dimension+i]);
+    	std::cerr << ROISBSsize[i] << std::endl;
+    	}
+    typename SBSInputImageType::RegionType ROISBS(ROISBSindex, ROISBSsize);
+
+
+
+    typedef itk::ROIShiftScaleImageFilter<SBSInputImageType, SBSOutputImageType> ROISSType;
+    typename ROISSType::Pointer roiss= ROISSType::New();
+    //roiss->SetNumberOfThreads(1);//rem. because SBS is NOT multi-threaded
+    roiss->SetDesiredMean(stackMean);
+    roiss->SetDesiredStd(stackStd);
+    roiss->SetROI(ROISBS);
+
+    sbs->SetFilter(roiss);
+    FilterWatcher watcher_sbs(sbs);
+    try { 
+	sbs->Update();
+        }
+    catch(itk::ExceptionObject &ex){ 
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
+
+    const typename OutputImageType::Pointer& output= sbs->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -100,13 +143,6 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    if(noSDI){
-	writer->SetUseCompression(CompChunk);
-	}
-    else{
-	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
-	writer->SetNumberOfStreamDivisions(CompChunk);
-	}
     try{
         writer->Update();
         }
@@ -124,12 +160,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
-    case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
-        break;
     case 3:
         res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
         break;
@@ -152,18 +182,18 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
         typedef InputComponentType InputPixelType;
         res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
         } break;
-    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+    //     typedef std::complex<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
+    //     typedef itk::RGBPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
+    // case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
+    //     typedef itk::RGBAPixel<InputComponentType> InputPixelType;
+    //     res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -262,34 +292,16 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 4 ){
+    if ( argc < 4 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-                  << " compress|stream-chunks"
+		  << " index... size..."
                   << std::endl;
 
-        std::cerr << std::endl;
-        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
         return EXIT_FAILURE;
         }
-
-    int CompChunk= atoi(argv[3]);
-    std::cerr << std::endl;
-    if(CompChunk == 0){
-	std::cerr << "Employing no compression and no streaming." << std::endl;
-	}
-    else if (CompChunk == 1){
-	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
-	}
-    else if (CompChunk > 1){
-	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
-	}
-    else {
-	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
-        return EXIT_FAILURE;
-	}
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
