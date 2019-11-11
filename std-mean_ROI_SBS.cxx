@@ -6,7 +6,6 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkExtractImageFilter.h>
 #include <itkStatisticsImageFilter.h>
 #include "filter/self-made/itkROIShiftScaleImageFilter.h"
 #include <itkSliceBySliceImageFilter.h>
@@ -33,16 +32,7 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-	reader->Update();
-	}
-    catch(itk::ExceptionObject &ex){
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
+    reader->UpdateOutputInformation();
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
@@ -62,26 +52,11 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::RegionType ROI(ROIindex, ROIsize);
 
 
-    typedef itk::ExtractImageFilter<InputImageType, InputImageType> FilterType;
-    typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
-    filter->SetExtractionRegion(ROI);
-    filter->SetDirectionCollapseToIdentity(); // This is required.
-
-    FilterWatcher watcher1(filter);
-    try{
-	filter->Update();
-	}
-    catch(itk::ExceptionObject &ex){
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
-
     typedef itk::StatisticsImageFilter<InputImageType> StatType;
     typename StatType::Pointer stat = StatType::New();
-    stat->SetInput(filter->GetOutput());
-    //stat->GetOutput()->SetRequestedRegion(ROI); //does not work for StatisticsImageFilter
-    //stat->GenerateInputRequestedRegion(); //does not help either
+    input->SetRequestedRegion(ROI); // basis for streaming, see https://discourse.itk.org/t/combining-probing-of-pixel-values-with-streaming/2010/2  //works for StatisticsImageFilter since ITK-5 @ c76b193eace
+    stat->SetInput(input);
+    stat->SetNumberOfStreamDivisions(ROIsize[Dimension]);// # of z-slices is a natural choice in case of SBS filtering.
     FilterWatcher watcher2(stat);
     try { 
 	stat->Update();
@@ -103,7 +78,7 @@ int DoIt(int argc, char *argv[]){
     typedef typename  SBSFilterType::InternalInputImageType SBSInputImageType;
     typedef typename  SBSFilterType::InternalOutputImageType SBSOutputImageType;
 
-
+    //// same as ROI for stat except for different types: InputImageType <-> SBSInputImageType
     typename SBSInputImageType::IndexType ROISBSindex;
     typename SBSInputImageType::SizeType  ROISBSsize;
     for (i= 0; i < Dimension - 1; i++){
@@ -127,13 +102,6 @@ int DoIt(int argc, char *argv[]){
 
     sbs->SetFilter(roiss);
     FilterWatcher watcher_sbs(sbs);
-    try { 
-	sbs->Update();
-        }
-    catch(itk::ExceptionObject &ex){ 
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
 
     const typename OutputImageType::Pointer& output= sbs->GetOutput();
 
@@ -143,6 +111,8 @@ int DoIt(int argc, char *argv[]){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
+    writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+    writer->SetNumberOfStreamDivisions(ROIsize[Dimension]);
     try{
         writer->Update();
         }
@@ -300,6 +270,8 @@ int main(int argc, char *argv[]){
 		  << " index... size..."
                   << std::endl;
 
+        std::cerr << std::endl;
+        std::cerr << "Employing streaming by default (compression not possible then)." << std::endl;
         return EXIT_FAILURE;
         }
 
