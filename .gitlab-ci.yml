@@ -286,6 +286,12 @@ project:
     CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.tif 0  0 2 && stat output.tif 2>/dev/null "
     MD5: 5e98aa400d86aa0db294b78030e15b48
 
+slic_UI32:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color_z70.png output.tif 0  50 0 && stat output.tif 2>/dev/null "
+    MD5: c1fa361468dddaf64da58c3f49c3379f
+
 DM3:
   <<: *test
   variables:
