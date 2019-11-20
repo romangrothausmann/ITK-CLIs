@@ -121,7 +121,7 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
 
     typedef   OutputPixelType;
 
