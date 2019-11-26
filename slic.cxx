@@ -134,9 +134,9 @@ template<typename InputComponentType, size_t CompPerPixel>
 int dispatch_D(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= dispatch_pT<InputComponentType, CompPerPixel, 1>(pixelType, argc, argv);
-        break;
+    // case 1:
+    //     res= dispatch_pT<InputComponentType, CompPerPixel, 1>(pixelType, argc, argv);
+    //     break;
     case 2:
         res= dispatch_pT<InputComponentType, CompPerPixel, 2>(pixelType, argc, argv);
         break;
