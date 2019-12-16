@@ -1,11 +1,12 @@
 ////program to resample to iso voxels with additional smoothing of subsampled region
 //01: based on resample.cxx and Examples/Filtering/ResampleVolumesToBeIsotropic.cxx
+//02: single program for SDI and noSDI (based on resample.cxx)
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkCastImageFilter.h>
-#include <itkRecursiveGaussianImageFilter.h>
+#include <itkRecursiveGaussianImageFilter.h> // can stream: https://github.com/InsightSoftwareConsortium/ITK/blob/d5158e04f00cc61249cc1043147bc9a99f055d99/Modules/Filtering/ImageFilterBase/include/itkRecursiveSeparableImageFilter.hxx#L189-L193
 #include <itkIdentityTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
@@ -29,23 +30,31 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
+    int CompChunk= atoi(argv[3]);
+    bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
+
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-        reader->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    if(noSDI){
+	FilterWatcher watcherI(reader);
+	watcherI.QuietOn();
+	watcherI.ReportTimeOn();
+	try{
+	    reader->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
+    else{
+	reader->UpdateOutputInformation();
+	}
 
-    typename InputImageType::Pointer input= reader->GetOutput();
+    const typename InputImageType::Pointer& input= reader->GetOutput();
 
     ////store header data before reader releases its output after it got used by the cast filter
     const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
@@ -76,7 +85,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     caster->SetInput(input);
     caster->ReleaseDataFlagOn();
     caster->InPlaceOn();
-    FilterWatcher watcherC(caster);
+    if(noSDI)
+	FilterWatcher watcherC(caster);
 
     typedef itk::RecursiveGaussianImageFilter<InternalImageType, InternalImageType> GaussianFilterType;
 
@@ -86,7 +96,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     smootherX->SetDirection(0);
     smootherX->ReleaseDataFlagOn();
     smootherX->InPlaceOn();
-    FilterWatcher watcherX(smootherX);
+    if(noSDI)
+	FilterWatcher watcherX(smootherX);
 
     typename GaussianFilterType::Pointer smootherY = GaussianFilterType::New();
     smootherY->SetInput(smootherX->GetOutput());
@@ -94,7 +105,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     smootherY->SetDirection(1);
     smootherY->ReleaseDataFlagOn();
     smootherY->InPlaceOn();
-    FilterWatcher watcherY(smootherY);
+    if(noSDI)
+	FilterWatcher watcherY(smootherY);
 
 
     typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
@@ -116,17 +128,19 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
 
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    if(noSDI){
+	FilterWatcher watcher1(filter);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	}
 
 
-    typename OutputImageType::Pointer output= filter->GetOutput();
+    const typename OutputImageType::Pointer& output= filter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -134,7 +148,13 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     FilterWatcher watcherO(writer);
     writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[3]));
+    if(noSDI){
+	writer->SetUseCompression(CompChunk);
+	}
+    else{
+	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+	writer->SetNumberOfStreamDivisions(CompChunk);
+	}
     try{
         writer->Update();
         }
@@ -146,6 +166,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     return EXIT_SUCCESS;
 
     }
+
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
@@ -171,7 +192,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
         res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, TCoordRep, InterpolatorType>(argc, argv, interpolator);
         }break;
-    case 2 ... 5 :{ // https://stackoverflow.com/questions/4494170/grouping-switch-statement-cases-together#28292802
+    case 2 ... 5: { // https://stackoverflow.com/questions/4494170/grouping-switch-statement-cases-together#28292802
         typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, TCoefficientType> InterpolatorType;
         typename InterpolatorType::Pointer interpolator= InterpolatorType::New();
         std::cerr << "Using interpolator: " << interpolator->GetNameOfClass() << std::endl;
@@ -223,7 +244,7 @@ int DoIt(int argc, char *argv[]){
 
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
     switch (dimensionType){
     // case 2:
     //     res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
@@ -240,7 +261,7 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
 
 template<typename InputComponentType>
 int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
@@ -259,7 +280,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, i
     }
 
 int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
 
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00107
@@ -353,13 +374,31 @@ int main(int argc, char *argv[]){
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
-                  << " compress"
+                  << " compress|stream-chunks"
                   << " Interpolator_Type"
                   << " [iso-spacing]"
                   << std::endl;
 
+        std::cerr << std::endl;
+        std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
         return EXIT_FAILURE;
         }
+
+    int CompChunk= atoi(argv[3]);
+    std::cerr << std::endl;
+    if(CompChunk == 0){
+	std::cerr << "Employing no compression and no streaming." << std::endl;
+	}
+    else if (CompChunk == 1){
+	std::cerr << "Employing compression (streaming not possible then)." << std::endl;
+	}
+    else if (CompChunk > 1){
+	std::cerr << "Employing streaming (compression not possible then)." << std::endl;
+	}
+    else {
+	std::cerr << "compress|stream-chunks must be a positive integer" << std::endl;
+        return EXIT_FAILURE;
+	}
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
