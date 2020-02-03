@@ -20,7 +20,7 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
-RUN git clone -b v4.13.1 --depth 1 https://itk.org/ITK.git 
+RUN git clone -b v4.13.1 --depth 1 https://github.com/InsightSoftwareConsortium/ITK.git 
 
 ### Module_StreamingSinc needs to be downloaded separately:
 RUN git clone https://github.com/blowekamp/itkStreamingSinc/ ITK/Modules/External/itkStreamingSinc/ && cd ITK/Modules/External/itkStreamingSinc/ && git checkout d7d76e1a9196a9138c2156f7c66db98d39cab918
