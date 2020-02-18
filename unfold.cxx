@@ -4,7 +4,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkCartesianToPolarTransform.h>
+#include <itkPolarToCartesianTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkGaussianInterpolateImageFunction.h>
@@ -57,7 +57,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-    typedef itk::CartesianToPolarTransform<TCoordRep, Dimension> TransformType;
+    typedef itk::PolarToCartesianTransform<TCoordRep, Dimension> TransformType;
     typename TransformType::Pointer transform= TransformType::New();
 
     const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
@@ -73,6 +73,15 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     for (unsigned int i= 0; i < Dimension; i++)
         outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
+    const typename InputImageType::PointType& inputOrigin= input->GetOrigin();
+    typedef typename TransformType::InputPointType::ValueType InputPointValueType;
+    typename TransformType::InputPointType centerPoint;
+    for (unsigned int i= 0; i < Dimension; i++)
+	if (i < 2) // only for first two dimensions
+	    centerPoint[i]= static_cast<InputPointValueType>(inputOrigin[i] + (inputSize[i] - 1) * inputSpacing[i] / 2.0); // based on GeometryOn() of itkCenteredTransformInitializer
+	else
+	    centerPoint[i]= 0;
+    transform->SetCenter(centerPoint);
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
