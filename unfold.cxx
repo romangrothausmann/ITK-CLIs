@@ -21,8 +21,8 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename TCoordRep, typename InterpolatorType>
 int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
-    if( argc != 4 + 1*Dimension + 1){
-        fprintf(stderr, "4 + 1*Dimension = %ld parameters are needed!\n", 4 + 1*Dimension);
+    if( argc != 4 + 1*2 + 1){
+        fprintf(stderr, "4 + 1*2 = %ld parameters are needed!\n", 4 + 1*2);
         return EXIT_FAILURE;
         }
 
@@ -77,11 +77,23 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename OutputImageType::SizeType outputSize;
     
     for (unsigned int i= 0; i < Dimension; i++)
-        outputSpacing[i]= atof(argv[5+i]);
+	if (i < 2) // only for first two dimensions
+	    outputSpacing[i]= atof(argv[5+i]);
+	else
+	    outputSpacing[i]= inputSpacing[i];
 
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
-        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
+        outputSize[i]= inputSize[i];
+
+    //// output size for polar coord plane differs
+    outputSize[0]= static_cast<SizeValueType>(2 * itk::Math::pi / outputSpacing[0]); // phi in 1st dim.
+    outputSize[1]= static_cast<SizeValueType>( // r in 2nd dim.
+	std::sqrt(
+	    inputSize[0] * inputSpacing[0] * inputSize[0] * inputSpacing[0] +
+	    inputSize[1] * inputSpacing[1] * inputSize[1] * inputSpacing[1]
+	    )
+	/ 2.0 / outputSpacing[1]); // length of half diagonal
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
