@@ -60,20 +60,10 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typedef itk::PolarToCartesianTransform<TCoordRep, Dimension> TransformType;
     typename TransformType::Pointer transform= TransformType::New();
 
-    const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
-
-    typename InputImageType::SpacingType outputSpacing;
-    for (unsigned int i= 0; i < Dimension; i++)
-        outputSpacing[i]= atof(argv[5+i]);
-
-    const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
-    typename OutputImageType::SizeType outputSize;
-
-    typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
-    for (unsigned int i= 0; i < Dimension; i++)
-        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
-
     const typename InputImageType::PointType& inputOrigin= input->GetOrigin();
+    const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
+    const typename InputImageType::SizeType& inputSize= input->GetLargestPossibleRegion().GetSize();
+
     typedef typename TransformType::InputPointType::ValueType InputPointValueType;
     typename TransformType::InputPointType centerPoint;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -82,6 +72,16 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	else
 	    centerPoint[i]= 0;
     transform->SetCenter(centerPoint);
+
+    typename InputImageType::SpacingType outputSpacing;
+    typename OutputImageType::SizeType outputSize;
+    
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSpacing[i]= atof(argv[5+i]);
+
+    typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
+    for (unsigned int i= 0; i < Dimension; i++)
+        outputSize[i]= static_cast<SizeValueType>((double) inputSize[i] * inputSpacing[i] / outputSpacing[i]);
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
