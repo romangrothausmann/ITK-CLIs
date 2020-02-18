@@ -21,11 +21,6 @@
 template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename TCoordRep, typename InterpolatorType>
 int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
-    if( argc != 4 + 1*2 + 1){
-        fprintf(stderr, "4 + 1*2 = %ld parameters are needed!\n", 4 + 1*2);
-        return EXIT_FAILURE;
-        }
-
     typedef InputPixelType  OutputPixelType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
@@ -77,11 +72,12 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     typename OutputImageType::SizeType outputSize;
     
     for (unsigned int i= 0; i < Dimension; i++)
-	if (i < 2) // only for first two dimensions
-	    outputSpacing[i]= atof(argv[5+i]);
-	else
-	    outputSpacing[i]= inputSpacing[i];
+	outputSpacing[i]= inputSpacing[i];
 
+    outputSpacing[0]= atof(argv[5]); // spacing for phi
+    if(argc > 6)
+	outputSpacing[1]= atof(argv[6]); // spacing for r
+    
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
         outputSize[i]= inputSize[i];
@@ -353,7 +349,8 @@ int main(int argc, char *argv[]){
                   << " Output_Image"
                   << " compress|stream-chunks"
                   << " Interpolator_Type"
-                  << " spacing..."
+                  << " spacing_phi"
+                  << " [spacing_r]"
                   << std::endl;
 
         std::cerr << std::endl;
