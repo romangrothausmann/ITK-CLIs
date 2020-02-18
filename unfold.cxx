@@ -1,12 +1,10 @@
-////program for itkResampleImageFilter
-//01: based on template.cxx and http://itk.org/Wiki/ITK/Examples/ImageProcessing/ResampleSegmentedImage
-//02: combining with resample_SDI.cxx to single code-base
-//03: single program for SDI and noSDI (based on new template_var-filter.cxx)
+////program to unfold an SRV using circular coord transform with itkResampleImageFilter in 2D slice-by-slice
+//01: based on resample.cxx
 
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
-#include <itkIdentityTransform.h>
+#include <itkCartesianToPolarTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkGaussianInterpolateImageFunction.h>
@@ -59,9 +57,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
 
-    typedef itk::IdentityTransform<TCoordRep, Dimension> TransformType;
+    typedef itk::CartesianToPolarTransform<TCoordRep, Dimension> TransformType;
     typename TransformType::Pointer transform= TransformType::New();
-    transform->SetIdentity();
 
     const typename InputImageType::SpacingType& inputSpacing= input->GetSpacing();
 
@@ -205,9 +202,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-        break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
