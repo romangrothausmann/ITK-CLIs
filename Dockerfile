@@ -35,6 +35,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_MinimalPathExtraction=ON \
 	  -DModule_ParabolicMorphology=ON \
 	  -DModule_Thickness3D=ON \
+	  -DModule_PolarTransform=ON \
 	  -DModule_LesionSizingToolkit=OFF \
 	  -DModule_SCIFIO=ON `# for DM3 and other bioformats` \
 	  ../ITK && \
