@@ -27,6 +27,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     int CompChunk= atoi(argv[3]);
     bool noSDI= CompChunk <= 1; // SDI only if CompChunk > 1
+    bool constArcIncr= atoi(argv[5]);
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -67,6 +68,8 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	else
 	    centerPoint[i]= 0;
     transform->SetCenter(centerPoint);
+    transform->SetConstArcIncr(constArcIncr);
+    transform->ReturnNaNOn();
 
     typename InputImageType::SpacingType outputSpacing;
     typename OutputImageType::SizeType outputSize;
@@ -74,9 +77,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     for (unsigned int i= 0; i < Dimension; i++)
 	outputSpacing[i]= inputSpacing[i];
 
-    outputSpacing[0]= atof(argv[5]); // spacing for phi
-    if(argc > 6)
-	outputSpacing[1]= atof(argv[6]); // spacing for r
+    outputSpacing[0]= atof(argv[6]); // spacing for phi
+    if(argc > 7)
+	outputSpacing[1]= atof(argv[7]); // spacing for r
     
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -89,6 +92,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	    )
 	/ 2.0;
     outputSize[0]= static_cast<SizeValueType>(2 * itk::Math::pi / outputSpacing[0]); // phi in 1st dim.
+    outputSize[0]*= constArcIncr ? Rmax : 1; // constArcIncr ? ArcMax : 2*pi 
     outputSize[1]= static_cast<SizeValueType>(Rmax / outputSpacing[1]); // r in 2nd dim. // length of half diagonal
 
     typename InputImageType::PointType outputOrigin;
@@ -346,13 +350,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc < 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress|stream-chunks"
                   << " Interpolator_Type"
+                  << " UseConstArcIncr"
                   << " spacing_phi"
                   << " [spacing_r]"
                   << std::endl;
