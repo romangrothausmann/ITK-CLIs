@@ -20,7 +20,8 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
-RUN git clone https://github.com/InsightSoftwareConsortium/ITK.git && cd ITK && git checkout 1d1ad8db90801335951258f5f4ebc6483a080647
+RUN git clone https://github.com/romangrothausmann/ITK.git && cd ITK && git checkout 0b9e39f6234bd56772c0dbb1eb81dbf01259ce51
+RUN cd ITK && git submodule add -f https://github.com/romangrothausmann/ITKPolarTransform Modules/Remote/PolarTransform/ # get commits not yet included in upstream before running cmake
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
