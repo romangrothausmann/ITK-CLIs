@@ -83,13 +83,13 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
         outputSize[i]= inputSize[i];
 
     //// output size for polar coord plane differs
-    outputSize[0]= static_cast<SizeValueType>(2 * itk::Math::pi / outputSpacing[0]); // phi in 1st dim.
-    outputSize[1]= static_cast<SizeValueType>( // r in 2nd dim.
-	std::sqrt(
+    double Rmax= std::sqrt(
 	    inputSize[0] * inputSpacing[0] * inputSize[0] * inputSpacing[0] +
 	    inputSize[1] * inputSpacing[1] * inputSize[1] * inputSpacing[1]
 	    )
-	/ 2.0 / outputSpacing[1]); // length of half diagonal
+	/ 2.0;
+    outputSize[0]= static_cast<SizeValueType>(2 * itk::Math::pi / outputSpacing[0]); // phi in 1st dim.
+    outputSize[1]= static_cast<SizeValueType>(Rmax / outputSpacing[1]); // r in 2nd dim. // length of half diagonal
 
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
