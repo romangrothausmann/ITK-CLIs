@@ -69,6 +69,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	    centerPoint[i]= 0;
     transform->SetCenter(centerPoint);
     transform->SetConstArcIncr(constArcIncr);
+    transform->SetAngleOffset(atof(argv[6]));
     transform->ReturnNaNOn();
 
     typename InputImageType::SpacingType outputSpacing;
@@ -77,9 +78,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     for (unsigned int i= 0; i < Dimension; i++)
 	outputSpacing[i]= inputSpacing[i];
 
-    outputSpacing[0]= atof(argv[6]); // spacing for phi
-    if(argc > 7)
-	outputSpacing[1]= atof(argv[7]); // spacing for r
+    outputSpacing[0]= atof(argv[7]); // spacing for phi
+    if(argc > 8)
+	outputSpacing[1]= atof(argv[8]); // spacing for r
     
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -350,7 +351,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 7 ){
+    if ( argc < 8 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -358,6 +359,7 @@ int main(int argc, char *argv[]){
                   << " compress|stream-chunks"
                   << " Interpolator_Type"
                   << " UseConstArcIncr"
+                  << " angleOffset"
                   << " spacing_phi"
                   << " [spacing_r]"
                   << std::endl;
