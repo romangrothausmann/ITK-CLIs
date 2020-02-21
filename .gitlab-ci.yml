@@ -179,15 +179,15 @@ resample.20:
 unfold:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/srv_z@02356.mha output.mha      0  1 0 0 0.00628 && stat output.mha 2>/dev/null "
-    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/srv_z@02356.mha output_SDI.mha 10  1 0 0 0.00628 && stat output.mha 2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/srv_z@02356.mha output.mha      0  1 0 0 0 0.00628 && stat output.mha 2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/srv_z@02356.mha output_SDI.mha 10  1 0 0 0 0.00628 && stat output.mha 2>/dev/null "
     MD5: 932c8feca9c18d21961c658873e74496
 
 unfold.1:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v unfold tests/data/srv_z@02356.mha output.mha      0  1 1 0 0.00015 && stat output.mha 2>/dev/null "
-    CMDSDI: " /usr/bin/time -v unfold tests/data/srv_z@02356.mha output_SDI.mha 10  1 1 0 0.00015 && stat output.mha 2>/dev/null "
+    CMD:    " /usr/bin/time -v unfold tests/data/srv_z@02356.mha output.mha      0  1 1 0 0 0.00015 && stat output.mha 2>/dev/null "
+    CMDSDI: " /usr/bin/time -v unfold tests/data/srv_z@02356.mha output_SDI.mha 10  1 1 0 0 0.00015 && stat output.mha 2>/dev/null "
     MD5: 4ad23e0ceff0066ef34b9b7168624f34
 
 sigmoid:

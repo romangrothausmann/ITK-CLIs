@@ -78,9 +78,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     for (unsigned int i= 0; i < Dimension; i++)
 	outputSpacing[i]= inputSpacing[i];
 
-    outputSpacing[0]= atof(argv[7]); // spacing for phi
-    if(argc > 8)
-	outputSpacing[1]= atof(argv[8]); // spacing for r
+    outputSpacing[0]= atof(argv[8]); // spacing for phi
+    if(argc > 9)
+	outputSpacing[1]= atof(argv[9]); // spacing for r
     
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -109,7 +109,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetSize(outputSize);
     filter->SetOutputOrigin(outputOrigin);//essential for images created with e.g. itkExtractImageFilter
     filter->SetOutputDirection(input->GetDirection());
-    filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
+    filter->SetDefaultPixelValue(static_cast<OutputPixelType>(atof(argv[7])));
     filter->ReleaseDataFlagOn();
 
     if(noSDI){
@@ -351,7 +351,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 8 ){
+    if ( argc < 9 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -360,6 +360,7 @@ int main(int argc, char *argv[]){
                   << " Interpolator_Type"
                   << " UseConstArcIncr"
                   << " angleOffset"
+                  << " defaultValue"
                   << " spacing_phi"
                   << " [spacing_r]"
                   << std::endl;
