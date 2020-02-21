@@ -91,6 +91,10 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     outputSize[0]= static_cast<SizeValueType>(2 * itk::Math::pi / outputSpacing[0]); // phi in 1st dim.
     outputSize[1]= static_cast<SizeValueType>(Rmax / outputSpacing[1]); // r in 2nd dim. // length of half diagonal
 
+    typename InputImageType::PointType outputOrigin;
+    outputOrigin.Fill(0.0);
+    outputOrigin[0]= -0.5 * outputSize[0] * outputSpacing[0]; // project left and right from center point, i.e. [-pi,pi] (without: [0, 2*pi])
+
     typedef itk::ResampleImageFilter<InputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
@@ -98,7 +102,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     filter->SetInterpolator(interpolator);
     filter->SetOutputSpacing(outputSpacing);
     filter->SetSize(outputSize);
-    filter->SetOutputOrigin(input->GetOrigin());//essential for images created with e.g. itkExtractImageFilter
+    filter->SetOutputOrigin(outputOrigin);//essential for images created with e.g. itkExtractImageFilter
     filter->SetOutputDirection(input->GetDirection());
     filter->SetDefaultPixelValue(itk::NumericTraits<InputPixelType>::Zero);
     filter->ReleaseDataFlagOn();
