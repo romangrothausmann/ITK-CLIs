@@ -1,5 +1,5 @@
-////program for itkVectorGradientAnisotropicDiffusionImageFilter
-//01: based on template_vec.cxx
+////program for CoherenceEnhancingDiffusionImageFilter
+//01: based on anisoDiff-grad.cxx
 
 
 #include <complex>
@@ -7,11 +7,28 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkCastImageFilter.h>
-#include <itkGradientAnisotropicDiffusionImageFilter.h>
-#include <itkVectorGradientAnisotropicDiffusionImageFilter.h>
+#include <itkCoherenceEnhancingDiffusionImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
+template<typename EnhancementType>
+EnhancementType resolveOption(std::string input){// https://stackoverflow.com/questions/16388510/evaluate-a-string-with-a-switch-in-c#16388594
+    static const std::map<std::string, EnhancementType> optionStrings {
+        {"EED",  EnhancementType::EED},       // Weickert's exponent : 4.
+        {"cEED", EnhancementType::cEED},      // Weickert's exponent : 4.
+        {"CED",  EnhancementType::CED},       // Weickert's exponent : 2.
+        {"cCED", EnhancementType::cCED},      // Weickert's exponent : 2.
+        {"iso",  EnhancementType::Isotropic}, // Perona-Malik's exponent: 2.
+	};
+
+    auto itr = optionStrings.find(input);
+    if(itr != optionStrings.end()) {
+        return itr->second; // https://stackoverflow.com/questions/10699689/how-can-i-get-a-value-from-a-map#10699752
+	}
+    
+    itkGenericExceptionMacro("Error: Unrecognized enhancement.\n");
+    exit; 
+    }
 
 template<typename InputComponentType, typename InputPixelType, size_t CompPerPixel, size_t Dimension, typename InputImageType, typename RealImageType, typename CastFilterType, typename FilterType, typename CastFilterType2>
 int DoIt(int argc, char *argv[]){
@@ -41,11 +58,14 @@ int DoIt(int argc, char *argv[]){
 
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(caster->GetOutput());
-    filter->SetNumberOfIterations(atoi(argv[4]));
-    filter->SetTimeStep(atof(argv[5]));
-    filter->SetConductanceParameter(atof(argv[6]));
+    filter->SetDiffusionTime(atof(argv[4]));
+    filter->SetLambda(atof(argv[5]));
+    filter->SetEnhancement(resolveOption<typename FilterType::EnhancementType>(argv[6]));
+    filter->SetNoiseScale(atof(argv[7]));
+    filter->SetFeatureScale(atof(argv[8]));
+    filter->SetExponent(atof(argv[9]));
+    // filter->SetAlpha(atof(argv[7]));
     filter->ReleaseDataFlagOn();
-    filter->InPlaceOn();
 
     FilterWatcher watcher1(filter);
     try{
@@ -103,7 +123,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<TRealType, Dimension>  RealImageType;
         typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::GradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::CoherenceEnhancingDiffusionImageFilter<RealImageType, TRealType> FilterType;
         typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -133,7 +153,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<RealPixelType, Dimension>  RealImageType;
         typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::CoherenceEnhancingDiffusionImageFilter<RealImageType, TRealType> FilterType;
         typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -149,10 +169,7 @@ template<typename InputComponentType, size_t CompPerPixel>
 int dispatch_D(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    case 1:
-        res= dispatch_pT<InputComponentType, CompPerPixel, 1>(pixelType, argc, argv);
-        break;
-    case 2:
+   case 2:
         res= dispatch_pT<InputComponentType, CompPerPixel, 2>(pixelType, argc, argv);
         break;
     case 3:
@@ -284,13 +301,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc != 10 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
-                  << " iterations TimeStep Conductance"
+                  << " diffTime lambda enhancementType exponent noiseScale featureScale"
                   << std::endl;
 
         return EXIT_FAILURE;
