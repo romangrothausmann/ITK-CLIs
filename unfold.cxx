@@ -70,7 +70,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     transform->SetCenter(centerPoint);
     transform->SetConstArcIncr(constArcIncr);
     transform->SetAngleOffset(atof(argv[6]));
-    transform->ReturnNaNOn();
+    transform->SetReturnNaN(atoi(argv[8]));
 
     typename InputImageType::SpacingType outputSpacing;
     typename OutputImageType::SizeType outputSize;
@@ -78,9 +78,9 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
     for (unsigned int i= 0; i < Dimension; i++)
 	outputSpacing[i]= inputSpacing[i];
 
-    outputSpacing[0]= atof(argv[8]); // spacing for phi
-    if(argc > 9)
-	outputSpacing[1]= atof(argv[9]); // spacing for r
+    outputSpacing[0]= atof(argv[9]); // spacing for phi
+    if(argc > 10)
+	outputSpacing[1]= atof(argv[10]); // spacing for r
     
     typedef typename InputImageType::SizeType::SizeValueType SizeValueType;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -351,7 +351,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 9 ){
+    if ( argc < 10 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -361,6 +361,7 @@ int main(int argc, char *argv[]){
                   << " UseConstArcIncr"
                   << " angleOffset"
                   << " defaultValue"
+                  << " noRepetition"
                   << " spacing_phi"
                   << " [spacing_r]"
                   << std::endl;
