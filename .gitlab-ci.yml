@@ -268,6 +268,12 @@ anisoDiff-grad_f32:
     CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  2 0.0207 0.2 && stat output.mha 2>/dev/null "
     MD5: 5c6b06013982d5aae5bce82e55f600b5
 
+anisoDiff-LBR_f32:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  5 0.0001 cCED 3 4 1.5 && stat output.mha 2>/dev/null "
+    MD5: 3997b6db3f16bb712deba4c0caaf7d50
+
 ## would need nvidia-docker and gitlab runner with access to a GPU    
 # anisoDiff-grad_GPU_f32:
 #   <<: *test
