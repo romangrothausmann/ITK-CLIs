@@ -31,29 +31,10 @@ int DoIt(int argc, char *argv[]){
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
-    typedef itk::ImageFileReader<InputImageType1> ReaderType1;
-    typename ReaderType1::Pointer reader1 = ReaderType1::New();
-
-    reader1->SetFileName(argv[1]);
-    reader1->ReleaseDataFlagOn();
-    FilterWatcher watcherI1(reader1);
-    watcherI1.QuietOn();
-    watcherI1.ReportTimeOn();
-    try{
-        reader1->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
-
-    const typename InputImageType1::Pointer& input1= reader1->GetOutput();
-
-
     typedef itk::ImageFileReader<InputImageType2> ReaderType2;
     typename ReaderType2::Pointer reader2 = ReaderType2::New();
 
-    reader2->SetFileName(argv[2]);
+    reader2->SetFileName(argv[1]);
     //reader2->ReleaseDataFlagOn();//needed twice
     FilterWatcher watcherI2(reader2);
     watcherI2.QuietOn();
@@ -79,7 +60,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::FastMarchingImageFilter<OutputImageType, OutputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(rescaler2->GetOutput());
-    filter->SetStoppingValue(atof(argv[5]));
+    filter->SetStoppingValue(atof(argv[4]));
     filter->ReleaseDataFlagOn();
 
     typedef typename FilterType::NodeContainer  NodeContainer;
@@ -88,18 +69,73 @@ int DoIt(int argc, char *argv[]){
     typename NodeContainer::Pointer ANodes = NodeContainer::New();
     ANodes->Initialize();
 
-    typedef itk::ImageRegionConstIteratorWithIndex<InputImageType1> IteratorType;
-    IteratorType it(input1, input1->GetLargestPossibleRegion() );
+    if(argc == 7){// fm start-points provided by image
+	typedef itk::ImageFileReader<InputImageType1> ReaderType1;
+	typename ReaderType1::Pointer reader1 = ReaderType1::New();
 
-    unsigned int count = 0;
-    for(it.GoToBegin(); !it.IsAtEnd(); ++it){
-        if(it.Get() > 0){
-            NodeType node;
-            node.SetIndex(it.GetIndex());
-            ANodes->InsertElement(count, node);
-            count++;
-            }
-        }
+	reader1->SetFileName(argv[6]);
+	reader1->ReleaseDataFlagOn();
+	FilterWatcher watcherI1(reader1);
+	watcherI1.QuietOn();
+	watcherI1.ReportTimeOn();
+	try{
+	    reader1->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+
+	const typename InputImageType1::Pointer& input1= reader1->GetOutput();
+
+	typedef itk::ImageRegionConstIteratorWithIndex<InputImageType1> IteratorType;
+	IteratorType it(input1, input1->GetLargestPossibleRegion() );
+
+	unsigned int count = 0;
+	for(it.GoToBegin(); !it.IsAtEnd(); ++it){
+	    if(it.Get() > 0){
+		NodeType node;
+		node.SetIndex(it.GetIndex());
+		ANodes->InsertElement(count, node);
+		count++;
+
+		//std::cout << "p: " << it.GetIndex() << std::endl;	
+		}
+	    }
+	}
+    else {// fm start-points provided as parameters
+	
+	const typename InputImageType2::RegionType region= input2->GetLargestPossibleRegion();
+	
+	const char offset= 6;
+	if((argc - offset) % Dimension){
+	    fprintf(stderr, "%d + n*Dimension  parameters are needed!\n", offset-1);
+	    return EXIT_FAILURE;
+	    }
+
+	unsigned int count = 0;
+	for(int i= offset; i < argc; i+= Dimension){
+	    typename InputImageType2::PointType point;
+	    typename InputImageType2::IndexType index;
+	    
+	    for(int j= 0; j < Dimension; j++){
+		point[j]= atof(argv[i+j]+1);//+1 to skip prefix-letter
+		index[j]= point[j];//interpret as index directly
+		}
+
+	    if(argv[i][0]=='p')
+		input2->TransformPhysicalPointToIndex(point, index);//overwrites index
+	    
+	    NodeType node;
+	    node.SetIndex(index);
+	    ANodes->InsertElement(count, node);
+	    count++;
+
+	    std::cout << "p: " << index << std::endl;
+	    if(!region.IsInside(index)){std::cerr << "Point not inside image region. Aborting!" << std::endl; return EXIT_FAILURE;}
+	    }
+	}
+
     //filter->SetAlivePoints(ANodes);//alive points are already part of the object, can be omitted?
     filter->SetTrialPoints(ANodes);//trial points are considered for inclusion, eg the layer of pixels around AlivePoints
 
@@ -117,8 +153,7 @@ int DoIt(int argc, char *argv[]){
     typename MFilterType::Pointer mask = MFilterType::New();
     mask->SetInput(filter->GetOutput());
     mask->ThresholdAbove(filter->GetStoppingValue());
-    if (argc > 6)
-	mask->SetOutsideValue(atof(argv[6]));
+    mask->SetOutsideValue(atof(argv[5]));
     mask->InPlaceOn();
     FilterWatcher watcherM(mask);
 
@@ -128,9 +163,9 @@ int DoIt(int argc, char *argv[]){
     typename WriterType::Pointer writer = WriterType::New();
 
     FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[3]);
+    writer->SetFileName(argv[2]);
     writer->SetInput(output);
-    writer->SetUseCompression(atoi(argv[4]));
+    writer->SetUseCompression(atoi(argv[3]));
     try{
         writer->Update();
         }
@@ -350,15 +385,15 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc < 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
-                  << " Source_Image"
                   << " Speed_Image"
                   << " Output_Image"
                   << " compress"
                   << " stop-value"
-                  << " [not-reached-value]"
+                  << " not-reached-value"
+                  << " Source_Image | point-coords..."
                   << std::endl;
 
         return EXIT_FAILURE;
@@ -373,17 +408,21 @@ int main(int argc, char *argv[]){
 
 
     try {
-        GetImageType(argv[1], pixelType1, componentType1, dimensionType1);
-        GetImageType(argv[2], pixelType2, componentType2, dimensionType2);
+        GetImageType(argv[1], pixelType2, componentType2, dimensionType2);
+        if(argc == 7){
+	    GetImageType(argv[6], pixelType1, componentType1, dimensionType1);
+	    if (dimensionType1 != dimensionType2){
+		std::cout << "Input images need to be of the same dimension." << std::endl;
+		return EXIT_FAILURE;
+		}
+	    }
+	else{
+	    GetImageType(argv[1], pixelType1, componentType1, dimensionType1);// use speed image as dummy for source image
+	    }
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
         std::cerr << excep << std::endl;
-        return EXIT_FAILURE;
-        }
-
-    if (dimensionType1 != dimensionType2){
-        std::cout << "Input images need to be of the same dimension." << std::endl;
         return EXIT_FAILURE;
         }
 

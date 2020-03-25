@@ -7,7 +7,7 @@
 #include <itkImageToImageFilter.h>
 #include <itkExtractImageFilter.h>
 #include <itkStatisticsImageFilter.h>
-#include "itkScaleShiftImageFilter.h"
+#include <itkShiftScaleImageFilter.h>
 
 namespace itk{
     /** \class ROIShiftScaleImageFilter
@@ -55,7 +55,7 @@ namespace itk{
 	/**  Filters  */
 	typedef ExtractImageFilter<TInputImage, TOutputImage> ExtractFilterType;
 	typedef StatisticsImageFilter<TInputImage> StatImageFilterType;
-	typedef ScaleShiftImageFilter<TInputImage, TOutputImage> SSImageFilterType;
+	typedef ShiftScaleImageFilter<TInputImage, TOutputImage> SSImageFilterType;
   
 	protected:
 	ROIShiftScaleImageFilter();

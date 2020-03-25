@@ -35,9 +35,11 @@ RUN mkdir -p ITK_build && \
 	  -DModule_LabelErodeDilate=ON \
 	  -DModule_MinimalPathExtraction=ON \
 	  -DModule_ParabolicMorphology=ON \
-	  -DModule_StreamingSinc=ON \
 	  -DModule_Thickness3D=ON \
+	  -DModule_AnisotropicDiffusionLBR=ON \
+	  -DModule_PolarTransform=ON \
 	  -DModule_LesionSizingToolkit=OFF \
+	  -DModule_SCIFIO=ON `# for DM3 and other bioformats` \
 	  ../ITK && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
@@ -56,7 +58,7 @@ RUN mkdir -p /build/ && \
 	  -DCMAKE_PREFIX_PATH=/opt/itk/lib/cmake/ \
 	  -DCMAKE_BUILD_TYPE=Release \
 	  -DCMAKE_CXX_STANDARD=11 \
-	  -DCMAKE_CXX_FLAGS="-Wno-format ${CMAKE_CXX_FLAGS}" \
+	  -DCMAKE_CXX_FLAGS="-Wno-format -Werror ${CMAKE_CXX_FLAGS}" \
 	  /code/ && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
@@ -68,6 +70,7 @@ RUN mkdir -p /build/ && \
 FROM system as install
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-8-jre \
     time
 
 COPY --from=builder /opt/itk/ /opt/itk/
@@ -75,4 +78,14 @@ COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
 
 ENV PATH "/opt/ITK-CLIs/bin/:${PATH}"
 
+## $(readlink -f /usr/bin/java | sed "s:/bin/java::") not possible with ENV: /usr/lib/jvm/java-8-openjdk-amd64/jre
+ENV JAVA_HOME "/usr/lib/jvm/java-8-openjdk-amd64/jre"
+
 WORKDIR /images
+
+ENV USERNAME diUser
+RUN useradd -m $USERNAME && \
+    echo "$USERNAME:$USERNAME" | chpasswd && \
+    usermod --shell /bin/bash $USERNAME
+
+USER $USERNAME

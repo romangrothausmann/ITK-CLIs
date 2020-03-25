@@ -9,12 +9,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 
-
-#ifdef USE_SDI
-#include <itkStreamingStatisticsImageFilter.h>
-#else
 #include <itkStatisticsImageFilter.h>
-#endif
 
 
 
@@ -28,20 +23,7 @@ int DoIt(int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->ReleaseDataFlagOn();
-#ifndef USE_SDI
-    FilterWatcher watcherI(reader);
-    watcherI.QuietOn();
-    watcherI.ReportTimeOn();
-    try{
-	reader->Update();
-	}
-    catch(itk::ExceptionObject &ex){
-	std::cerr << ex << std::endl;
-	return EXIT_FAILURE;
-	}
-#else
     reader->UpdateOutputInformation();
-#endif
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
     std::cout << "input region index: " << input->GetLargestPossibleRegion().GetIndex()
@@ -49,16 +31,11 @@ int DoIt(int argc, char *argv[]){
 	      << std::endl;
 
 
-#ifndef USE_SDI
     typedef itk::StatisticsImageFilter<InputImageType> FilterType;
-#else
-    typedef itk::StreamingStatisticsImageFilter<InputImageType> FilterType;
-#endif
     typename FilterType::Pointer stat= FilterType::New();
     stat->SetInput(input);
-#ifdef USE_SDI
-    stat->SetNumberOfStreamDivisions(atoi(argv[2]));
-#endif
+    if(argc > 2 && atoi(argv[2]))
+	stat->SetNumberOfStreamDivisions(atoi(argv[2]));
     FilterWatcher watcher1(stat);
 
     try{ 
@@ -220,17 +197,11 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-#ifdef USE_SDI
-    if ( argc != 3 ){
-#else
-    if ( argc != 2 ){
-#endif
+    if ( argc < 2 ){
 	std::cerr << "Missing Parameters: "
 		  << argv[0]
 		  << " Input_Image"
-#ifdef USE_SDI
-		  << " stream-chunks"
-#endif
+		  << " [stream-chunks]"
                   << std::endl;
 
         return EXIT_FAILURE;

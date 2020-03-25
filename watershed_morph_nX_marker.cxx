@@ -130,7 +130,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << "Min: " << +stat->GetMinimum() << " Max: " << +stat->GetMaximum() << " Mean: " << +stat->GetMean() << " Std: " << +stat->GetSigma() << " Variance: " << +stat->GetVariance() << " Sum: " << +stat->GetSum() << std::endl;
 
         labelCnt= stat->GetMaximum();
-        labelImg= stat->GetOutput();
+        labelImg= reader2->GetOutput();// stat->GetOutput() not available any more with ITK #855
         labelImg->DisconnectPipeline();//will need its own Delete later on!
         }
     look_up_our_self(&usage); fprintf(stderr, "vsize: %.3f mb; rss: %.3f mb\n", usage.vsize/1024./1024., usage.rss * page_size_mb);

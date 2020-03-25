@@ -1,0 +1,14 @@
+ObjectType = Image
+NDims = 3
+BinaryData = True
+BinaryDataByteOrderMSB = False
+CompressedData = False
+TransformMatrix = 1 0 0 0 1 0 0 0 1
+Offset = 105.952 81.355999999999995 9.0006000000000004
+CenterOfRotation = 0 0 0
+AnatomicalOrientation = RAI
+ElementSpacing = 0.37840000000000001 0.37840000000000001 1.5001
+DimSize = 500 550 120
+ElementNumberOfChannels = 3
+ElementType = MET_UCHAR
+ElementDataFile = mosaic-color.raw

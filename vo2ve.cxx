@@ -21,6 +21,7 @@ this matters for vo2ve but not for the EPC (e.g. calculated with imEuler3D.m)
 
 ////ToDo:
 // - resovle branchpoints correctly
+// -- check if modifications to prune_ends.cxx would be suitable for this
 
 
 #include "itkFilterWatcher.h"
@@ -205,7 +206,7 @@ int DoIt(int argc, char *argv[]){
         std::cerr << ex << std::endl;
         return EXIT_FAILURE;
         }
-    std::cerr << "# of branching nodes: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
+    std::cerr << "# of non-connecting nodes: " << ana->GetOutput()->GetNumberOfLabelObjects() << std::endl;
 
     //// create mesh to save in a VTK-file
     typedef typename itk::Mesh<float, Dimension>  MeshType;

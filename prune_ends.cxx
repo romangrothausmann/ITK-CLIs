@@ -1,6 +1,7 @@
 ////program to prune ends of a voxel representation of a simplical 1-complex (e.g. voxel-skeleton consisting only of vertices and lines)
 //01: based on template.cxx
 //02: resovling remaining branchpoints done by itkBinaryThinningImageFilter3D, works, but could probably be done more effective (e.g. use Boost as vtkBoostBiconnectedComponents does (NOTE: results differ by definition!))
+//// was removing the note below forgotten with v02?
 
 
 /**************************************************************************
@@ -24,6 +25,7 @@ An increase in removed end-points can occure if a branch section lies such that 
 
 ////ToDo:
 // - put iterator into an ITK-filter for multithreading
+// - remove itkBinaryThinningImageFilter3D dep. and instead remove 2-voxel if they do not have a 2-voxel neighbour
 
 
 #include "itkFilterWatcher.h"

@@ -139,6 +139,7 @@ int DoIt(int argc, char *argv[]){
         res= EXIT_FAILURE;
         break;
         }//switch
+    return res;
     }
 
 template<typename InputComponentType, typename InputPixelType>
