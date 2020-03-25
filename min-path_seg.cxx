@@ -402,6 +402,7 @@ int DoIt2(int argc, char *argv[], OptimizerType* optimizer){
 	sss.str(""); sss << outPrefix << ".vtk"; // include i for more than one path //vtp not supported as of itk-4.8
 	mwriter->SetFileName(sss.str().c_str());
 	mwriter->SetInput(mesh);
+	mwriter->SetFileTypeAsBINARY(); // NaN only supported in binary
 
 	itk::VTKPolyDataMeshIO::Pointer mio= itk::VTKPolyDataMeshIO::New();
 	itk::MetaDataDictionary & metaDic= mio->GetMetaDataDictionary();
