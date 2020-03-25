@@ -20,8 +20,8 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### ITK
-RUN git clone https://github.com/romangrothausmann/ITK && cd ITK && git checkout f0cd43a809d10aa23227d6fc2ab1f3afcfaec1d8
-RUN cd ITK && git submodule add -f https://github.com/richardbeare/ITKMinimalPathExtraction Modules/Remote/MinimalPathExtraction/ # get commits not yet included in upstream before running cmake
+RUN git clone https://github.com/romangrothausmann/ITK && cd ITK && git checkout e92aa0fc404c069a188a0c9dd63bbb9374495891
+RUN cd ITK && git submodule add -f https://github.com/romangrothausmann/ITKMinimalPathExtraction Modules/Remote/MinimalPathExtraction/ # get commits not yet included in upstream before running cmake
 
 RUN mkdir -p ITK_build && \
     cd ITK_build && \
