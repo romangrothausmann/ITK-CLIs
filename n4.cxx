@@ -1,5 +1,7 @@
 ////program for N4BiasFieldCorrectionImageFilter
-//01: based on template.cxx and https://github.com/midas-journal/midas-journal-640/blob/66064fa938920bc3e47e90ad9bffd79be713bbe8/Source/itkN3MRIBiasFieldCorrectionImageFilterTest.cxx
+//01: based on template.cxx and Modules/Filtering/BiasCorrection/test/itkN4BiasFieldCorrectionImageFilterTest.cxx
+
+// ToDo: add and test effect of downsampling (in itkN4BiasFieldCorrectionImageFilterTest)
 
 
 #include <complex>
@@ -9,6 +11,46 @@
 #include <itkN4BiasFieldCorrectionImageFilter.h>
 #include <itkImageFileWriter.h>
 
+
+template <typename TValue>
+TValue Convert(std::string optionString){
+    TValue             value;
+    std::istringstream iss(optionString);
+
+    iss >> value;
+    return value;
+    }
+
+template <typename TValue>
+std::vector<TValue> ConvertVector(std::string optionString){
+    std::vector<TValue>    values;
+    std::string::size_type crosspos = optionString.find('x', 0);
+
+    if(crosspos == std::string::npos){
+	values.push_back(Convert<TValue>(optionString));
+	}
+    else{
+	std::string        element = optionString.substr(0, crosspos);
+	TValue             value;
+	std::istringstream iss(element);
+	iss >> value;
+	values.push_back(value);
+	while (crosspos != std::string::npos){
+	    std::string::size_type crossposfrom = crosspos;
+	    crosspos = optionString.find('x', crossposfrom + 1);
+	    if (crosspos == std::string::npos){
+		element = optionString.substr(crossposfrom + 1, optionString.length());
+		}
+	    else{
+		element = optionString.substr(crossposfrom + 1, crosspos);
+		}
+	    std::istringstream iss2(element);
+	    iss2 >> value;
+	    values.push_back(value);
+	    }
+	}
+    return values;
+    }
 
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
@@ -58,8 +100,16 @@ int DoIt(int argc, char *argv[]){
     // filter->SetMaskImage();
     // filter->SetConfidenceImage();
 
-    filter->SetMaximumNumberOfIterations(atoi(argv[4]));
-    filter->SetNumberOfFittingLevels(atoi(argv[5]));
+    std::vector<unsigned int> numIters = ConvertVector<unsigned int>(std::string("100x50x50"));
+    numIters = ConvertVector<unsigned int>(argv[4]);
+    typename FilterType::VariableSizeArrayType maximumNumberOfIterations(static_cast<typename FilterType::VariableSizeArrayType::SizeValueType>(numIters.size()));
+    for (unsigned int d = 0; d < numIters.size(); d++)
+	maximumNumberOfIterations[d] = numIters[d];
+    filter->SetMaximumNumberOfIterations(maximumNumberOfIterations);
+
+    typename FilterType::ArrayType numberOfFittingLevels;
+    numberOfFittingLevels.Fill(static_cast<typename FilterType::VariableSizeArrayType::SizeValueType>(numIters.size()));
+    filter->SetNumberOfFittingLevels(numberOfFittingLevels);
 
     filter->ReleaseDataFlagOn();
 
@@ -233,15 +283,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc != 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress|stream-chunks"
-                  << " iter"
-		  << " levels"
-		  << std::endl;
+                  << " iter+level_(100x50x50)"
+                  << std::endl;
 
         std::cerr << std::endl;
         std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;

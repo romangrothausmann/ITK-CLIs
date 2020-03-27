@@ -329,6 +329,13 @@ DM3:
     CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 "
     MD5: 0ace321341c760d8490a32a304a10eb0
 
+n4:
+  <<: *testSDI
+  variables:
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/s02_z@2461.mha output.mha      0  10x10x10 && stat output.mha 2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/s02_z@2461.mha output_SDI.mha 10  10x10x10 && stat output.mha 2>/dev/null "
+    MD5: 948359fa3438845d12538348857a29a5
+
 
 release:
   stage: release
