@@ -91,7 +91,7 @@ int DoIt(int argc, char *argv[]){
     typedef itk::N4BiasFieldCorrectionImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(input);
-    // filter->SetConvergenceThreshold();
+    filter->SetConvergenceThreshold(1e-6); // default unclear, apparently too high such that only a few iterations actually happen
     // filter->SetBiasFieldFullWidthAtHalfMaximum();
     // filter->SetNumberOfControlPoints();
     // filter->SetNumberOfHistogramBins();
