@@ -1,5 +1,5 @@
 ////program for N4BiasFieldCorrectionImageFilter
-//01: based on template.cxx and Modules/Filtering/BiasCorrection/test/itkN4BiasFieldCorrectionImageFilterTest.cxx
+//01: based on n4.cxx and Modules/Filtering/BiasCorrection/test/itkN4BiasFieldCorrectionImageFilterTest.cxx
 
 // ToDo: add and test effect of downsampling (in itkN4BiasFieldCorrectionImageFilterTest)
 
@@ -8,6 +8,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkSliceBySliceImageFilter.h>
 #include <itkN4BiasFieldCorrectionImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -87,10 +88,14 @@ int DoIt(int argc, char *argv[]){
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    typedef itk::SliceBySliceImageFilter<InputImageType, OutputImageType> SBSFilterType;
+    typename SBSFilterType::Pointer sbs = SBSFilterType::New();
+    sbs->SetInput(input);
 
-    typedef itk::N4BiasFieldCorrectionImageFilter<InputImageType> FilterType;
+    typedef typename  SBSFilterType::InternalInputImageType SBSInputImageType;
+
+    typedef itk::N4BiasFieldCorrectionImageFilter<SBSInputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
     filter->SetConvergenceThreshold(1e-6); // default unclear, apparently too high such that only a few iterations actually happen
     // filter->SetBiasFieldFullWidthAtHalfMaximum();
     // filter->SetNumberOfControlPoints();
@@ -111,12 +116,11 @@ int DoIt(int argc, char *argv[]){
     numberOfFittingLevels.Fill(static_cast<typename FilterType::VariableSizeArrayType::SizeValueType>(numIters.size()));
     filter->SetNumberOfFittingLevels(numberOfFittingLevels);
 
-    filter->ReleaseDataFlagOn();
-
+    sbs->SetFilter(filter);
     if(noSDI){
-	FilterWatcher watcher1(filter);
+	FilterWatcher watcher1(sbs);
 	try{
-	    filter->Update();
+	    sbs->Update();
 	    }
 	catch(itk::ExceptionObject &ex){
 	    std::cerr << ex << std::endl;
@@ -125,7 +129,7 @@ int DoIt(int argc, char *argv[]){
 	}
 
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    const typename OutputImageType::Pointer& output= sbs->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -157,9 +161,6 @@ template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
-    // case 1:
-    //     res= DoIt<InputComponentType, InputPixelType, 1>(argc, argv);
-    //     break;
     case 2:
         res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
         break;
