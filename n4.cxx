@@ -127,23 +127,12 @@ int DoIt(int argc, char *argv[]){
 	}
 
     //// reconstruct bias field at original size
-    using BSplinerType = itk::BSplineControlPointImageFilter<typename FilterType::BiasFieldControlPointLatticeType, typename FilterType::ScalarImageType>;
-    typename BSplinerType::Pointer bspliner = BSplinerType::New();
-    bspliner->SetInput(filter->GetLogBiasFieldControlPointLattice());
-    bspliner->SetSplineOrder(filter->GetSplineOrder());
-    bspliner->SetSize(input->GetLargestPossibleRegion().GetSize());
-    bspliner->SetOrigin(input->GetOrigin());
-    bspliner->SetDirection(input->GetDirection());
-    bspliner->SetSpacing(input->GetSpacing());
-    bspliner->Update(); // essential for output to match input spacing, origin etc!
+    filter->SetInput(input);
+    filter->SetMaskImage(nullptr);
 
     typedef typename FilterType::RealImageType RealImageType;
+    typename FilterType::RealImagePointer biasField= filter->ReconstructBiasField(filter->GetLogBiasFieldControlPointLattice()); // ReconstructBiasField public only since ITK > 5.0.1 (ITK @ d6d17b00)
 
-    using SelectorType = itk::VectorIndexSelectionCastImageFilter<typename FilterType::ScalarImageType, RealImageType>;
-    typename SelectorType::Pointer selector = SelectorType::New();
-    selector->SetInput(bspliner->GetOutput());
-    selector->SetIndex(0);
-    
     using CustomBinaryFilter= itk::BinaryGeneratorImageFilter<InputImageType, RealImageType, OutputImageType>;
     typename CustomBinaryFilter::Pointer expAndDivFilter = CustomBinaryFilter::New();
     auto expAndDivLambda=
@@ -153,7 +142,7 @@ int DoIt(int argc, char *argv[]){
 	    };
     expAndDivFilter->SetFunctor(expAndDivLambda);
     expAndDivFilter->SetInput1(input);
-    expAndDivFilter->SetInput2(selector->GetOutput());
+    expAndDivFilter->SetInput2(biasField);
     FilterWatcher watcher2(expAndDivFilter);
     try{
 	expAndDivFilter->Update();
