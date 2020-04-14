@@ -8,6 +8,7 @@
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkShrinkImageFilter.h>
 #include <itkN4BiasFieldCorrectionImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -68,7 +69,6 @@ int DoIt(int argc, char *argv[]){
     typename ReaderType::Pointer reader = ReaderType::New();
 
     reader->SetFileName(argv[1]);
-    reader->ReleaseDataFlagOn();
     if(noSDI){
 	FilterWatcher watcherI(reader);
 	watcherI.QuietOn();
@@ -87,10 +87,14 @@ int DoIt(int argc, char *argv[]){
 	
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    typedef itk::ShrinkImageFilter<InputImageType, InputImageType> ShrinkerType;
+    typename ShrinkerType::Pointer shrinker = ShrinkerType::New();
+    shrinker->SetInput(input);
+    shrinker->SetShrinkFactors(atoi(argv[4]));
 
     typedef itk::N4BiasFieldCorrectionImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
-    filter->SetInput(input);
+    filter->SetInput(shrinker->GetOutput());
     filter->SetConvergenceThreshold(1e-6); // default unclear, apparently too high such that only a few iterations actually happen
     // filter->SetBiasFieldFullWidthAtHalfMaximum();
     // filter->SetNumberOfControlPoints();
@@ -101,7 +105,7 @@ int DoIt(int argc, char *argv[]){
     // filter->SetConfidenceImage();
 
     std::vector<unsigned int> numIters = ConvertVector<unsigned int>(std::string("100x50x50"));
-    numIters = ConvertVector<unsigned int>(argv[4]);
+    numIters = ConvertVector<unsigned int>(argv[5]);
     typename FilterType::VariableSizeArrayType maximumNumberOfIterations(static_cast<typename FilterType::VariableSizeArrayType::SizeValueType>(numIters.size()));
     for (unsigned int d = 0; d < numIters.size(); d++)
 	maximumNumberOfIterations[d] = numIters[d];
@@ -113,19 +117,53 @@ int DoIt(int argc, char *argv[]){
 
     filter->ReleaseDataFlagOn();
 
-    if(noSDI){
-	FilterWatcher watcher1(filter);
-	try{
-	    filter->Update();
-	    }
-	catch(itk::ExceptionObject &ex){
-	    std::cerr << ex << std::endl;
-	    return EXIT_FAILURE;
-	    }
+    FilterWatcher watcher1(filter);
+    try{
+	filter->Update();
+	}
+    catch(itk::ExceptionObject &ex){
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
 	}
 
+    //// reconstruct bias field at original size
+    using BSplinerType = itk::BSplineControlPointImageFilter<typename FilterType::BiasFieldControlPointLatticeType, typename FilterType::ScalarImageType>;
+    typename BSplinerType::Pointer bspliner = BSplinerType::New();
+    bspliner->SetInput(filter->GetLogBiasFieldControlPointLattice());
+    bspliner->SetSplineOrder(filter->GetSplineOrder());
+    bspliner->SetSize(input->GetLargestPossibleRegion().GetSize());
+    bspliner->SetOrigin(input->GetOrigin());
+    bspliner->SetDirection(input->GetDirection());
+    bspliner->SetSpacing(input->GetSpacing());
+    bspliner->Update(); // essential for output to match input spacing, origin etc!
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    typedef typename FilterType::RealImageType RealImageType;
+
+    using SelectorType = itk::VectorIndexSelectionCastImageFilter<typename FilterType::ScalarImageType, RealImageType>;
+    typename SelectorType::Pointer selector = SelectorType::New();
+    selector->SetInput(bspliner->GetOutput());
+    selector->SetIndex(0);
+    
+    using CustomBinaryFilter= itk::BinaryGeneratorImageFilter<InputImageType, RealImageType, OutputImageType>;
+    typename CustomBinaryFilter::Pointer expAndDivFilter = CustomBinaryFilter::New();
+    auto expAndDivLambda=
+	[](const typename InputImageType::PixelType & input, const typename RealImageType::PixelType & biasField) ->
+	typename OutputImageType::PixelType{
+	    return static_cast<typename OutputImageType::PixelType>(input / std::exp(biasField));
+	    };
+    expAndDivFilter->SetFunctor(expAndDivLambda);
+    expAndDivFilter->SetInput1(input);
+    expAndDivFilter->SetInput2(selector->GetOutput());
+    FilterWatcher watcher2(expAndDivFilter);
+    try{
+	expAndDivFilter->Update();
+	}
+    catch(itk::ExceptionObject &ex){
+	std::cerr << ex << std::endl;
+	return EXIT_FAILURE;
+	}
+   
+    const typename OutputImageType::Pointer& output= expAndDivFilter->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -283,12 +321,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress|stream-chunks"
+                  << " shrinkFactor"
                   << " iter+level_(100x50x50)"
                   << std::endl;
 
