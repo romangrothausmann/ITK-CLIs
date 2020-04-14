@@ -69,16 +69,12 @@ RUN mkdir -p /build/ && \
 FROM system as install
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-8-jre \
     time
 
 COPY --from=builder /opt/itk/ /opt/itk/
 COPY --from=builder /opt/ITK-CLIs/ /opt/ITK-CLIs/
 
 ENV PATH "/opt/ITK-CLIs/bin/:${PATH}"
-
-## $(readlink -f /usr/bin/java | sed "s:/bin/java::") not possible with ENV: /usr/lib/jvm/java-8-openjdk-amd64/jre
-ENV JAVA_HOME "/usr/lib/jvm/java-8-openjdk-amd64/jre"
 
 WORKDIR /images
 
