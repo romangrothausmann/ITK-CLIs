@@ -97,7 +97,10 @@ test01:
                  $IMAGE_TAG:test
                  /bin/bash -c "$CMDSDI"
     - md5sum output* | tee md5.out
-    - res=$( awk '{print $1}' md5.out | sort -u | wc -l | awk '{print $1}' )
+    - res=$( awk '{print $1}' md5.out | wc -l ) # check that there are 2 different outputs
+    - echo $res
+    - test $res -eq 2
+    - res=$( awk '{print $1}' md5.out | sort -u | wc -l | awk '{print $1}' ) # check that they have the same MD5
     - echo $res
     - test $res -eq 1
     - set +o pipefail # essential if return-value of pipe is used to determine job status
