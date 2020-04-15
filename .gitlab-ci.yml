@@ -319,8 +319,8 @@ project:
 slic_UI32:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output.mha  0  50 0 && stat output.mha 2>/dev/null "
-    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output.mha 10  50 0 && stat output.mha 2>/dev/null "
+    CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output.mha      0  50 0 && stat output.mha 2>/dev/null "
+    CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output_SDI.mha 10  50 0 && stat output.mha 2>/dev/null "
     MD5: 97d0bc733a7f8d57192c3fead873bb3d
 
 DM3:
