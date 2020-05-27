@@ -1,6 +1,7 @@
 ////program for itkBinaryThresholdImageFilter
 //01: based on template.cxx
 //02: single program for SDI and noSDI (based on new template.cxx)
+//03: based on template_var-filter.cxx
 
 
 #include "itkFilterWatcher.h"
@@ -10,10 +11,8 @@
 
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
-int DoIt(int argc, char *argv[]){
-
-    typedef uint8_t  OutputPixelType; // ideally OutputPixelType should be determined in a DoIt2 depending on argv[6]
+template<typename InputComponentType, typename InputPixelType, typename OutputPixelType, size_t Dimension>
+int DoIt2(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
@@ -145,6 +144,18 @@ int DoIt(int argc, char *argv[]){
     }
 
 
+template<typename InputComponentType, typename InputPixelType, size_t Dimension>
+int DoIt(int argc, char *argv[]){
+    int res= EXIT_FAILURE;
+
+    if(argc > 7 && atoi(argv[7]))
+        res= DoIt2<InputComponentType, InputPixelType, InputPixelType, Dimension>(argc, argv);
+    else
+	res= DoIt2<InputComponentType, InputPixelType, uint8_t, Dimension>(argc, argv); // ideally OutputPixelType should be determined in a DoIt2 depending on argv[6]
+	
+    return res;
+    }
+
 template<typename InputComponentType, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
@@ -275,7 +286,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc < 6 ){
+    if ( argc < 7 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -283,7 +294,8 @@ int main(int argc, char *argv[]){
                   << " compress|stream-chunks"
 		  << " lower upper"
 		  << " [inside-value]"
-                  << std::endl;
+ 		  << " [preserve-input-type]"
+                 << std::endl;
 
         std::cerr << std::endl;
         std::cerr << " no-compress: 0, compress: 1, stream > 1" << std::endl;
