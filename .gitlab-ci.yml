@@ -326,7 +326,7 @@ slic_UI32:
 DM3:
   <<: *test
   variables:
-    CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 && stat output.mha 2>/dev/null "
+    CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 "
     MD5: dae96ec43b1b29838837f9888a142f05
 
 
