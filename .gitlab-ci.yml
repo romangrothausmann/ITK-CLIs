@@ -135,7 +135,7 @@ thresh-erase:
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd tests/res/$CI_JOB_NAME/output.mhd      0  -0.5 +0.5 && stat tests/res/$CI_JOB_NAME/output.mhd      2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME       tests/data/ACN_speed.mhd tests/res/$CI_JOB_NAME/output_SDI.mhd 10  -0.5 +0.5 && stat tests/res/$CI_JOB_NAME/output_SDI.mhd  2>/dev/null "
-    MD5: 862461122c1d136fd1bd5f776defede4
+    MD5: e0047595dd520acbb6a8c5a0e42adbdf
 
 resample-iso.1:
   <<: *testSDI
