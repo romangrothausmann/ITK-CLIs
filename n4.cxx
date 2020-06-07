@@ -9,6 +9,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkShrinkImageFilter.h>
+#include <itkOtsuThresholdImageFilter.h>
 #include <itkN4BiasFieldCorrectionImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -60,6 +61,7 @@ int DoIt(int argc, char *argv[]){
     typedef InputPixelType  OutputPixelType;
 
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<uint8_t, Dimension>  MaskImageType;
     typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
     int CompChunk= atoi(argv[3]);
@@ -92,6 +94,18 @@ int DoIt(int argc, char *argv[]){
     shrinker->SetInput(input);
     shrinker->SetShrinkFactors(atoi(argv[4]));
 
+    typedef itk::OtsuThresholdImageFilter<InputImageType, MaskImageType> ThresholderType;
+    typename ThresholderType::Pointer otsu = ThresholderType::New();
+    otsu->SetInput(input);
+    otsu->SetNumberOfHistogramBins(200);
+    otsu->SetInsideValue(0);
+    otsu->SetOutsideValue(1);
+
+    typedef itk::ShrinkImageFilter<MaskImageType, MaskImageType> MaskShrinkerType;
+    typename MaskShrinkerType::Pointer maskshrinker = MaskShrinkerType::New();
+    maskshrinker->SetInput(otsu->GetOutput());
+    maskshrinker->SetShrinkFactors(atoi(argv[4]));
+  
     typedef itk::N4BiasFieldCorrectionImageFilter<InputImageType> FilterType;
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput(shrinker->GetOutput());
@@ -101,7 +115,7 @@ int DoIt(int argc, char *argv[]){
     // filter->SetNumberOfHistogramBins();
     // filter->SetSplineOrder();
     // filter->SetWienerFilterNoise();
-    // filter->SetMaskImage();
+    filter->SetMaskImage(maskshrinker->GetOutput());
     // filter->SetConfidenceImage();
 
     std::vector<unsigned int> numIters = ConvertVector<unsigned int>(std::string("100x50x50"));
