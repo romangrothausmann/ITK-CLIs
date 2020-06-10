@@ -138,9 +138,9 @@ thresh-erase:
 resample-iso.1:
   <<: *testSDI
   variables:
-    CMD:    " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output.mha      0  1  0.3 && stat output.mha      2>/dev/null "
-    CMDSDI: " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output_SDI.mha 10  1  0.3 && stat output_SDI.mha  2>/dev/null "
-    MD5: baa815b1e16c5017a8d52a6ff134b9f0
+    CMD:    " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output.mha      0  1  0.6 && stat output.mha      2>/dev/null "
+    CMDSDI: " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output_SDI.mha 10  1  0.6 && stat output_SDI.mha  2>/dev/null "
+    MD5: 2521b066150637d3deae6dc54d7920fc
 
 resample.0:
   <<: *testSDI

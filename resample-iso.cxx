@@ -69,6 +69,23 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	isoSpacing = std::sqrt(inputSpacing[0] * inputSpacing[Dimension-1]);
 	std::cerr << "Using geometric mean between first and last spacing: " << isoSpacing << std::endl;
 	}
+    for (unsigned int i= 0; i < Dimension - 1; i++)
+	if(isoSpacing < inputSpacing[i]){
+	    fprintf(stderr, "Filter only intended for down-smapling but specified spacing (%e) is smaller than input spacing (%e) in dimension %d.\n", isoSpacing, inputSpacing[i], i);
+	    return EXIT_FAILURE;
+	    }
+
+    //// using sqrt((isoSpacing^2 - inputSpacing[0]^2)/(2*sqrt(2*ln(2)))^2), from Cardoso M.J., Modat M., Vercauteren T., Ourselin S. (2015) Scale Factor Point Spread Function Matching: Beyond Aliasing in Image Resampling -- MICCAI 2015 https://doi.org/10.1007/978-3-319-24571-3_81
+    //// which also contains the difference and gets close to the former approach, e.g.:
+    //// sigma= sqrt((150^2 - 105^2)/(2*sqrt(2*ln(2)))^2) ~ 45.49028 ;  150 - 105 = 45
+    //// sigma= sqrt((  2^2 -   1^2)/(2*sqrt(2*ln(2)))^2) ~  0.73553 ;    2 -   1 =  1
+    //// sigma= sqrt((  1^2 -   1^2)/(2*sqrt(2*ln(2)))^2) =  0       ;    1 -   1 =  0
+    
+    double sigmaX= std::sqrt((std::pow(isoSpacing, 2) - std::pow(inputSpacing[0], 2)) / std::pow(2*std::sqrt(2*std::log(2)), 2));
+    double sigmaY= std::sqrt((std::pow(isoSpacing, 2) - std::pow(inputSpacing[1], 2)) / std::pow(2*std::sqrt(2*std::log(2)), 2));
+
+    std::cerr << "Using sigmaX (physical units): " << sigmaX << std::endl;
+    std::cerr << "Using sigmaY (physical units): " << sigmaY << std::endl;
 
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
@@ -92,7 +109,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename GaussianFilterType::Pointer smootherX = GaussianFilterType::New();
     smootherX->SetInput(caster->GetOutput());
-    smootherX->SetSigma(isoSpacing);
+    smootherX->SetSigma(sigmaX); // in physical units
     smootherX->SetDirection(0);
     smootherX->ReleaseDataFlagOn();
     smootherX->InPlaceOn();
@@ -101,7 +118,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename GaussianFilterType::Pointer smootherY = GaussianFilterType::New();
     smootherY->SetInput(smootherX->GetOutput());
-    smootherY->SetSigma(isoSpacing);
+    smootherY->SetSigma(sigmaY); // in physical units
     smootherY->SetDirection(1);
     smootherY->ReleaseDataFlagOn();
     smootherY->InPlaceOn();
