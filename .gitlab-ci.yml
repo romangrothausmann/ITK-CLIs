@@ -329,6 +329,12 @@ DM3:
     CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 "
     MD5: dae96ec43b1b29838837f9888a142f05
 
+std-mean_ROI_SBS:
+  <<: *test
+  variables:
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  50 50 0  117 102 137 && stat output.mha 2>/dev/null "
+    MD5: 810e4c6c48136394699efd4842ada8c8
+
 
 release:
   stage: release
