@@ -140,7 +140,7 @@ resample-iso.1:
   variables:
     CMD:    " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output.mha      0  1  0.6 && stat output.mha      2>/dev/null "
     CMDSDI: " /usr/bin/time -v resample-iso       tests/data/ACN_speed.mhd output_SDI.mha 10  1  0.6 && stat output_SDI.mha  2>/dev/null "
-    MD5: dd12166a70d20f32915b8fce3ffec52a
+    MD5: 2521b066150637d3deae6dc54d7920fc
 
 resample.0:
   <<: *testSDI

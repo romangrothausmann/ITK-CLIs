@@ -75,8 +75,14 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	    return EXIT_FAILURE;
 	    }
 
-    double sigmaX= isoSpacing - inputSpacing[0]; // using diff, see e.g. https://discourse.itk.org/t/resampling-to-isotropic-signal-processing-theory/1403/13
-    double sigmaY= isoSpacing - inputSpacing[1]; // using diff, see e.g. https://discourse.itk.org/t/resampling-to-isotropic-signal-processing-theory/1403/13
+    //// using sqrt((isoSpacing^2 - inputSpacing[0]^2)/(2*sqrt(2*ln(2)))^2), from Cardoso M.J., Modat M., Vercauteren T., Ourselin S. (2015) Scale Factor Point Spread Function Matching: Beyond Aliasing in Image Resampling -- MICCAI 2015 https://doi.org/10.1007/978-3-319-24571-3_81
+    //// which also contains the difference and gets close to the former approach, e.g.:
+    //// sigma= sqrt((150^2 - 105^2)/(2*sqrt(2*ln(2)))^2) ~ 45.49028 ;  150 - 105 = 45
+    //// sigma= sqrt((  2^2 -   1^2)/(2*sqrt(2*ln(2)))^2) ~  0.73553 ;    2 -   1 =  1
+    //// sigma= sqrt((  1^2 -   1^2)/(2*sqrt(2*ln(2)))^2) =  0       ;    1 -   1 =  0
+    
+    double sigmaX= std::sqrt((std::pow(isoSpacing, 2) - std::pow(inputSpacing[0], 2)) / std::pow(2*std::sqrt(2*std::log(2)), 2));
+    double sigmaY= std::sqrt((std::pow(isoSpacing, 2) - std::pow(inputSpacing[1], 2)) / std::pow(2*std::sqrt(2*std::log(2)), 2));
 
     std::cerr << "Using sigmaX (physical units): " << sigmaX << std::endl;
     std::cerr << "Using sigmaY (physical units): " << sigmaY << std::endl;
