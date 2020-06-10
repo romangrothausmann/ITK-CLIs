@@ -75,6 +75,12 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	    return EXIT_FAILURE;
 	    }
 
+    double sigmaX= isoSpacing - inputSpacing[0]; // using diff, see e.g. https://discourse.itk.org/t/resampling-to-isotropic-signal-processing-theory/1403/13
+    double sigmaY= isoSpacing - inputSpacing[1]; // using diff, see e.g. https://discourse.itk.org/t/resampling-to-isotropic-signal-processing-theory/1403/13
+
+    std::cerr << "Using sigmaX (physical units): " << sigmaX << std::endl;
+    std::cerr << "Using sigmaY (physical units): " << sigmaY << std::endl;
+
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
         outputSpacing[i]= isoSpacing;
@@ -97,7 +103,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename GaussianFilterType::Pointer smootherX = GaussianFilterType::New();
     smootherX->SetInput(caster->GetOutput());
-    smootherX->SetSigma(isoSpacing);
+    smootherX->SetSigma(sigmaX); // in physical units
     smootherX->SetDirection(0);
     smootherX->ReleaseDataFlagOn();
     smootherX->InPlaceOn();
@@ -106,7 +112,7 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 
     typename GaussianFilterType::Pointer smootherY = GaussianFilterType::New();
     smootherY->SetInput(smootherX->GetOutput());
-    smootherY->SetSigma(isoSpacing);
+    smootherY->SetSigma(sigmaY); // in physical units
     smootherY->SetDirection(1);
     smootherY->ReleaseDataFlagOn();
     smootherY->InPlaceOn();
