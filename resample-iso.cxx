@@ -69,6 +69,11 @@ int DoIt2(int argc, char *argv[], InterpolatorType* interpolator){
 	isoSpacing = std::sqrt(inputSpacing[0] * inputSpacing[Dimension-1]);
 	std::cerr << "Using geometric mean between first and last spacing: " << isoSpacing << std::endl;
 	}
+    for (unsigned int i= 0; i < Dimension - 1; i++)
+	if(isoSpacing < inputSpacing[i]){
+	    fprintf(stderr, "Filter only intended for down-smapling but specified spacing (%e) is smaller than input spacing (%e) in dimension %d.\n", isoSpacing, inputSpacing[i], i);
+	    return EXIT_FAILURE;
+	    }
 
     typename InputImageType::SpacingType outputSpacing;
     for (unsigned int i= 0; i < Dimension; i++)
