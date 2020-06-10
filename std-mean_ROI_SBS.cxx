@@ -8,7 +8,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 
-#include <itkExtractImageFilter.h>
+#include <itkCropImageFilter.h>
 #include <itkStatisticsImageFilter.h>
 #include "filter/self-made/itkROIShiftScaleImageFilter.h"
 #include <itkSliceBySliceImageFilter.h>
@@ -49,8 +49,8 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    if( argc != 3 + 2*(Dimension-1)){
-	fprintf(stderr, "2 + 2*(Dimension-1) = %d parameters are needed!\n", 3 + 2*(Dimension-1) - 1);
+    if( argc != 3 + 1*(Dimension-1)){
+	fprintf(stderr, "2 + 1*(Dimension-1) = %d parameters are needed!\n", 3 + 1*(Dimension-1) - 1);
 	return EXIT_FAILURE;
 	}
 	
@@ -80,27 +80,18 @@ int DoIt(int argc, char *argv[]){
 
 
     unsigned int i;
-    typename InputImageType::IndexType ROIindex;
-    typename InputImageType::SizeType  ROIsize;
+    typename InputImageType::SizeType border;
 
-    for (i= 0; i < Dimension - 1 ; i++){
-        ROIindex[i]= atoi(argv[3+i]);
-    	std::cerr << ROIindex[i] << std::endl;
+    for (i= 0; i < Dimension - 1; i++){
+        border[i]= atoi(argv[3+i]);
+    	std::cerr << border[i] << std::endl;
     	}
-    for (i= 0; i < Dimension - 1 ; i++){
-        ROIsize[i]= atoi(argv[3+Dimension-1+i]);
-    	std::cerr << ROIsize[i] << std::endl;
-    	}
-    ROIindex[2]= 0;
-    ROIsize[2]= reader->GetOutput()->GetLargestPossibleRegion().GetSize()[2];
-    typename InputImageType::RegionType ROI(ROIindex, ROIsize);
+    border[2]= 0;
 
-
-    typedef itk::ExtractImageFilter<InputImageType, InputImageType> FilterType;
+    typedef itk::CropImageFilter<InputImageType, InputImageType> FilterType;
     typename FilterType::Pointer filter = FilterType::New();
     filter->SetInput(input);
-    filter->SetExtractionRegion(ROI);
-    filter->SetDirectionCollapseToIdentity(); // This is required.
+    filter->SetBoundaryCropSize(border);
 
     FilterWatcher watcher1(filter);
     try{ 
@@ -110,6 +101,8 @@ int DoIt(int argc, char *argv[]){
 	std::cerr << ex << std::endl;
 	return EXIT_FAILURE;
 	}
+
+    typename InputImageType::RegionType ROI(filter->GetOutput()->GetLargestPossibleRegion());
 
     typedef itk::StatisticsImageFilter<InputImageType> StatType;
     typename StatType::Pointer stat = StatType::New();
@@ -345,7 +338,7 @@ int main(int argc, char *argv[]){
 		  << argv[0]
 		  << " Input_Image"
 		  << " Output_Image"
-		  << " index... size..."
+		  << " border... "
     		  << std::endl;
 
 	return EXIT_FAILURE;
