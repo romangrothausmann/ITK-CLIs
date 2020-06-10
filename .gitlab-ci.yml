@@ -332,7 +332,7 @@ DM3:
 std-mean_ROI_SBS:
   <<: *test
   variables:
-    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  50 50 0  117 102 137 && stat output.mha 2>/dev/null "
+    CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha  50 50  117 102 && stat output.mha 2>/dev/null "
     MD5: 810e4c6c48136394699efd4842ada8c8
 
 

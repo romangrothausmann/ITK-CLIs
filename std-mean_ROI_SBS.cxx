@@ -49,8 +49,8 @@ int DoIt(int, char *argv[]);
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
 
-    if( argc != 3 + 2*Dimension){
-	fprintf(stderr, "2 + 2*Dimension = %d parameters are needed!\n", 3 + 2*Dimension - 1);
+    if( argc != 3 + 2*(Dimension-1)){
+	fprintf(stderr, "2 + 2*(Dimension-1) = %d parameters are needed!\n", 3 + 2*(Dimension-1) - 1);
 	return EXIT_FAILURE;
 	}
 	
@@ -83,14 +83,16 @@ int DoIt(int argc, char *argv[]){
     typename InputImageType::IndexType ROIindex;
     typename InputImageType::SizeType  ROIsize;
 
-    for (i= 0; i < Dimension; i++){
+    for (i= 0; i < Dimension - 1 ; i++){
         ROIindex[i]= atoi(argv[3+i]);
     	std::cerr << ROIindex[i] << std::endl;
     	}
-    for (i= 0; i < Dimension; i++){
-        ROIsize[i]= atoi(argv[3+Dimension+i]);
+    for (i= 0; i < Dimension - 1 ; i++){
+        ROIsize[i]= atoi(argv[3+Dimension-1+i]);
     	std::cerr << ROIsize[i] << std::endl;
     	}
+    ROIindex[2]= 0;
+    ROIsize[2]= reader->GetOutput()->GetLargestPossibleRegion().GetSize()[2];
     typename InputImageType::RegionType ROI(ROIindex, ROIsize);
 
 
@@ -139,11 +141,11 @@ int DoIt(int argc, char *argv[]){
     typename SBSInputImageType::IndexType ROISBSindex;
     typename SBSInputImageType::SizeType  ROISBSsize;
     for (i= 0; i < Dimension - 1; i++){
-        ROISBSindex[i]= atoi(argv[3+i]);
+        ROISBSindex[i]= ROI.GetIndex()[i];
     	std::cerr << ROISBSindex[i] << std::endl;
     	}
     for (i= 0; i < Dimension - 1; i++){
-        ROISBSsize[i]= atoi(argv[3+Dimension+i]);
+        ROISBSsize[i]= ROI.GetSize()[i];
     	std::cerr << ROISBSsize[i] << std::endl;
     	}
     typename SBSInputImageType::RegionType ROISBS(ROISBSindex, ROISBSsize);
