@@ -10,6 +10,47 @@
 #include <itkImageFileWriter.h>
 
 
+template <typename TValue>
+TValue Convert(std::string optionString){
+    TValue             value;
+    std::istringstream iss(optionString);
+
+    iss >> value;
+    return value;
+    }
+
+template <typename TValue>
+std::vector<TValue> ConvertVector(std::string optionString){
+    std::vector<TValue>    values;
+    char delim= ',';
+    std::string::size_type crosspos = optionString.find(delim, 0);
+
+    if(crosspos == std::string::npos){
+	values.push_back(Convert<TValue>(optionString));
+	}
+    else{
+	std::string        element = optionString.substr(0, crosspos);
+	TValue             value;
+	std::istringstream iss(element);
+	iss >> value;
+	values.push_back(value);
+	while (crosspos != std::string::npos){
+	    std::string::size_type crossposfrom = crosspos;
+	    crosspos = optionString.find(delim, crossposfrom + 1);
+	    if (crosspos == std::string::npos){
+		element = optionString.substr(crossposfrom + 1, optionString.length());
+		}
+	    else{
+		element = optionString.substr(crossposfrom + 1, crosspos);
+		}
+	    std::istringstream iss2(element);
+	    iss2 >> value;
+	    values.push_back(value);
+	    }
+	}
+    return values;
+    }
+
 
 template<typename InputComponentType1, typename InputComponentType2, typename InputPixelType1, typename InputPixelType2, size_t Dimension>
 int DoIt(int argc, char *argv[]){
@@ -80,6 +121,15 @@ int DoIt(int argc, char *argv[]){
     filter->SetOpacity(0.5);
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
+
+    const char offset= 5;
+    if(argc > offset){
+	filter->ResetColors();
+	for(int i= offset; i < argc; i++){
+	    std::vector<unsigned int> color = ConvertVector<unsigned int>(argv[i]);
+	    filter->AddColor(color[0],color[1],color[2]);
+	    }
+	}
 
     if(noSDI){
 	FilterWatcher watcher1(filter);
@@ -320,13 +370,14 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 5 ){
+    if ( argc < 5 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image1"
                   << " Input_Image2"
                   << " Output_Image"
                   << " compress|stream-chunks"
+                  << " [LUT-colors <r,g,b>]"
                   << std::endl;
 
         std::cerr << std::endl;
