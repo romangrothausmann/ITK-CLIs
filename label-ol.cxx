@@ -76,6 +76,8 @@ int DoIt(int argc, char *argv[]){
     typename FilterType::Pointer filter= FilterType::New();
     filter->SetInput1(input1);
     filter->SetInput2(input2);
+    filter->SetBackgroundValue(0);
+    filter->SetOpacity(0.5);
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
@@ -192,16 +194,32 @@ int dispatch_cT2(itk::ImageIOBase::IOComponentType componentType2, itk::ImageIOB
         typedef unsigned char InputComponentType2;
         res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
+    case itk::ImageIOBase::CHAR:{         // int8_t
+        typedef char InputComponentType2;
+        res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
+        } break;
     case itk::ImageIOBase::USHORT:{       // uint16_t
         typedef unsigned short InputComponentType2;
+        res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::SHORT:{        // int16_t
+        typedef short InputComponentType2;
         res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UINT:{         // uint32_t
         typedef unsigned int InputComponentType2;
         res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
+    case itk::ImageIOBase::INT:{          // int32_t
+        typedef int InputComponentType2;
+        res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
+        } break;
     case itk::ImageIOBase::ULONG:{        // uint64_t
         typedef unsigned long InputComponentType2;
+        res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
+        } break;
+    case itk::ImageIOBase::LONG:{         // int64_t
+        typedef long InputComponentType2;
         res= dispatch_pT1<InputComponentType1, InputComponentType2>(pixelType1, pixelType2, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
