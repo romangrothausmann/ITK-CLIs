@@ -1,11 +1,13 @@
 ////program to scale image values to a lower bit-depth
 //01: based on template.cxx
+//02: invert image if min > max
 
 
 #include <complex>
 
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
+#include <itkInvertIntensityImageFilter.h>
 #include <itkIntensityWindowingImageFilter.h>
 #include <itkImageFileWriter.h>
 
@@ -74,8 +76,23 @@ int DoIt(int argc, char *argv[]){
 	    }
 	}
 
+    typename OutputImageType::Pointer output; // output either from bc or from invert
+    
+    //// invert after bc adj. because conversion to OutputImageType has happened then
+    typedef itk::InvertIntensityImageFilter<OutputImageType> InvertType;
+    typename InvertType::Pointer invert= InvertType::New();
+    if ( argc > 6 ){
+	invert->SetInput(filter->GetOutput());
+	// invert->SetMaximum(static_cast<InputPixelType>(atof(argv[6]))); // coult be used to handle float outputs
+	invert->ReleaseDataFlagOn();
+	invert->InPlaceOn(); // overwrites filter->GetOutput()
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+	output= invert->GetOutput();
+	}
+    else {
+	output= filter->GetOutput();
+	}
+
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -233,7 +250,7 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 6 ){
+    if ( argc < 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
@@ -241,6 +258,7 @@ int main(int argc, char *argv[]){
                   << " compress|stream-chunks"
                   << " lower"
                   << " upper"
+                  << " invert"
                   << std::endl;
 
         std::cerr << std::endl;
