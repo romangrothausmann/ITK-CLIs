@@ -1,5 +1,5 @@
 ////program to extract sub-images at cc-centers (cross-sections of a 3D skeleton, for stereological evaluations)
-//01: based on template_2inputs.cxx and subimage_extract.cxx analyse_binary.cxx label_stack.cxx file-series_reader.cxx
+//01: based on template_2inputs.cxx and subimage_extract.cxx analyse_binary.cxx file-series_writer_SDI.cxx
 
 
 #include <complex>
@@ -7,8 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkExtractImageFilter.h>
-#include <itkChangeInformationImageFilter.h>
-#include <itkJoinSeriesImageFilter.h>
+#include <itkNumericSeriesFileNames.h>
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeLabelObject.h>
 #include <itkLabelMap.h>
@@ -24,8 +23,7 @@ int DoIt(int argc, char *argv[]){
 
     typedef itk::Image<InputPixelType1, Dimension>  InputImageType1;
     typedef itk::Image<InputPixelType2, Dimension>  InputImageType2;
-    typedef itk::Image<OutputPixelType, Dimension>  SliceImageType;
-    typedef itk::Image<OutputPixelType, Dimension + 1>  OutputImageType;
+    typedef itk::Image<OutputPixelType, Dimension>  OutputImageType;
 
 
     int CompChunk= 0;
@@ -85,11 +83,6 @@ int DoIt(int argc, char *argv[]){
     for (i= 0; i < Dimension; i++)
         desiredSize[i]= atoi(argv[4]);
 
-    typedef itk::JoinSeriesImageFilter<SliceImageType, OutputImageType> JoinSeriesFilterType;
-    typename JoinSeriesFilterType::Pointer joinSeries = JoinSeriesFilterType::New();
-    joinSeries->SetOrigin(0); // origin for Dimension + 1
-    joinSeries->SetSpacing(1); // spacing for Dimension + 1
-
     
     typedef itk::BinaryImageToShapeLabelMapFilter<InputImageType2> LMType;
     typename LMType::Pointer lm= LMType::New();
@@ -117,8 +110,16 @@ int DoIt(int argc, char *argv[]){
     //// list of quantities see: http://www.itk.org/Doxygen/html/classitk_1_1ShapeLabelObject.html
     typename LabelMapType::Pointer labelMap = lm->GetOutput();
 
+    typedef itk::NumericSeriesFileNames    NameGeneratorType;
+    NameGeneratorType::Pointer nameGenerator = NameGeneratorType::New();
+
+    nameGenerator->SetSeriesFormat(argv[3]);
+    nameGenerator->SetStartIndex(0);
+    nameGenerator->SetEndIndex(labelMap->GetNumberOfLabelObjects() - 1);
+    nameGenerator->SetIncrementIndex(1);
+    std::vector<std::string> names = nameGenerator->GetFileNames();
+
     const LabelObjectType* labelObject;
-    std::vector<itk::ProcessObject::Pointer> savedPointers; // to store smart-pointers for use outside the scope of the loop: https://itk.org/pipermail/community/2016-July/011692.html
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
         labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
@@ -135,7 +136,7 @@ int DoIt(int argc, char *argv[]){
 	    continue; // skip this region because it would need a boundary extension (e.g. padding, mirroring)
 	    }
 
-	typedef itk::ExtractImageFilter<InputImageType1, SliceImageType> FilterType;
+	typedef itk::ExtractImageFilter<InputImageType1, OutputImageType> FilterType;
 	typename FilterType::Pointer filter = FilterType::New();
 	filter->SetInput(input1);
 	filter->SetDirectionCollapseToIdentity(); // This is required.
@@ -143,47 +144,29 @@ int DoIt(int argc, char *argv[]){
 
 	filter->SetExtractionRegion(desiredRegion);
 
-	typedef itk::ChangeInformationImageFilter<SliceImageType> ChangeInfoType;
-	typename ChangeInfoType::Pointer chi= ChangeInfoType::New();
-	chi->SetInput(filter->GetOutput());
-	chi->SetOutputOrigin(reader1->GetOutput()->GetOrigin());
-	chi->ChangeOriginOn();
+	const typename OutputImageType::Pointer& output= filter->GetOutput();
 
+	typedef itk::ImageFileWriter<OutputImageType>  WriterType;
+	typename WriterType::Pointer writer = WriterType::New();
+	
+	FilterWatcher watcherO(writer);
+	writer->SetFileName(names[label]);
+	writer->SetInput(output);
+	if(noSDI){
+	    writer->SetUseCompression(CompChunk);
+	    }
+	else{
+	    writer->UseCompressionOff(); // writing compressed is not supported when streaming!
+	    writer->SetNumberOfStreamDivisions(CompChunk);
+	    }
 	try{
-	    chi->Update();
+	    writer->Update();
 	    }
 	catch(itk::ExceptionObject &ex){
 	    std::cerr << ex << std::endl;
-	    continue;
+	    return EXIT_FAILURE;
 	    }
-
-	savedPointers.push_back(chi.GetPointer()); // needed to store smart-pointers for update of joinSeries outside loop scope
-	joinSeries->PushBackInput(chi->GetOutput());
 	}
-	    
-    
-    const typename OutputImageType::Pointer& output= joinSeries->GetOutput();
-
-    typedef itk::ImageFileWriter<OutputImageType>  WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-
-    FilterWatcher watcherO(writer);
-    writer->SetFileName(argv[3]);
-    writer->SetInput(output);
-    if(noSDI){
-	writer->SetUseCompression(CompChunk);
-	}
-    else{
-	writer->UseCompressionOff(); // writing compressed is not supported when streaming!
-	writer->SetNumberOfStreamDivisions(CompChunk);
-	}
-    try{
-        writer->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
 
     return EXIT_SUCCESS;
 
