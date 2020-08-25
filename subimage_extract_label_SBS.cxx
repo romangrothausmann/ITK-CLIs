@@ -84,12 +84,6 @@ int DoIt(int argc, char *argv[]){
     for (i= 0; i < Dimension; i++)
         desiredSize[i]= atoi(argv[4]);
 
-    typedef itk::ExtractImageFilter<InputImageType1, SliceImageType> FilterType;
-    typename FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(input1);
-    filter->SetDirectionCollapseToIdentity(); // This is required.
-    FilterWatcher watcher0(filter);
-
     typedef itk::JoinSeriesImageFilter<SliceImageType, OutputImageType> JoinSeriesFilterType;
     typename JoinSeriesFilterType::Pointer joinSeries = JoinSeriesFilterType::New();
     joinSeries->SetOrigin(0); // origin for Dimension + 1
@@ -138,6 +132,12 @@ int DoIt(int argc, char *argv[]){
 	    std::cerr << "Desired region is not inside the largest possible input region, skipping connected component" << std::endl;
 	    continue; // skip this region because it would need a boundary extension (e.g. padding, mirroring)
 	    }
+
+	typedef itk::ExtractImageFilter<InputImageType1, SliceImageType> FilterType;
+	typename FilterType::Pointer filter = FilterType::New();
+	filter->SetInput(input1);
+	filter->SetDirectionCollapseToIdentity(); // This is required.
+	FilterWatcher watcher0(filter);
 
 	filter->SetExtractionRegion(desiredRegion);
 
