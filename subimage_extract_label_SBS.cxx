@@ -1,5 +1,5 @@
 ////program to extract sub-images at cc-centers (cross-sections of a 3D skeleton, for stereological evaluations)
-//01: based on template_2inputs.cxx and subimage_extract.cxx analyse_binary.cxx label_stack.cxx
+//01: based on template_2inputs.cxx and subimage_extract.cxx analyse_binary.cxx label_stack.cxx file-series_reader.cxx
 
 
 #include <complex>
@@ -7,6 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkExtractImageFilter.h>
+#include <itkChangeInformationImageFilter.h>
 #include <itkJoinSeriesImageFilter.h>
 #include <itkBinaryImageToShapeLabelMapFilter.h>
 #include <itkShapeLabelObject.h>
@@ -141,8 +142,14 @@ int DoIt(int argc, char *argv[]){
 
 	filter->SetExtractionRegion(desiredRegion);
 
+	typedef itk::ChangeInformationImageFilter<SliceImageType> ChangeInfoType;
+	typename ChangeInfoType::Pointer chi= ChangeInfoType::New();
+	chi->SetInput(filter->GetOutput());
+	chi->SetOutputOrigin(reader1->GetOutput()->GetOrigin());
+	chi->ChangeOriginOn();
+
 	try{
-	    filter->Update();
+	    chi->Update();
 	    }
 	catch(itk::ExceptionObject &ex){
 	    std::cerr << ex << std::endl;
@@ -150,7 +157,7 @@ int DoIt(int argc, char *argv[]){
 	    }
 
 	typename SliceImageType::Pointer subImg;
-	subImg= filter->GetOutput();
+	subImg= chi->GetOutput();
 	subImg->DisconnectPipeline();
 
 	joinSeries->PushBackInput(subImg);
