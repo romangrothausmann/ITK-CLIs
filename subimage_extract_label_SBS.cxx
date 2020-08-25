@@ -118,6 +118,7 @@ int DoIt(int argc, char *argv[]){
     typename LabelMapType::Pointer labelMap = lm->GetOutput();
 
     const LabelObjectType* labelObject;
+    std::vector<itk::ProcessObject::Pointer> savedPointers; // to store smart-pointers for use outside the scope of the loop: https://itk.org/pipermail/community/2016-July/011692.html
     for(LabelType label= 0; label < labelMap->GetNumberOfLabelObjects(); label++){//SizeValueType == LabelType //GetNthLabelObject starts with 0 and ends at GetNumberOfLabelObjects()-1!!!
 
         labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
@@ -156,11 +157,8 @@ int DoIt(int argc, char *argv[]){
 	    continue;
 	    }
 
-	typename SliceImageType::Pointer subImg;
-	subImg= chi->GetOutput();
-	subImg->DisconnectPipeline();
-
-	joinSeries->PushBackInput(subImg);
+	savedPointers.push_back(chi.GetPointer()); // needed to store smart-pointers for update of joinSeries outside loop scope
+	joinSeries->PushBackInput(chi->GetOutput());
 	}
 	    
     
