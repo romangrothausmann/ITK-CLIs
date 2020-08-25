@@ -127,7 +127,7 @@ int DoIt(int argc, char *argv[]){
 
         labelObject= labelMap->GetNthLabelObject(label);//using GetNthLabelObject to be save (even though the doc suggests otherwise (compare: http://www.itk.org/Doxygen47/html/classitk_1_1BinaryImageToShapeLabelMapFilter.html and http://www.itk.org/Doxygen47/html/classitk_1_1LabelMap.html)
 	for (i= 0; i < Dimension; i++)
-	    desiredStart[i]=  labelObject->GetCentroid()[i] - desiredSize[i] / 2;
+	    desiredStart[i]= labelObject->GetBoundingBox().GetIndex()[i] + labelObject->GetBoundingBox().GetSize()[i] / 2 - desiredSize[i] / 2;
 
 	typename InputImageType1::RegionType desiredRegion(desiredStart, desiredSize);
 	std::cerr << "desired region index: " << desiredRegion.GetIndex()
