@@ -78,14 +78,15 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
 
 template<typename InputComponentType, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
 
     typedef InputPixelType  OutputPixelType;
     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
     typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
 
 
-    switch(atoi(argv[4])){
+    int opt= atoi(argv[4]);
+    switch(opt){
     case 0: {
         typedef itk::MeanProjectionImageFilter<InputImageType, OutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
