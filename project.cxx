@@ -45,43 +45,18 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
+    
+    typedef itk::SplitComponentsImageFilter<InputImageType, FilterInputImageType, NumComponents> SplitType;
+    typename SplitType::Pointer split = SplitType::New();
+    split->SetInput(input);
 
-    typename OutputImageType::Pointer output;
-    filter->SetProjectionDimension(atoi(argv[5]));
-    filter->ReleaseDataFlagOn();
+    typedef itk::ComposeImageFilter<FilterOutputImageType, OutputImageType> ComposeType;
+    typename ComposeType::Pointer compose= ComposeType::New();
 
-    if(NumComponents > 1){
-	typedef itk::SplitComponentsImageFilter<InputImageType, FilterInputImageType, NumComponents> SplitType;
-	typename SplitType::Pointer split = SplitType::New();
-	split->SetInput(input);
-
-	typedef itk::ComposeImageFilter<FilterOutputImageType, OutputImageType> ComposeType;
-	typename ComposeType::Pointer compose= ComposeType::New();
-
-	for(unsigned int i= 0; i < NumComponents; i++){
-	    filter->SetInput(split->GetOutput(i));
-	
-	    FilterWatcher watcher1(filter);
-	    try{
-		filter->Update();
-		}
-	    catch(itk::ExceptionObject &ex){
-		std::cerr << ex << std::endl;
-		return EXIT_FAILURE;
-		}
-	
-	    typename FilterType::OutputImageType::Pointer img;
-	    img= filter->GetOutput();
-	    img->DisconnectPipeline();
-	
-	    compose->SetInput(i, img);
-	    }
-
-
-	output= compose->GetOutput();
-	}
-    else{
-	filter->SetInput(input);
+    for(unsigned int i= 0; i < NumComponents; i++){
+	filter->SetInput(split->GetOutput(i));
+	filter->SetProjectionDimension(atoi(argv[5]));
+	filter->ReleaseDataFlagOn();
 	
 	FilterWatcher watcher1(filter);
 	try{
@@ -91,8 +66,16 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
 	    std::cerr << ex << std::endl;
 	    return EXIT_FAILURE;
 	    }
-	output= filter->GetOutput();
+	
+	typename FilterType::OutputImageType::Pointer img;
+	img= filter->GetOutput();
+	img->DisconnectPipeline();
+	
+	compose->SetInput(i, img);
 	}
+
+
+    const typename OutputImageType::Pointer& output= compose->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -205,10 +188,10 @@ int dispatch_pT(size_t numComponentsType, itk::ImageIOBase::IOPixelType pixelTyp
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
     switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
-        typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, 1, InputPixelType>(dimensionType, argc, argv);
-        } break;
+    // case itk::ImageIOBase::SCALAR:{
+    //     typedef InputComponentType InputPixelType;
+    //     res= dispatch_D<InputComponentType, 1, InputPixelType>(dimensionType, argc, argv);
+    //     } break;
     // case itk::ImageIOBase::COMPLEX:{
     //     typedef std::complex<InputComponentType> InputPixelType;
     //     res= dispatch_D<InputComponentType, 2, InputPixelType>(dimensionType, argc, argv);
