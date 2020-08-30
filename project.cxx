@@ -14,13 +14,18 @@
 #include <itkStandardDeviationProjectionImageFilter.h>
 #include <itkBinaryProjectionImageFilter.h>
 #include <itkBinaryThresholdProjectionImageFilter.h>
+#include <itkSplitComponentsImageFilter.h>
+#include <itkComposeImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension, typename InputImageType, typename OutputImageType, typename FilterType>
+template<typename InputComponentType, size_t NumComponents, typename InputPixelType, size_t Dimension, typename FilterInputImageType, typename FilterOutputImageType, typename FilterType>
 int DoIt2(int argc, char *argv[], FilterType* filter){
+
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    typedef itk::Image<InputPixelType, Dimension - 1>  OutputImageType;
 
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
@@ -40,21 +45,37 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
 
     const typename InputImageType::Pointer& input= reader->GetOutput();
 
-    filter->SetInput(input);
-    filter->SetProjectionDimension(atoi(argv[5]));
-    filter->ReleaseDataFlagOn();
+    
+    typedef itk::SplitComponentsImageFilter<InputImageType, FilterInputImageType, NumComponents> SplitType;
+    typename SplitType::Pointer split = SplitType::New();
+    split->SetInput(input);
 
-    FilterWatcher watcher1(filter);
-    try{
-        filter->Update();
-        }
-    catch(itk::ExceptionObject &ex){
-        std::cerr << ex << std::endl;
-        return EXIT_FAILURE;
-        }
+    typedef itk::ComposeImageFilter<FilterOutputImageType, OutputImageType> ComposeType;
+    typename ComposeType::Pointer compose= ComposeType::New();
+
+    for(unsigned int i= 0; i < NumComponents; i++){
+	filter->SetInput(split->GetOutput(i));
+	filter->SetProjectionDimension(atoi(argv[5]));
+	filter->ReleaseDataFlagOn();
+	
+	FilterWatcher watcher1(filter);
+	try{
+	    filter->Update();
+	    }
+	catch(itk::ExceptionObject &ex){
+	    std::cerr << ex << std::endl;
+	    return EXIT_FAILURE;
+	    }
+	
+	typename FilterType::OutputImageType::Pointer img;
+	img= filter->GetOutput();
+	img->DisconnectPipeline();
+	
+	compose->SetInput(i, img);
+	}
 
 
-    const typename OutputImageType::Pointer& output= filter->GetOutput();
+    const typename OutputImageType::Pointer& output= compose->GetOutput();
 
     typedef itk::ImageFileWriter<OutputImageType>  WriterType;
     typename WriterType::Pointer writer = WriterType::New();
@@ -76,63 +97,63 @@ int DoIt2(int argc, char *argv[], FilterType* filter){
     }
 
 
-template<typename InputComponentType, typename InputPixelType, size_t Dimension>
+template<typename InputComponentType, size_t NumComponents, typename InputPixelType, size_t Dimension>
 int DoIt(int argc, char *argv[]){
-    int res= 0;
+    int res= EXIT_FAILURE;
 
-    typedef InputPixelType  OutputPixelType;
-    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-    typedef itk::Image<OutputPixelType, Dimension - 1>  OutputImageType;
+    typedef itk::Image<InputComponentType, Dimension>  FilterInputImageType;
+    typedef itk::Image<InputComponentType, Dimension - 1>  FilterOutputImageType;
 
 
-    switch(atoi(argv[4])){
+    int opt= atoi(argv[4]);
+    switch(opt){
     case 0: {
-        typedef itk::MeanProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::MeanProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 1: {
-        typedef itk::MedianProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::MedianProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 2: {
-        typedef itk::MaximumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::MaximumProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 3: {
-        typedef itk::MinimumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::MinimumProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 4: {
-        typedef itk::SumProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::SumProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 5: {
-        typedef itk::StandardDeviationProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::StandardDeviationProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 6: {
-        typedef itk::BinaryProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::BinaryProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     case 7: {
-        typedef itk::BinaryThresholdProjectionImageFilter<InputImageType, OutputImageType> FilterType;
+        typedef itk::BinaryThresholdProjectionImageFilter<FilterInputImageType, FilterOutputImageType> FilterType;
         typename FilterType::Pointer filter= FilterType::New();
         std::cerr << "Using filter: " << filter->GetNameOfClass() << std::endl;
-        res= DoIt2<InputComponentType, InputPixelType, Dimension, InputImageType, OutputImageType, FilterType>(argc, argv, filter);
+        res= DoIt2<InputComponentType, NumComponents, InputPixelType, Dimension, FilterInputImageType, FilterOutputImageType, FilterType>(argc, argv, filter);
 	} break;
     default:
         std::cerr << "unknown filter type." << std::endl;
@@ -142,15 +163,15 @@ int DoIt(int argc, char *argv[]){
     return res;
     }
 
-template<typename InputComponentType, typename InputPixelType>
+template<typename InputComponentType, size_t NumComponents, typename InputPixelType>
 int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     switch (dimensionType){
     case 2:
-        res= DoIt<InputComponentType, InputPixelType, 2>(argc, argv);
+        res= DoIt<InputComponentType, NumComponents, InputPixelType, 2>(argc, argv);
         break;
     case 3:
-        res= DoIt<InputComponentType, InputPixelType, 3>(argc, argv);
+        res= DoIt<InputComponentType, NumComponents, InputPixelType, 3>(argc, argv);
         break;
     default:
         std::cerr << "Error: Images of dimension " << dimensionType << " are not handled!" << std::endl;
@@ -160,26 +181,37 @@ int dispatch_D(size_t dimensionType, int argc, char *argv[]){
     }
 
 template<typename InputComponentType>
-int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+int dispatch_pT(size_t numComponentsType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#abd189f096c2a1b3ea559bc3e4849f658
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
-    switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{
-        typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::UNKNOWNPIXELTYPE:
+    switch (numComponentsType){ // ignoring pixelType (might still be needed in case of dep. on limited value range [0,1])
+    case 1: { // e.g. scalar
+	typedef itk::Vector<InputComponentType, 1> InputPixelType;
+	res= dispatch_D<InputComponentType, 1, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 2: { // e.g. complex
+	typedef itk::Vector<InputComponentType, 2> InputPixelType;
+	res= dispatch_D<InputComponentType, 2, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 3: { // e.g. RGB
+	typedef itk::Vector<InputComponentType, 3> InputPixelType;
+	res= dispatch_D<InputComponentType, 3, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 4: { // e.g. RGBA
+	typedef itk::Vector<InputComponentType, 4> InputPixelType;
+	res= dispatch_D<InputComponentType, 4, InputPixelType>(dimensionType, argc, argv);
+	} break;
     default:
-        std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
-        break;
-        }//switch
+	std::cerr << std::endl << "Error: Number of components (Pixel type) not handled!" << std::endl;
+	break;
+	} // numComponentsType switch
     return res;
     }
 
-int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
+int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, size_t numComponentsType, itk::ImageIOBase::IOPixelType pixelType, size_t dimensionType, int argc, char *argv[]){
     int res= EXIT_FAILURE;
 
     //http://www.itk.org/Doxygen45/html/classitk_1_1ImageIOBase.html#a8dc783055a0af6f0a5a26cb080feb178
@@ -189,43 +221,43 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
     switch (componentType){
     case itk::ImageIOBase::UCHAR:{        // uint8_t
         typedef unsigned char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::CHAR:{         // int8_t
         typedef char InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::USHORT:{       // uint16_t
         typedef unsigned short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::SHORT:{        // int16_t
         typedef short InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UINT:{         // uint32_t
         typedef unsigned int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::INT:{          // int32_t
         typedef int InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::ULONG:{        // uint64_t
         typedef unsigned long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::LONG:{         // int64_t
         typedef long InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::FLOAT:{        // float32
         typedef float InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::DOUBLE:{       // float64
         typedef double InputComponentType;
-        res= dispatch_pT<InputComponentType>(pixelType, dimensionType, argc, argv);
+        res= dispatch_pT<InputComponentType>(numComponentsType, pixelType, dimensionType, argc, argv);
         } break;
     case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
     default:
@@ -244,6 +276,7 @@ int dispatch_cT(itk::ImageIOBase::IOComponentType componentType, itk::ImageIOBas
 void GetImageType (std::string fileName,
     itk::ImageIOBase::IOPixelType &pixelType,
     itk::ImageIOBase::IOComponentType &componentType,
+    size_t &numComponentsType, 
     size_t &dimensionType
     ){
     typedef itk::Image<char, 1> ImageType; //template initialization parameters need to be given but can be arbitrary here
@@ -256,11 +289,13 @@ void GetImageType (std::string fileName,
 
     pixelType = imageReader->GetImageIO()->GetPixelType();
     componentType = imageReader->GetImageIO()->GetComponentType();
+    numComponentsType = imageReader->GetImageIO()->GetNumberOfComponents();
     dimensionType= imageReader->GetImageIO()->GetNumberOfDimensions();
 
     std::cerr << std::endl << "dimensions: " << dimensionType << std::endl;
     std::cerr << "component type: " << imageReader->GetImageIO()->GetComponentTypeAsString(componentType) << std::endl;
     std::cerr << "component size: " << imageReader->GetImageIO()->GetComponentSize() << std::endl;
+    std::cerr << "component #: " << numComponentsType << std::endl;
     std::cerr << "pixel type (string): " << imageReader->GetImageIO()->GetPixelTypeAsString(imageReader->GetImageIO()->GetPixelType()) << std::endl;
     std::cerr << "pixel type: " << pixelType << std::endl << std::endl;
 
@@ -284,11 +319,12 @@ int main(int argc, char *argv[]){
 
     itk::ImageIOBase::IOPixelType pixelType;
     typename itk::ImageIOBase::IOComponentType componentType;
+    size_t numComponentsType;
     size_t dimensionType;
 
 
     try {
-        GetImageType(argv[1], pixelType, componentType, dimensionType);
+        GetImageType(argv[1], pixelType, componentType, numComponentsType, dimensionType);
         }//try
     catch( itk::ExceptionObject &excep){
         std::cerr << argv[0] << ": exception caught !" << std::endl;
@@ -296,7 +332,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    return dispatch_cT(componentType, pixelType, dimensionType, argc, argv);
+    return dispatch_cT(componentType, numComponentsType, pixelType, dimensionType, argc, argv);
     }
 
 

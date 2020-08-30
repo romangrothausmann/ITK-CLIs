@@ -39,6 +39,7 @@ RUN mkdir -p ITK_build && \
 	  -DModule_PolarTransform=ON \
 	  -DModule_LesionSizingToolkit=OFF \
 	  -DModule_SCIFIO=ON `# for DM3 and other bioformats` \
+	  -DModule_SplitComponents=ON \
 	  ../ITK && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
