@@ -173,47 +173,27 @@ int dispatch_pT(size_t numComponentsType, itk::ImageIOBase::IOPixelType pixelTyp
     //http://www.itk.org/Doxygen45/html/itkImageIOBase_8h_source.html#l00099
     //IOPixelType:: UNKNOWNPIXELTYPE, SCALAR, RGB, RGBA, OFFSET, VECTOR, POINT, COVARIANTVECTOR, SYMMETRICSECONDRANKTENSOR, DIFFUSIONTENSOR3D, COMPLEX, FIXEDARRAY, MATRIX
 
-    switch (pixelType){
-    case itk::ImageIOBase::SCALAR:{ // 1 component per pixel
-        typedef InputComponentType InputPixelType;
-        res= dispatch_D<InputComponentType, 1, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, 2, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
-        typedef itk::RGBPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, 3, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::RGBA:{ // 4 components per pixel, limited [0,1]
-        typedef itk::RGBAPixel<InputComponentType> InputPixelType;
-        res= dispatch_D<InputComponentType, 4, InputPixelType>(dimensionType, argc, argv);
-        } break;
-    case itk::ImageIOBase::VECTOR:{
-	switch (numComponentsType){
-	case 2: { // e.g. complex
-	    typedef itk::Vector<InputComponentType, 2> InputPixelType;
-	    res= dispatch_D<InputComponentType, 2, InputPixelType>(dimensionType, argc, argv);
-	    } break;
-	case 3: { // e.g. RGB
-	    typedef itk::Vector<InputComponentType, 3> InputPixelType;
-	    res= dispatch_D<InputComponentType, 3, InputPixelType>(dimensionType, argc, argv);
-	    } break;
-	case 4: { // e.g. RGBA
-	    typedef itk::Vector<InputComponentType, 4> InputPixelType;
-	    res= dispatch_D<InputComponentType, 4, InputPixelType>(dimensionType, argc, argv);
-	    } break;
-	default:
-	    std::cerr << std::endl << "Error: Number of components not handled!" << std::endl;
-	    break;
-	    } // numComponentsType switch
-        } break;
-    case itk::ImageIOBase::UNKNOWNPIXELTYPE:
+    switch (numComponentsType){ // ignoring pixelType (might still be needed in case of dep. on limited value range [0,1])
+    case 1: { // e.g. scalar
+	typedef itk::Vector<InputComponentType, 1> InputPixelType;
+	res= dispatch_D<InputComponentType, 1, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 2: { // e.g. complex
+	typedef itk::Vector<InputComponentType, 2> InputPixelType;
+	res= dispatch_D<InputComponentType, 2, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 3: { // e.g. RGB
+	typedef itk::Vector<InputComponentType, 3> InputPixelType;
+	res= dispatch_D<InputComponentType, 3, InputPixelType>(dimensionType, argc, argv);
+	} break;
+    case 4: { // e.g. RGBA
+	typedef itk::Vector<InputComponentType, 4> InputPixelType;
+	res= dispatch_D<InputComponentType, 4, InputPixelType>(dimensionType, argc, argv);
+	} break;
     default:
-        std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
-        break;
-        } // pixelType switch
+	std::cerr << std::endl << "Error: Number of components (Pixel type) not handled!" << std::endl;
+	break;
+	} // numComponentsType switch
     return res;
     }
 
