@@ -1,4 +1,4 @@
-////program for itkVectorGradientAnisotropicDiffusionImageFilter
+////program for itkCurvatureFlowImageFilter
 //01: based on template_vec.cxx
 
 
@@ -7,8 +7,7 @@
 #include "itkFilterWatcher.h"
 #include <itkImageFileReader.h>
 #include <itkCastImageFilter.h>
-#include <itkGradientAnisotropicDiffusionImageFilter.h>
-#include <itkVectorGradientAnisotropicDiffusionImageFilter.h>
+#include <itkCurvatureFlowImageFilter.h>
 #include <itkImageFileWriter.h>
 
 
@@ -43,7 +42,6 @@ int DoIt(int argc, char *argv[]){
     filter->SetInput(caster->GetOutput());
     filter->SetNumberOfIterations(atoi(argv[4]));
     filter->SetTimeStep(atof(argv[5]));
-    filter->SetConductanceParameter(atof(argv[6]));
     filter->ReleaseDataFlagOn();
     filter->InPlaceOn();
 
@@ -103,7 +101,7 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef itk::Image<InputPixelType, Dimension>  InputImageType;
         typedef itk::Image<TRealType, Dimension>  RealImageType;
         typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::GradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+        typedef itk::CurvatureFlowImageFilter<RealImageType, RealImageType> FilterType;
         typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
         } break;
@@ -127,16 +125,16 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
     //     typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
     //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
     //     } break;
-    case itk::ImageIOBase::VECTOR:{
-        typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
-        typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
-        typedef itk::Image<InputPixelType, Dimension>  InputImageType;
-        typedef itk::Image<RealPixelType, Dimension>  RealImageType;
-        typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
-        typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
-        typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
-        } break;
+    // case itk::ImageIOBase::VECTOR:{
+    //     typedef itk::Vector<InputComponentType, CompPerPixel> InputPixelType;
+    //     typedef itk::Vector<TRealType, CompPerPixel> RealPixelType;
+    //     typedef itk::Image<InputPixelType, Dimension>  InputImageType;
+    //     typedef itk::Image<RealPixelType, Dimension>  RealImageType;
+    //     typedef itk::CastImageFilter<InputImageType, RealImageType> CastFilterType;
+    //     typedef itk::VectorGradientAnisotropicDiffusionImageFilter<RealImageType, RealImageType> FilterType;
+    //     typedef itk::CastImageFilter<RealImageType, InputImageType> CastFilterType2;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension, InputImageType, RealImageType, CastFilterType, FilterType, CastFilterType2>(argc, argv);
+    //     } break;
     case itk::ImageIOBase::UNKNOWNPIXELTYPE:
     default:
         std::cerr << std::endl << "Error: Pixel type not handled!" << std::endl;
@@ -284,13 +282,13 @@ void GetImageType (std::string fileName,
 
 
 int main(int argc, char *argv[]){
-    if ( argc != 7 ){
+    if ( argc != 6 ){
         std::cerr << "Missing Parameters: "
                   << argv[0]
                   << " Input_Image"
                   << " Output_Image"
                   << " compress"
-                  << " iterations TimeStep Conductance"
+                  << " iterations TimeStep "
                   << std::endl;
 
         return EXIT_FAILURE;
