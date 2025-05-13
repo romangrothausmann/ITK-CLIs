@@ -104,10 +104,10 @@ int dispatch_pT(itk::ImageIOBase::IOPixelType pixelType, int argc, char *argv[])
         typedef InputComponentType InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
         } break;
-    case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
-        typedef std::complex<InputComponentType> InputPixelType;
-        res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
-        } break;
+    // case itk::ImageIOBase::COMPLEX:{ // 2 components per pixel
+    //     typedef std::complex<InputComponentType> InputPixelType;
+    //     res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
+    //     } break;
     case itk::ImageIOBase::RGB:{ // 3 components per pixel, limited [0,1]
         typedef itk::RGBPixel<InputComponentType> InputPixelType;
         res= DoIt<InputComponentType, InputPixelType, CompPerPixel, Dimension>(argc, argv);
