@@ -1,5 +1,6 @@
 PROJECT(ITK-CLIs)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11) #2.8.11 for TARGET_INCLUDE_DIRECTORIES
+CMAKE_POLICY(SET CMP0115 OLD) # cmake --help-policy CMP0115
 
 ## bash command to check if CMakeLists.txt contains an entry for all *.cxx: 
 ## for i in *cxx ; do if ! `grep -q ${i%.cxx} CMakeLists.txt`; then echo "$i not found"'!'; fi; done
