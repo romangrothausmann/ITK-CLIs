@@ -36,7 +36,25 @@ int DoIt(int argc, char *argv[]){
     if (argc > 2)
 	size.Fill(atoi(argv[2]));
     else
+        switch (componentType){
+    case itk::ImageIOBase::UCHAR:        // uint8_t
+    case itk::ImageIOBase::CHAR:         // int8_t
+    case itk::ImageIOBase::USHORT:       // uint16_t
+    case itk::ImageIOBase::SHORT:        // int16_t
+    case itk::ImageIOBase::UINT:         // uint32_t
+    case itk::ImageIOBase::INT:          // int32_t  
 	size.Fill((long long) itk::NumericTraits<InputComponentType>::max() - itk::NumericTraits<InputComponentType>::min()); // filter can handle RGB, Vector, etc. but Fill not; itk::NumericTraits<InputPixelType>::IsSigned // needs cast for calc if InputComponentType > Int, needs cast to one above InputComponentType: https://stackoverflow.com/questions/19853095/warning-integer-overflow-in-expression#19853141
+	break;
+    case itk::ImageIOBase::ULONG:        // uint64_t
+    case itk::ImageIOBase::LONG:         // int64_t
+    //// floats neeed special treatment due to the use of num-traits min/max
+    case itk::ImageIOBase::FLOAT:        // float32
+    case itk::ImageIOBase::DOUBLE:       // float64
+    case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
+    default:
+        std::cerr << "component type does not allow to compute min-max bounds of hist!" << std::endl;
+        break;
+        }//switch
     filter->SetHistogramSize(size);
 
     typename FilterType::HistogramMeasurementVectorType lowerBound(CompPerPixel);
