@@ -400,17 +400,6 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
 INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
 
-SET(CurrentExe "vessel_enhancing_diffusion")
-IF(LesionSizingToolkit_FOUND LESS 0)# -1 if not found!
-  #MESSAGE(SEND_ERROR "${CurrentExe} requires ITK to be compiled with LesionSizingToolkit ON")
-  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires ITK with LesionSizingToolkit ON)")
-ELSE(LesionSizingToolkit_FOUND LESS 0)
-  ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
-  TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
-  INSTALL(TARGETS  ${CurrentExe}  RUNTIME  DESTINATION  bin)
-  MESSAGE(STATUS "${CurrentExe} will be compiled!")
-ENDIF(LesionSizingToolkit_FOUND LESS 0)
-
 SET(CurrentExe "change_header")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe}  ${Libraries})
