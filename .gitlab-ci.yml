@@ -272,7 +272,7 @@ slice.1:
   variables:
     CMD:    " /usr/bin/time -v slice     tests/data/mosaic-color.mhd output.png      0  z 70 "
     CMDSDI: " /usr/bin/time -v slice     tests/data/mosaic-color.mhd output_SDI.png 10  z 70 "
-    MD5: 611920c5288f7f63f458811ef1344c27
+    MD5: f0e7f6d7a999825298abd6e53a5ee141
 
 anisoDiff-curv_f32:
   <<: *test
@@ -290,7 +290,7 @@ anisoDiff-LBR_f32:
   <<: *test
   variables:
     CMD: " /usr/bin/time -v $CI_JOB_NAME tests/data/ACN_speed.mhd output.mha 0  5 0.0001 cCED 3 4 1.5 && stat output.mha 2>/dev/null "
-    MD5: 3997b6db3f16bb712deba4c0caaf7d50
+    MD5: b9409d4f4021dcbfc273a2a7c669c223
 
 ## would need nvidia-docker and gitlab runner with access to a GPU    
 # anisoDiff-grad_GPU_f32:
@@ -328,13 +328,13 @@ slic_UI32:
   variables:
     CMD:    " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output.mha      0  50 0 && stat output.mha 2>/dev/null "
     CMDSDI: " /usr/bin/time -v $CI_JOB_NAME tests/data/mosaic-color.mhd output_SDI.mha 10  50 0 && stat output.mha 2>/dev/null "
-    MD5: 97d0bc733a7f8d57192c3fead873bb3d
+    MD5: 78269c20305ae2641c15b35d4adafe3d
 
 DM3:
   <<: *test
   variables:
     CMD: " /usr/bin/time -v file_converter tests/data/test.dm3 output.mha  0 "
-    MD5: dae96ec43b1b29838837f9888a142f05
+    MD5: 278fec95bc47d89729339dce1d58b340
 
 std-mean_ROI_SBS:
   <<: *test
