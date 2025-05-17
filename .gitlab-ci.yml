@@ -17,7 +17,7 @@ variables:
 build:
   stage: build
   tags:
-    - multicore
+#    - multicore
     - saas-linux-medium-amd64 # provides more storage than default-runner: https://docs.gitlab.com/ci/runners/hosted_runners/linux/#machine-types-available-for-linux---x86-64
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
